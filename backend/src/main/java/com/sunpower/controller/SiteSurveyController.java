@@ -81,11 +81,7 @@ public class SiteSurveyController {
     }
 
     @PatchMapping("/{id}/approval")
-<<<<<<< HEAD
-    @PreAuthorize("hasAnyRole('SALES', 'TECHNICIAN', 'ADMIN')")
-=======
-    @PreAuthorize("hasAnyRole('SALES', 'ADMIN', 'DIRECTOR')")
->>>>>>> origin/main
+    @PreAuthorize("hasAnyRole('SALES', 'TECHNICIAN', 'ADMIN', 'DIRECTOR')")
     public ResponseEntity<SiteSurvey> reviewAndApprove(
             @PathVariable Long id,
             @Valid @RequestBody SurveyApprovalRequest request,
