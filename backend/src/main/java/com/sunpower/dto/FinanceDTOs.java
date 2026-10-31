@@ -152,6 +152,7 @@ public class FinanceDTOs {
         private String referenceNumber;
         private String notes;
 
+
         public TechnicianPayoutRequest() {}
 
         public Long getTechnicianId() { return technicianId; }
@@ -170,6 +171,7 @@ public class FinanceDTOs {
         public void setReferenceNumber(String referenceNumber) { this.referenceNumber = referenceNumber; }
         public String getNotes() { return notes; }
         public void setNotes(String notes) { this.notes = notes; }
+
     }
 
     public static class SubsidyUpdateRequest {
@@ -182,6 +184,11 @@ public class FinanceDTOs {
         private BigDecimal amountReceived;
         private LocalDate actualReceiptDate;
         private String notes;
+        private String discomConsumerNumber;
+        private String discomApplicationNumber;
+        private LocalDate feasibilityApprovedDate;
+        private LocalDate netMeterInstalledDate;
+        private String commissioningCertificateNumber;
 
         public SubsidyUpdateRequest() {}
 
@@ -199,6 +206,16 @@ public class FinanceDTOs {
         public void setActualReceiptDate(LocalDate actualReceiptDate) { this.actualReceiptDate = actualReceiptDate; }
         public String getNotes() { return notes; }
         public void setNotes(String notes) { this.notes = notes; }
+        public String getDiscomConsumerNumber() { return discomConsumerNumber; }
+        public void setDiscomConsumerNumber(String discomConsumerNumber) { this.discomConsumerNumber = discomConsumerNumber; }
+        public String getDiscomApplicationNumber() { return discomApplicationNumber; }
+        public void setDiscomApplicationNumber(String discomApplicationNumber) { this.discomApplicationNumber = discomApplicationNumber; }
+        public LocalDate getFeasibilityApprovedDate() { return feasibilityApprovedDate; }
+        public void setFeasibilityApprovedDate(LocalDate feasibilityApprovedDate) { this.feasibilityApprovedDate = feasibilityApprovedDate; }
+        public LocalDate getNetMeterInstalledDate() { return netMeterInstalledDate; }
+        public void setNetMeterInstalledDate(LocalDate netMeterInstalledDate) { this.netMeterInstalledDate = netMeterInstalledDate; }
+        public String getCommissioningCertificateNumber() { return commissioningCertificateNumber; }
+        public void setCommissioningCertificateNumber(String commissioningCertificateNumber) { this.commissioningCertificateNumber = commissioningCertificateNumber; }
     }
 
     public static class InvoiceCancelRequest {
@@ -239,6 +256,10 @@ public class FinanceDTOs {
         private List<CategoryDistributionItem> expenseCategoryBreakdown = new ArrayList<>();
         private List<StatusCountItem> paymentStatusDistribution = new ArrayList<>();
         private List<StatusCountItem> subsidyStatusDistribution = new ArrayList<>();
+        private BigDecimal aging0To30Days = BigDecimal.ZERO;
+        private BigDecimal aging31To60Days = BigDecimal.ZERO;
+        private BigDecimal aging61To90Days = BigDecimal.ZERO;
+        private BigDecimal agingOver90Days = BigDecimal.ZERO;
 
         public FinanceDashboardDTO() {}
 
@@ -278,6 +299,14 @@ public class FinanceDTOs {
         public void setPaymentStatusDistribution(List<StatusCountItem> paymentStatusDistribution) { this.paymentStatusDistribution = paymentStatusDistribution; }
         public List<StatusCountItem> getSubsidyStatusDistribution() { return subsidyStatusDistribution; }
         public void setSubsidyStatusDistribution(List<StatusCountItem> subsidyStatusDistribution) { this.subsidyStatusDistribution = subsidyStatusDistribution; }
+        public BigDecimal getAging0To30Days() { return aging0To30Days; }
+        public void setAging0To30Days(BigDecimal aging0To30Days) { this.aging0To30Days = aging0To30Days; }
+        public BigDecimal getAging31To60Days() { return aging31To60Days; }
+        public void setAging31To60Days(BigDecimal aging31To60Days) { this.aging31To60Days = aging31To60Days; }
+        public BigDecimal getAging61To90Days() { return aging61To90Days; }
+        public void setAging61To90Days(BigDecimal aging61To90Days) { this.aging61To90Days = aging61To90Days; }
+        public BigDecimal getAgingOver90Days() { return agingOver90Days; }
+        public void setAgingOver90Days(BigDecimal agingOver90Days) { this.agingOver90Days = agingOver90Days; }
     }
 
     public static class MonthlyTrendItem {

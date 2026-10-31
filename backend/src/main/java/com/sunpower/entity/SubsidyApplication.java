@@ -48,6 +48,18 @@ public class SubsidyApplication {
     private LocalDate sanctionDate;
     private LocalDate actualReceiptDate;
 
+    @Column(length = 50)
+    private String discomConsumerNumber;
+
+    @Column(length = 50)
+    private String discomApplicationNumber;
+
+    private LocalDate feasibilityApprovedDate;
+    private LocalDate netMeterInstalledDate;
+
+    @Column(length = 50)
+    private String commissioningCertificateNumber;
+
     @Column(columnDefinition = "TEXT")
     private String notes;
 
@@ -115,6 +127,17 @@ public class SubsidyApplication {
     public void setSanctionDate(LocalDate sanctionDate) { this.sanctionDate = sanctionDate; }
     public LocalDate getActualReceiptDate() { return actualReceiptDate; }
     public void setActualReceiptDate(LocalDate actualReceiptDate) { this.actualReceiptDate = actualReceiptDate; }
+    public String getDiscomConsumerNumber() { return discomConsumerNumber; }
+    public void setDiscomConsumerNumber(String discomConsumerNumber) { this.discomConsumerNumber = discomConsumerNumber; }
+    public String getDiscomApplicationNumber() { return discomApplicationNumber; }
+    public void setDiscomApplicationNumber(String discomApplicationNumber) { this.discomApplicationNumber = discomApplicationNumber; }
+    public LocalDate getFeasibilityApprovedDate() { return feasibilityApprovedDate; }
+    public void setFeasibilityApprovedDate(LocalDate feasibilityApprovedDate) { this.feasibilityApprovedDate = feasibilityApprovedDate; }
+    public LocalDate getNetMeterInstalledDate() { return netMeterInstalledDate; }
+    public void setNetMeterInstalledDate(LocalDate netMeterInstalledDate) { this.netMeterInstalledDate = netMeterInstalledDate; }
+    public String getCommissioningCertificateNumber() { return commissioningCertificateNumber; }
+    public void setCommissioningCertificateNumber(String commissioningCertificateNumber) { this.commissioningCertificateNumber = commissioningCertificateNumber; }
+
     public String getNotes() { return notes; }
     public void setNotes(String notes) { this.notes = notes; }
     public LocalDateTime getCreatedAt() { return createdAt; }

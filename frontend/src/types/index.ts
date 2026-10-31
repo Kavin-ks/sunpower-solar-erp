@@ -535,6 +535,10 @@ export interface FinanceDashboard {
   expenseCategoryBreakdown: { category: string; amount: number }[];
   paymentStatusDistribution: { status: string; count: number; amount: number }[];
   subsidyStatusDistribution: { status: string; count: number; amount: number }[];
+  aging0To30Days?: number;
+  aging31To60Days?: number;
+  aging61To90Days?: number;
+  agingOver90Days?: number;
 }
 
 export interface TechnicianWorkload {
