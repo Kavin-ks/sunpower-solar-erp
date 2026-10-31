@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SunPower Solar ERP - Test Barcodes & QR Codes for Scanning</title>
+  <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      background: #0f172a;
+      color: #f8fafc;
+      margin: 0;
+      padding: 30px 20px;
+    }
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+    }
+    h1 {
+      font-size: 24px;
+      margin-bottom: 6px;
+      color: #38bdf8;
+    }
+    .instructions {
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 12px;
+      padding: 16px 20px;
+      margin-bottom: 24px;
+      line-height: 1.5;
+      font-size: 14px;
+      color: #cbd5e1;
+    }
+    .instructions b {
+      color: #facc15;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
+      gap: 20px;
+    }
+    .card {
+      background: #ffffff;
+      color: #0f172a;
+      border-radius: 16px;
+      padding: 24px;
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.4);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+    }
+    .badge {
+      display: inline-block;
+      padding: 4px 10px;
+      border-radius: 9999px;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      margin-bottom: 10px;
+    }
+    .badge-inverter {
+      background: #fef3c7;
+      color: #b45309;
+    }
+    .badge-panel {
+      background: #dbeafe;
+      color: #1e40af;
+    }
+    .badge-controller {
+      background: #f3e8ff;
+      color: #6b21a8;
+    }
+    .card h3 {
+      margin: 0 0 4px 0;
+      font-size: 16px;
+      font-weight: 700;
+    }
+    .card p {
+      margin: 0 0 16px 0;
+      font-size: 12px;
+      color: #64748b;
+    }
+    .barcode-box {
+      background: #ffffff;
+      padding: 10px;
+      border: 2px dashed #e2e8f0;
+      border-radius: 12px;
+      width: 100%;
+      box-sizing: border-box;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+    svg.barcode {
+      width: 100%;
+      max-width: 300px;
+      height: 80px;
+    }
+    canvas.qr-canvas {
+      width: 140px;
+      height: 140px;
+    }
+    .code-text {
+      font-family: monospace;
+      font-size: 13px;
+      font-weight: 700;
+      color: #047857;
+      margin-top: 6px;
+    }
+    .step-box {
+      background: #064e3b;
+      border: 1px solid #059669;
+      color: #d1fae5;
+      padding: 12px 16px;
+      border-radius: 10px;
+      font-size: 13px;
+      margin-top: 24px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>SunPower ERP — Barcode & QR Code Test Sheet</h1>
+    <div class="instructions">
+      <b>⚠️ Why your previous scan showed a red message:</b><br>
+      The camera <i>did</i> scan successfully! However, <b>DSP-00001</b> is already in <b>DELIVERED</b> status and all items are already fully assigned.
+      <br><br>
+      👉 In your ERP at <a href="http://localhost:5173/dispatch" target="_blank" style="color:#38bdf8;">http://localhost:5173/dispatch</a>:
+      <ol style="margin: 6px 0 0 20px; padding: 0;">
+        <li>Close the modal for DSP-00001.</li>
+        <li>Click <b>Scan & Pick</b> on <b>DSP-00005</b> or <b>DSP-00007</b> (these are in <b>PICKING</b> status and need serial numbers!).</li>
+        <li>Point your camera at any of the barcodes or QR codes below, or upload a screenshot!</li>
+      </ol>
+    </div>
+
+    <div class="grid">
+      <!-- Item 1: Inverter Barcode -->
+      <div class="card">
+        <span class="badge badge-inverter">Solar Inverter 5kW</span>
+        <h3>Growatt 5 kW On-Grid Inverter</h3>
+        <p>1D Code 128 Barcode</p>
+        <div class="barcode-box">
+          <svg id="barcode-inv"></svg>
+          <span class="code-text">SN-INV-5KW-2026-A101</span>
+        </div>
+      </div>
+
+      <!-- Item 2: Solar Panel Barcode -->
+      <div class="card">
+        <span class="badge badge-panel">Mono PERC Panel</span>
+        <h3>Mono PERC Half-Cut 540W Panel</h3>
+        <p>1D Code 128 Barcode</p>
+        <div class="barcode-box">
+          <svg id="barcode-panel"></svg>
+          <span class="code-text">PANEL-MONO-540W-9812</span>
+        </div>
+      </div>
+
+      <!-- Item 3: Charge Controller QR Code -->
+      <div class="card">
+        <span class="badge badge-controller">Charge Controller</span>
+        <h3>Smart MPPT 60A Controller</h3>
+        <p>2D QR Code (Scannable from phone/screen)</p>
+        <div class="barcode-box">
+          <canvas id="qr-controller" class="qr-canvas"></canvas>
+          <span class="code-text">CC-MPPT-60A-7741</span>
+        </div>
+      </div>
+
+      <!-- Item 4: Retail EAN-13 / Custom Barcode -->
+      <div class="card">
+        <span class="badge badge-inverter">Alternative Serial</span>
+        <h3>5kW Solar System Component</h3>
+        <p>1D Code 128 Serial</p>
+        <div class="barcode-box">
+          <svg id="barcode-alt"></svg>
+          <span class="code-text">SN-SOLAR-5KW-0099</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="step-box">
+      <b>💡 Tip:</b> You can open this file in any browser or on your phone by visiting: <br>
+      <code style="background: rgba(0,0,0,0.3); padding: 2px 6px; border-radius: 4px;">file:///Users/kavinsoorya/Downloads/Solar/test_barcodes.html</code>
+      or keep it open on half of your screen and point your webcam at it!
+    </div>
+  </div>
+
+  <script>
+    JsBarcode("#barcode-inv", "SN-INV-5KW-2026-A101", {
+      format: "CODE128",
+      lineColor: "#0f172a",
+      width: 2,
+      height: 60,
+      displayValue: true,
+      fontSize: 14
+    });
+
+    JsBarcode("#barcode-panel", "PANEL-MONO-540W-9812", {
+      format: "CODE128",
+      lineColor: "#0f172a",
+      width: 2,
+      height: 60,
+      displayValue: true,
+      fontSize: 14
+    });
+
+    JsBarcode("#barcode-alt", "SN-SOLAR-5KW-0099", {
+      format: "CODE128",
+      lineColor: "#0f172a",
+      width: 2,
+      height: 60,
+      displayValue: true,
+      fontSize: 14
+    });
+
+    QRCode.toCanvas(document.getElementById('qr-controller'), 'CC-MPPT-60A-7741', {
+      width: 140,
+      margin: 1,
+      color: {
+        dark: '#0f172a',
+        light: '#ffffff'
+      }
+    });
+  </script>
+</body>
+</html>

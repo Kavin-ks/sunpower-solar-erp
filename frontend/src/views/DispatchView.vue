@@ -1,12 +1,27 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
+import { ref, computed, onMounted, onBeforeUnmount, nextTick } from 'vue';
 import { api } from '../api/client';
 import type { Dispatch, SalesOrder, DispatchItem } from '../types';
 import StatusBadge from '../components/ui/StatusBadge.vue';
 import { useAuthStore } from '../stores/auth';
-import { Truck, Plus, Barcode, CheckCircle2, Camera, CameraOff, Volume2 } from 'lucide-vue-next';
-import { BrowserMultiFormatReader } from '@zxing/browser';
-import { NotFoundException } from '@zxing/library';
+import {
+  Truck,
+  Plus,
+  Barcode,
+  CheckCircle2,
+  Camera,
+  CameraOff,
+  Volume2,
+  Upload,
+  RefreshCw,
+  Zap,
+  FlipHorizontal,
+  AlertCircle,
+  Loader2,
+  Check,
+  ImageIcon,
+} from 'lucide-vue-next';
+import { BrowserMultiFormatReader, type IScannerControls } from '@zxing/browser';
 
 const dispatches = ref<Dispatch[]>([]);
 const confirmedOrders = ref<SalesOrder[]>([]);
@@ -29,12 +44,27 @@ const scannerInput = ref('');
 const isScanning = ref(false);
 const scanMessage = ref<{ text: string; type: 'success' | 'error' } | null>(null);
 const cameraActive = ref(false);
+const cameraLoading = ref(false);
 const cameraError = ref<string | null>(null);
+const availableDevices = ref<{ deviceId: string; label: string }[]>([]);
+const selectedDeviceId = ref<string>('');
+const hasTorch = ref(false);
+const isTorchOn = ref(false);
+const fileInputRef = ref<HTMLInputElement | null>(null);
+const lastDetectedBarcode = ref<string | null>(null);
 let lastScanned = '';
+let scanningActive = false;
+
+const unallocatedItemsCount = computed(() => {
+  if (!selectedDispatch.value) return 0;
+  return selectedDispatch.value.items.filter(
+    (i) => i.product.serialized && !i.serialNumber
+  ).length;
+});
 
 const videoRef = ref<HTMLVideoElement | null>(null);
 let codeReader: BrowserMultiFormatReader | null = null;
-let scanningActive = false;
+let controls: IScannerControls | null = null;
 
 const authStore = useAuthStore();
 const isAdmin = computed(() => {
@@ -102,9 +132,21 @@ const handleCreateDispatch = async () => {
 
 const handleBarcodeScan = async (code: string) => {
   if (!code || !selectedDispatch.value) return;
-  if (code === lastScanned) return;
-  lastScanned = code;
-  setTimeout(() => { lastScanned = ''; }, 2000);
+  const cleanCode = code.trim();
+  lastDetectedBarcode.value = cleanCode;
+  setTimeout(() => {
+    if (lastDetectedBarcode.value === cleanCode) {
+      lastDetectedBarcode.value = null;
+    }
+  }, 4000);
+
+  if (cleanCode === lastScanned) return;
+  lastScanned = cleanCode;
+  setTimeout(() => {
+    if (lastScanned === cleanCode) {
+      lastScanned = '';
+    }
+  }, 2500);
 
   isScanning.value = true;
   scanMessage.value = null;
@@ -112,19 +154,19 @@ const handleBarcodeScan = async (code: string) => {
   try {
     const dispatchItemId = targetItemId.value !== 'auto' ? parseInt(targetItemId.value) : undefined;
     const res = await api.post(`/dispatches/${selectedDispatch.value.id}/scan-barcode`, {
-      barcode: code,
+      barcode: cleanCode,
       dispatchItemId,
     });
     playBeep();
     selectedDispatch.value = res.data;
     scanMessage.value = {
-      text: `✓ Barcode '${code}' registered & allocated! Marked: Outbound for Installation.`,
+      text: `✓ Barcode '${cleanCode}' registered & allocated! Marked: Outbound for Installation.`,
       type: 'success',
     };
     fetchData();
   } catch (err: any) {
     scanMessage.value = {
-      text: err.response?.data?.message || `Barcode '${code}' not found or already registered.`,
+      text: err.response?.data?.message || `Barcode '${cleanCode}' not found or already registered.`,
       type: 'error',
     };
   } finally {
@@ -139,51 +181,186 @@ const handleManualScanSubmit = () => {
   }
 };
 
-const startCamera = async () => {
+const startCamera = async (preferredDeviceId?: string) => {
+  stopCamera();
   cameraError.value = null;
-  lastScanned = '';
-  try {
-    codeReader = new BrowserMultiFormatReader();
-    scanningActive = true;
+  cameraLoading.value = true;
+  cameraActive.value = true;
 
-    const devices = await BrowserMultiFormatReader.listVideoInputDevices();
-    if (devices.length === 0) {
-      cameraError.value = 'No camera found. Use USB scanner or manual entry.';
-      return;
+  // Await next tick so videoRef element is mounted in DOM
+  await nextTick();
+
+  try {
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      throw new Error('Camera API (getUserMedia) not supported in this browser. Please use the image upload option or USB scanner.');
     }
 
-    const preferredDevice = devices.find((d) => d.label.toLowerCase().includes('back')) || devices[0];
+    if (!codeReader) {
+      codeReader = new BrowserMultiFormatReader();
+    }
+    scanningActive = true;
 
-    await codeReader.decodeFromVideoDevice(
-      preferredDevice.deviceId,
-      videoRef.value!,
+    const constraints: MediaStreamConstraints = preferredDeviceId
+      ? { video: { deviceId: { exact: preferredDeviceId } }, audio: false }
+      : {
+          video: {
+            facingMode: { ideal: 'environment' },
+            width: { ideal: 1280 },
+            height: { ideal: 720 },
+          },
+          audio: false,
+        };
+
+    if (!videoRef.value) {
+      throw new Error('Video preview element is not ready.');
+    }
+
+    controls = await codeReader.decodeFromConstraints(
+      constraints,
+      videoRef.value,
       (result, err) => {
         if (!scanningActive) return;
         if (result) {
-          handleBarcodeScan(result.getText());
+          const text = result.getText();
+          if (text && text.trim() && text.trim() !== lastScanned) {
+            handleBarcodeScan(text.trim());
+          }
         }
       }
     );
 
-    cameraActive.value = true;
+    // Detect torch capability
+    if (controls && typeof controls.switchTorch === 'function') {
+      hasTorch.value = true;
+    } else {
+      hasTorch.value = false;
+    }
+
+    // Refresh video devices list now that permission has been granted
+    try {
+      const devices = await BrowserMultiFormatReader.listVideoInputDevices();
+      availableDevices.value = devices.map((d, idx) => ({
+        deviceId: d.deviceId,
+        label: d.label || `Camera ${idx + 1}`,
+      }));
+      if (preferredDeviceId) {
+        selectedDeviceId.value = preferredDeviceId;
+      } else if (devices.length > 0 && !selectedDeviceId.value) {
+        const envCam = devices.find(d =>
+          d.label.toLowerCase().includes('back') || d.label.toLowerCase().includes('environment')
+        );
+        selectedDeviceId.value = envCam ? envCam.deviceId : devices[0].deviceId;
+      }
+    } catch (e) {
+      console.warn('Could not list video devices:', e);
+    }
   } catch (err: any) {
-    cameraError.value = 'Camera unavailable. Allow camera permission or use manual entry below.';
-    cameraActive.value = false;
+    console.error('Camera initialization failed:', err);
+    let msg = 'Camera access failed. ';
+    if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+      msg = 'Camera permission was denied. Please allow camera permissions in your browser or address bar settings.';
+    } else if (err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError') {
+      msg = 'No camera found on this device. You can upload an image or use a USB barcode scanner.';
+    } else if (err.name === 'NotReadableError' || err.name === 'TrackStartError') {
+      msg = 'Camera hardware is busy or in use by another application.';
+    } else if (err.message) {
+      msg += err.message;
+    }
+    cameraError.value = msg;
+    stopCamera();
+  } finally {
+    cameraLoading.value = false;
   }
 };
 
 const stopCamera = () => {
   scanningActive = false;
-  if (codeReader) {
-    codeReader = null;
+  if (controls) {
+    try {
+      controls.stop();
+    } catch (e) {
+      console.warn('Error stopping scanner controls:', e);
+    }
+    controls = null;
   }
   if (videoRef.value && videoRef.value.srcObject) {
-    const stream = videoRef.value.srcObject as MediaStream;
-    stream.getTracks().forEach((track) => track.stop());
-    videoRef.value.srcObject = null;
+    try {
+      const stream = videoRef.value.srcObject as MediaStream;
+      stream.getTracks().forEach((track) => track.stop());
+      videoRef.value.srcObject = null;
+    } catch (e) {}
   }
   cameraActive.value = false;
+  cameraLoading.value = false;
+  hasTorch.value = false;
+  isTorchOn.value = false;
+};
+
+const toggleTorch = async () => {
+  if (!controls?.switchTorch) return;
+  try {
+    const nextTorch = !isTorchOn.value;
+    await controls.switchTorch(nextTorch);
+    isTorchOn.value = nextTorch;
+  } catch (err) {
+    console.warn('Failed to switch torch:', err);
+  }
+};
+
+const handleDeviceChange = async () => {
+  if (selectedDeviceId.value) {
+    await startCamera(selectedDeviceId.value);
+  }
+};
+
+const triggerFileInput = () => {
+  fileInputRef.value?.click();
+};
+
+const handleImageUpload = async (event: Event) => {
+  const target = event.target as HTMLInputElement;
+  const file = target.files?.[0];
+  if (!file) return;
+
+  isScanning.value = true;
+  scanMessage.value = {
+    text: `Analyzing barcode image '${file.name}'...`,
+    type: 'success',
+  };
+
+  try {
+    if (!codeReader) {
+      codeReader = new BrowserMultiFormatReader();
+    }
+    const objectUrl = URL.createObjectURL(file);
+    const result = await codeReader.decodeFromImageUrl(objectUrl);
+    URL.revokeObjectURL(objectUrl);
+
+    if (result && result.getText()) {
+      await handleBarcodeScan(result.getText());
+    } else {
+      throw new Error('No barcode detected in image');
+    }
+  } catch (err: any) {
+    scanMessage.value = {
+      text: 'Could not decode barcode from image. Please ensure the barcode is clear, flat, and well lit.',
+      type: 'error',
+    };
+  } finally {
+    isScanning.value = false;
+    target.value = '';
+  }
+};
+
+const closeScanModal = () => {
+  stopCamera();
+  selectedDispatch.value = null;
+  scanMessage.value = null;
+  cameraError.value = null;
+  scannerInput.value = '';
+  targetItemId.value = 'auto';
   lastScanned = '';
+  lastDetectedBarcode.value = null;
 };
 
 const handleDispatchShipment = async (dispatchId: number) => {
@@ -234,6 +411,16 @@ onBeforeUnmount(() => {
       </div>
 
       <div class="flex items-center gap-2">
+        <a
+          href="/test_barcodes.html"
+          target="_blank"
+          class="flex items-center space-x-1.5 px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-xl text-xs font-semibold border border-slate-200 transition cursor-pointer"
+          title="Open printable & on-screen scannable sample barcodes"
+        >
+          <Barcode class="w-3.5 h-3.5 text-emerald-600" />
+          <span>Test Barcodes Sheet ↗</span>
+        </a>
+
         <button
           v-if="isWarehouse"
           type="button"
@@ -279,7 +466,10 @@ onBeforeUnmount(() => {
                 <span class="block text-[10px] text-slate-400">{{ disp.driverName }} ({{ disp.driverPhone }})</span>
               </td>
               <td class="py-3 px-4">
-                <span class="font-bold text-slate-800">{{ disp.items.length }} line items</span>
+                <span class="font-bold text-slate-800">{{ disp.items.filter(i => i.product.serialized).length }} serialized units</span>
+                <span class="block text-[10px]" :class="disp.items.filter(i => i.product.serialized && !i.serialNumber).length > 0 ? 'text-amber-600 font-semibold' : 'text-emerald-600 font-medium'">
+                  {{ disp.items.filter(i => i.product.serialized && i.serialNumber).length }} / {{ disp.items.filter(i => i.product.serialized).length }} picked
+                </span>
               </td>
               <td class="py-3 px-4">
                 <StatusBadge :status="disp.status" />
@@ -288,10 +478,15 @@ onBeforeUnmount(() => {
                 <button
                   type="button"
                   @click="selectedDispatch = disp"
-                  class="px-2.5 py-1 text-slate-700 bg-slate-100 hover:bg-slate-200 rounded font-medium cursor-pointer inline-flex items-center space-x-1"
+                  :class="[
+                    'px-2.5 py-1 rounded font-semibold cursor-pointer inline-flex items-center space-x-1 text-xs transition',
+                    disp.status === 'PICKING'
+                      ? 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs'
+                      : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
+                  ]"
                 >
                   <Barcode class="w-3.5 h-3.5" />
-                  <span>Scan & Pick</span>
+                  <span>{{ disp.status === 'PICKING' ? '⚡ Scan & Pick' : 'View Serials' }}</span>
                 </button>
 
                 <button
@@ -408,31 +603,229 @@ onBeforeUnmount(() => {
       <div class="bg-white rounded-2xl max-w-2xl w-full p-6 shadow-2xl max-h-[92vh] overflow-y-auto">
         <div class="flex items-center justify-between pb-3 border-b border-slate-100 mb-4">
           <div>
-            <h2 class="text-lg font-bold text-slate-900">Picking & Barcode Scanner: {{ selectedDispatch.dispatchNumber }}</h2>
-            <p class="text-xs text-slate-500">Order: {{ selectedDispatch.salesOrder.orderNumber }} • Status: {{ selectedDispatch.status }}</p>
+            <h2 class="text-lg font-bold text-slate-900 flex items-center gap-2">
+              <Barcode class="w-5 h-5 text-emerald-600" />
+              Picking & Barcode Scanner: {{ selectedDispatch.dispatchNumber }}
+            </h2>
+            <p class="text-xs text-slate-500">
+              Order: <span class="font-mono font-semibold">{{ selectedDispatch.salesOrder.orderNumber }}</span> • Status: {{ selectedDispatch.status }}
+            </p>
           </div>
-          <button type="button" @click="stopCamera(); selectedDispatch = null" class="text-slate-400 hover:text-slate-600 text-lg cursor-pointer">✕</button>
+          <button type="button" @click="closeScanModal" class="text-slate-400 hover:text-slate-600 text-lg cursor-pointer">✕</button>
+        </div>
+
+        <!-- Already allocated notice if all items are assigned -->
+        <div v-if="unallocatedItemsCount === 0" class="p-3 bg-blue-50 border border-blue-200 rounded-xl text-blue-900 text-xs mb-3 flex items-start gap-2.5">
+          <span class="text-base shrink-0">ℹ️</span>
+          <div class="flex-1">
+            <p class="font-bold">All serialized items in {{ selectedDispatch.dispatchNumber }} are already assigned & picked!</p>
+            <p class="text-[11px] text-blue-700 mt-0.5">
+              Current status: <b>{{ selectedDispatch.status }}</b>.
+              To pick and register new barcodes, close this modal and click <b>⚡ Scan & Pick</b> on a dispatch in <b>PICKING</b> status (such as <b>DSP-00005</b> or <b>DSP-00007</b>).
+            </p>
+          </div>
+        </div>
+
+        <!-- Target Product Selector -->
+        <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 mb-3 bg-slate-50 p-2.5 rounded-xl border border-slate-200">
+          <label class="text-xs font-semibold text-slate-700 whitespace-nowrap">Target Product:</label>
+          <select
+            v-model="targetItemId"
+            class="flex-1 bg-white px-3 py-1.5 border border-slate-200 rounded-lg text-xs font-medium focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+          >
+            <option value="auto">⚡ Auto-Assign Next Unallocated Serialized Item</option>
+            <option
+              v-for="item in selectedDispatch.items.filter(i => i.product.serialized)"
+              :key="item.id"
+              :value="item.id.toString()"
+            >
+              {{ item.product.name }} ({{ item.serialNumber ? '✓ ' + item.serialNumber.serialCode : 'Pending Barcode' }})
+            </option>
+          </select>
         </div>
 
         <!-- Scan Feedback -->
-        <div v-if="scanMessage" :class="['p-3 rounded-xl text-xs mb-3 flex items-center space-x-2', scanMessage.type === 'success' ? 'bg-emerald-50 text-emerald-800 border border-emerald-200' : 'bg-rose-50 text-rose-800 border border-rose-200']">
+        <div
+          v-if="scanMessage"
+          :class="[
+            'p-3 rounded-xl text-xs mb-3 flex items-center space-x-2 transition-all',
+            scanMessage.type === 'success' ? 'bg-emerald-50 text-emerald-800 border border-emerald-200' : 'bg-rose-50 text-rose-800 border border-rose-200'
+          ]"
+        >
+          <CheckCircle2 v-if="scanMessage.type === 'success'" class="w-4 h-4 text-emerald-600 shrink-0" />
+          <AlertCircle v-else class="w-4 h-4 text-rose-600 shrink-0" />
           <span class="font-semibold">{{ scanMessage.text }}</span>
         </div>
 
-        <!-- Live Camera Barcode Reader -->
-        <div class="mb-4 bg-slate-900 rounded-xl overflow-hidden p-2 text-center text-white">
-          <div class="flex items-center justify-between px-2 py-1 text-xs">
-            <span class="flex items-center gap-1.5"><Barcode class="w-4 h-4 text-emerald-400" /> Live Camera Barcode Scanner</span>
-            <button
-              type="button"
-              @click="cameraActive ? stopCamera() : startCamera()"
-              class="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded text-[11px] font-semibold cursor-pointer"
-            >
-              {{ cameraActive ? 'Turn Off Camera' : 'Turn On Camera' }}
-            </button>
+        <!-- Camera Error Banner -->
+        <div v-if="cameraError" class="p-3 bg-amber-50 border border-amber-200 rounded-xl text-amber-900 text-xs mb-3 flex items-start gap-2.5">
+          <AlertCircle class="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+          <div class="flex-1">
+            <p class="font-semibold">{{ cameraError }}</p>
+            <div class="mt-2 flex gap-2">
+              <button
+                type="button"
+                @click="startCamera(selectedDeviceId || undefined)"
+                class="px-2.5 py-1 bg-amber-700 hover:bg-amber-800 text-white rounded text-[11px] font-semibold cursor-pointer"
+              >
+                Retry Camera
+              </button>
+              <button
+                type="button"
+                @click="triggerFileInput"
+                class="px-2.5 py-1 bg-white border border-amber-300 text-amber-900 rounded text-[11px] font-semibold hover:bg-amber-100 cursor-pointer"
+              >
+                Upload Barcode Image
+              </button>
+            </div>
           </div>
-          <div v-if="cameraActive" class="relative mt-2 aspect-16/9 bg-black rounded-lg overflow-hidden flex items-center justify-center">
-            <video ref="videoRef" playsinline muted class="w-full h-full object-cover"></video>
+        </div>
+
+        <!-- Live Camera Barcode Reader Container -->
+        <div class="mb-4 bg-slate-900 rounded-xl overflow-hidden p-3 text-white shadow-inner">
+          <div class="flex flex-wrap items-center justify-between gap-2 pb-2 border-b border-slate-800 text-xs">
+            <span class="flex items-center gap-1.5 font-semibold text-emerald-400">
+              <Camera class="w-4 h-4" /> Live Camera Scanner
+            </span>
+
+            <div class="flex items-center gap-2">
+              <!-- Camera Switcher (if multiple cameras) -->
+              <select
+                v-if="availableDevices.length > 1"
+                v-model="selectedDeviceId"
+                @change="handleDeviceChange"
+                class="bg-slate-800 text-slate-200 border border-slate-700 rounded px-2 py-1 text-[11px] focus:outline-none"
+              >
+                <option v-for="dev in availableDevices" :key="dev.deviceId" :value="dev.deviceId">
+                  {{ dev.label }}
+                </option>
+              </select>
+
+              <!-- Torch Toggle -->
+              <button
+                v-if="hasTorch && cameraActive"
+                type="button"
+                @click="toggleTorch"
+                :class="[
+                  'px-2 py-1 rounded text-[11px] font-semibold cursor-pointer flex items-center gap-1 transition',
+                  isTorchOn ? 'bg-amber-500 text-slate-950' : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+                ]"
+                title="Toggle Flashlight / Torch"
+              >
+                <Zap class="w-3.5 h-3.5" />
+                <span>{{ isTorchOn ? 'Torch On' : 'Torch' }}</span>
+              </button>
+
+              <!-- Photo Upload Fallback Button -->
+              <button
+                type="button"
+                @click="triggerFileInput"
+                class="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded text-[11px] font-medium cursor-pointer flex items-center gap-1"
+                title="Upload or snap photo of barcode"
+              >
+                <Upload class="w-3.5 h-3.5 text-slate-400" />
+                <span>Photo Upload</span>
+              </button>
+
+              <!-- Camera Toggle Button -->
+              <button
+                type="button"
+                @click="cameraActive ? stopCamera() : startCamera(selectedDeviceId || undefined)"
+                :class="[
+                  'px-3 py-1 rounded text-[11px] font-semibold cursor-pointer transition flex items-center gap-1.5',
+                  cameraActive ? 'bg-rose-600 hover:bg-rose-700 text-white' : 'bg-emerald-600 hover:bg-emerald-700 text-white'
+                ]"
+              >
+                <CameraOff v-if="cameraActive" class="w-3.5 h-3.5" />
+                <Camera v-else class="w-3.5 h-3.5" />
+                <span>{{ cameraActive ? 'Turn Off Camera' : 'Turn On Camera' }}</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Hidden File Input for Mobile / Photo Scan Fallback -->
+          <input
+            type="file"
+            ref="fileInputRef"
+            accept="image/*"
+            capture="environment"
+            @change="handleImageUpload"
+            class="hidden"
+          />
+
+          <!-- Viewport Box -->
+          <div class="relative mt-2 aspect-16/9 bg-black rounded-lg overflow-hidden flex items-center justify-center">
+            <!-- Loading Indicator -->
+            <div v-if="cameraLoading" class="absolute inset-0 flex flex-col items-center justify-center bg-black/80 z-20">
+              <Loader2 class="w-8 h-8 text-emerald-400 animate-spin mb-2" />
+              <p class="text-xs text-slate-300 font-medium">Starting camera video stream & detector...</p>
+            </div>
+
+            <!-- Active Video Stream with HUD Viewfinder -->
+            <template v-if="cameraActive">
+              <video
+                ref="videoRef"
+                playsinline
+                autoplay
+                muted
+                class="w-full h-full object-cover"
+              ></video>
+
+              <!-- Detected Barcode Notification Overlay -->
+              <div
+                v-if="lastDetectedBarcode"
+                class="absolute top-3 bg-emerald-950/95 border border-emerald-400 text-emerald-300 px-3.5 py-1.5 rounded-full text-xs font-mono font-bold flex items-center gap-2 shadow-xl z-30 animate-pulse pointer-events-none"
+              >
+                <span class="w-2.5 h-2.5 rounded-full bg-emerald-400"></span>
+                <span>Scanned: {{ lastDetectedBarcode }}</span>
+              </div>
+
+              <!-- HUD Target Box & Animated Laser Line -->
+              <div class="absolute inset-0 pointer-events-none flex items-center justify-center">
+                <div class="relative w-64 h-36 border border-emerald-400/40 rounded-lg shadow-[0_0_0_9999px_rgba(0,0,0,0.35)]">
+                  <!-- Corner Brackets -->
+                  <div class="absolute -top-1 -left-1 w-5 h-5 border-t-3 border-l-3 border-emerald-400"></div>
+                  <div class="absolute -top-1 -right-1 w-5 h-5 border-t-3 border-r-3 border-emerald-400"></div>
+                  <div class="absolute -bottom-1 -left-1 w-5 h-5 border-b-3 border-l-3 border-emerald-400"></div>
+                  <div class="absolute -bottom-1 -right-1 w-5 h-5 border-b-3 border-r-3 border-emerald-400"></div>
+
+                  <!-- Animated Green Laser Scan Line -->
+                  <div class="absolute left-1 right-1 h-0.5 bg-gradient-to-r from-transparent via-emerald-400 to-transparent shadow-[0_0_10px_#34d399] scanner-laser"></div>
+                </div>
+
+                <div class="absolute bottom-3 bg-black/60 backdrop-blur-xs px-3 py-1 rounded-full text-[11px] text-emerald-300 font-medium border border-emerald-500/30">
+                  Align 1D Barcode or 2D QR Code inside target box
+                </div>
+              </div>
+            </template>
+
+            <!-- Inactive State -->
+            <div v-else class="text-center p-6 space-y-3">
+              <div class="w-12 h-12 mx-auto rounded-full bg-slate-800 flex items-center justify-center text-slate-400">
+                <Barcode class="w-6 h-6 text-emerald-400" />
+              </div>
+              <p class="text-xs text-slate-400 max-w-sm mx-auto">
+                Use your device camera (laptop webcam, smartphone, or tablet rear camera) to scan product serial barcodes in real-time.
+              </p>
+              <div class="flex justify-center gap-2 pt-1">
+                <button
+                  type="button"
+                  @click="startCamera(selectedDeviceId || undefined)"
+                  class="px-4 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-semibold shadow-xs cursor-pointer inline-flex items-center gap-1.5"
+                >
+                  <Camera class="w-3.5 h-3.5" />
+                  <span>Start Camera Scanner</span>
+                </button>
+                <button
+                  type="button"
+                  @click="triggerFileInput"
+                  class="px-3.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-xl text-xs font-medium cursor-pointer inline-flex items-center gap-1.5"
+                >
+                  <Upload class="w-3.5 h-3.5 text-slate-400" />
+                  <span>Upload / Snap Photo</span>
+                </button>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -441,14 +834,15 @@ onBeforeUnmount(() => {
           <input
             type="text"
             v-model="scannerInput"
-            placeholder="Scan USB barcode or enter serial code (e.g. SN-INV-5KW-001)..."
+            placeholder="Scan USB barcode gun or enter serial code (e.g. SN-INV-5KW-001)..."
             class="flex-1 px-3 py-2 border border-slate-200 rounded-xl text-xs font-mono focus:ring-2 focus:ring-emerald-500 focus:outline-none"
           />
           <button
             type="submit"
-            class="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-semibold cursor-pointer"
+            :disabled="!scannerInput.trim() || isScanning"
+            class="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-semibold cursor-pointer disabled:opacity-50"
           >
-            Register Serial
+            {{ isScanning ? 'Registering...' : 'Register Serial' }}
           </button>
         </form>
 
@@ -464,21 +858,49 @@ onBeforeUnmount(() => {
               </tr>
             </thead>
             <tbody class="divide-y divide-slate-100">
-              <tr v-for="item in selectedDispatch.items" :key="item.id">
+              <tr
+                v-for="item in selectedDispatch.items"
+                :key="item.id"
+                :class="{'bg-emerald-50/40': targetItemId === item.id.toString()}"
+              >
                 <td class="py-2.5 px-3 font-semibold text-slate-800">
-                  {{ item.product.name }}
+                  <div class="flex items-center gap-1.5">
+                    <span>{{ item.product.name }}</span>
+                    <button
+                      v-if="item.product.serialized && !item.serialNumber"
+                      type="button"
+                      @click="targetItemId = item.id.toString()"
+                      class="text-[10px] text-emerald-600 hover:text-emerald-800 underline font-normal cursor-pointer"
+                    >
+                      (select as target)
+                    </button>
+                  </div>
                   <span class="block text-[10px] text-slate-400 font-normal">{{ item.product.productCode }}</span>
                 </td>
                 <td class="py-2.5 px-3 text-center font-bold text-slate-700">{{ item.quantity }} {{ item.product.unit }}</td>
                 <td class="py-2.5 px-3">
-                  <span v-if="item.serialNumber" class="font-mono font-bold text-purple-700 bg-purple-50 px-2 py-0.5 rounded border border-purple-200">
-                    {{ item.serialNumber.serialCode }}
-                  </span>
-                  <span v-else class="text-amber-600 italic text-[11px]">Pending Barcode Scan</span>
+                  <template v-if="item.product.serialized">
+                    <span v-if="item.serialNumber" class="font-mono font-bold text-purple-700 bg-purple-50 px-2 py-0.5 rounded border border-purple-200">
+                      {{ item.serialNumber.serialCode }}
+                    </span>
+                    <span v-else class="text-amber-600 italic text-[11px] font-semibold">Pending Barcode Scan</span>
+                  </template>
+                  <template v-else>
+                    <span class="text-slate-400 italic text-[11px]">Bulk Item (No Serial Required)</span>
+                  </template>
                 </td>
                 <td class="py-2.5 px-3 text-right">
-                  <span v-if="item.serialNumber" class="text-emerald-700 font-bold text-[11px]">✓ Picked</span>
-                  <span v-else class="text-slate-400 text-[11px]">Unallocated</span>
+                  <template v-if="item.product.serialized">
+                    <span v-if="item.serialNumber" class="text-emerald-700 font-bold text-[11px] inline-flex items-center gap-1">
+                      <Check class="w-3.5 h-3.5 text-emerald-600" /> Picked
+                    </span>
+                    <span v-else class="text-amber-600 font-medium text-[11px]">Unallocated</span>
+                  </template>
+                  <template v-else>
+                    <span class="text-slate-600 font-medium text-[11px] inline-flex items-center gap-1">
+                      <Check class="w-3.5 h-3.5 text-slate-400" /> Bulk Packed
+                    </span>
+                  </template>
                 </td>
               </tr>
             </tbody>
@@ -488,7 +910,7 @@ onBeforeUnmount(() => {
         <div class="flex justify-end pt-4 border-t border-slate-100 mt-4">
           <button
             type="button"
-            @click="stopCamera(); selectedDispatch = null"
+            @click="closeScanModal"
             class="px-4 py-2 bg-slate-100 text-slate-700 rounded-xl font-medium hover:bg-slate-200 cursor-pointer text-xs"
           >
             Close
@@ -498,3 +920,24 @@ onBeforeUnmount(() => {
     </div>
   </div>
 </template>
+
+<style scoped>
+@keyframes scanLaser {
+  0% {
+    top: 8%;
+    opacity: 0.85;
+  }
+  50% {
+    top: 88%;
+    opacity: 1;
+  }
+  100% {
+    top: 8%;
+    opacity: 0.85;
+  }
+}
+
+.scanner-laser {
+  animation: scanLaser 2.2s ease-in-out infinite;
+}
+</style>

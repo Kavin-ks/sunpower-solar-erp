@@ -81,6 +81,9 @@ public class DataInitializationService implements CommandLineRunner {
     private WarrantyRepository warrantyRepository;
 
     @Autowired
+    private WarrantyService warrantyService;
+
+    @Autowired
     private ExpenseRepository expenseRepository;
 
     @Autowired
@@ -100,6 +103,7 @@ public class DataInitializationService implements CommandLineRunner {
             ensurePickingDispatchExists();
             ensurePanelSerializationAndStockSerials();
             ensureDemoHistoricalDataExists();
+            ensureDispatchedOrdersHaveSerialNumbers();
             ensureDemoEnquiriesExist();
             return; // Already initialized roles/users
         }
@@ -1319,5 +1323,63 @@ public class DataInitializationService implements CommandLineRunner {
                 siteSurveyRepository.save(survSched);
             }
         }
+    }
+
+    @Transactional
+    public void ensureDispatchedOrdersHaveSerialNumbers() {
+        List<Dispatch> dispatches = dispatchRepository.findAll();
+        for (Dispatch disp : dispatches) {
+            if (disp.getStatus() == DispatchStatus.DISPATCHED || disp.getStatus() == DispatchStatus.DELIVERED) {
+                List<DispatchItem> currentItems = new ArrayList<>(disp.getItems());
+                for (DispatchItem item : currentItems) {
+                    Product product = item.getProduct();
+                    if (product.isSerialized() && item.getSerialNumber() == null) {
+                        int qty = item.getQuantity() != null ? item.getQuantity() : 1;
+                        if (qty == 1) {
+                            String code = String.format("%s-%s-%02d", product.getProductCode(), disp.getDispatchNumber(), item.getId());
+                            SerialNumber sn = registerSerialForDispatchedOrder(code, product, disp.getSalesOrder(), disp.getCustomer(), disp.getStatus());
+                            item.setSerialNumber(sn);
+                            dispatchItemRepository.save(item);
+                            warrantyService.activateWarranty(disp.getCustomer(), disp.getSalesOrder(), product, sn, disp.getDispatchDate() != null ? disp.getDispatchDate() : LocalDate.now());
+                        } else {
+                            // Split multi-quantity serialized item into individual units of qty 1
+                            dispatchItemRepository.delete(item);
+                            disp.getItems().remove(item);
+                            for (int i = 1; i <= qty; i++) {
+                                String code = String.format("%s-%s-%02d", product.getProductCode(), disp.getDispatchNumber(), i);
+                                SerialNumber sn = registerSerialForDispatchedOrder(code, product, disp.getSalesOrder(), disp.getCustomer(), disp.getStatus());
+                                DispatchItem singleItem = new DispatchItem(disp, product, 1, sn);
+                                dispatchItemRepository.save(singleItem);
+                                disp.getItems().add(singleItem);
+                                warrantyService.activateWarranty(disp.getCustomer(), disp.getSalesOrder(), product, sn, disp.getDispatchDate() != null ? disp.getDispatchDate() : LocalDate.now());
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private SerialNumber registerSerialForDispatchedOrder(String code, Product product, SalesOrder order, Customer customer, DispatchStatus status) {
+        Optional<SerialNumber> existing = serialNumberRepository.findBySerialCode(code);
+        if (existing.isPresent()) {
+            return existing.get();
+        }
+        SerialNumber sn = new SerialNumber(code, product, "DISPATCH-" + (order != null ? order.getOrderNumber() : "ORDER"), "Assigned - " + (customer != null ? customer.getFullName() : "Customer"));
+        sn.setStatus(status == DispatchStatus.DELIVERED ? SerialNumberStatus.ALLOCATED : SerialNumberStatus.ALLOCATED);
+        sn.setSalesOrder(order);
+        sn.setCustomer(customer);
+        sn.setDeliveryDate(LocalDate.now());
+        sn = serialNumberRepository.save(sn);
+
+        SerialNumberHistory history = new SerialNumberHistory(
+                sn,
+                SerialNumberStatus.ALLOCATED,
+                "Allocated & dispatched for order " + (order != null ? order.getOrderNumber() : ""),
+                customer != null ? customer.getAddress() : "Customer Site",
+                "Warehouse Manager"
+        );
+        serialNumberHistoryRepository.save(history);
+        return sn;
     }
 }
