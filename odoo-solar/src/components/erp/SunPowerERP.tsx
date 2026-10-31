@@ -2,6 +2,15 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
+import {
+  getEnquiries,
+  getOrders,
+  getInventory,
+  getSerialNumbers,
+  getInstallations,
+  getServiceTickets,
+  getTechnicians,
+} from '@/lib/api';
 
 // Types
 export interface PackageBOMItem {
@@ -563,7 +572,7 @@ const SunPowerERP = () => {
     setTimeout(() => setNotification(null), 4000);
   };
 
-  // Load / Save localStorage
+  // Load / Save localStorage & Hydrate from Live Spring Boot Backend
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem('sunpower_erp_state_next_v1');
@@ -582,6 +591,81 @@ const SunPowerERP = () => {
         }
       }
     }
+
+    // Live sync from Spring Boot backend (port 8080)
+    const hydrateFromBackend = async () => {
+      try {
+        const [liveEnqs, liveTechs, liveSerials] = await Promise.allSettled([
+          getEnquiries(),
+          getTechnicians(),
+          getSerialNumbers(),
+        ]);
+
+        if (liveEnqs.status === 'fulfilled' && Array.isArray(liveEnqs.value) && liveEnqs.value.length > 0) {
+          const mappedEnqs: CustomerEnquiry[] = liveEnqs.value.map((e: any) => ({
+            id: e.enquiryNumber || `ENQ-${e.id}`,
+            customerName: e.customer?.fullName || 'Customer',
+            email: e.customer?.email || 'customer@sunpower.com',
+            phone: e.customer?.phone || '9876543210',
+            address: e.customer?.address || 'Chennai, Tamil Nadu',
+            source: e.source === 'WEBSITE' ? 'Web Form' : e.source === 'WHATSAPP' ? 'WhatsApp' : 'Phone Call',
+            kw: Number(e.requestedCapacityKw) || 3,
+            systemType: e.systemType === 'OFF_GRID' ? 'Off-Grid' : 'On-Grid',
+            subsidy: !!e.subsidyRequired,
+            subsidyStatus: e.subsidyRequired ? 'Pending Docs' : 'Not Applicable',
+            shadowFreeSqft: Number(e.shadowFreeAreaSqFt) || 0,
+            monthlyBill: Number(e.monthlyElectricityBill) || 0,
+            gridSuitable: e.gridSuitable !== false,
+            surveyor: e.assignedTo?.fullName || 'Unassigned',
+            roofDirection: 'South',
+            roofTilt: 13,
+            cableDistance: 15,
+            status: e.status === 'CONVERTED' ? 'Order Confirmed' : e.status === 'QUOTED' ? 'Quoted' : e.status === 'SURVEY_APPROVED' ? 'Survey Approved' : 'New Enquiry',
+            createdAt: e.createdAt ? String(e.createdAt).split('T')[0] : new Date().toISOString().split('T')[0]
+          }));
+          setEnquiries(prev => {
+            const liveIds = new Set(mappedEnqs.map(m => m.id));
+            return [...mappedEnqs, ...prev.filter(p => !liveIds.has(p.id))];
+          });
+        }
+
+        if (liveTechs.status === 'fulfilled' && Array.isArray(liveTechs.value) && liveTechs.value.length > 0) {
+          const mappedTechs: TechnicianItem[] = liveTechs.value.map((t: any) => ({
+            id: t.id,
+            name: t.name,
+            role: t.skills || 'Rooftop Installer',
+            jobsThisMonth: 8,
+            hoursLogged: 36,
+            rate: Number(t.hourlyRate) || 250,
+            status: t.available ? 'Available' : 'On Roof'
+          }));
+          setTechnicians(mappedTechs);
+        }
+
+        if (liveSerials.status === 'fulfilled' && Array.isArray(liveSerials.value) && liveSerials.value.length > 0) {
+          const mappedSerials: SerialRegistryItem[] = liveSerials.value.map((s: any) => ({
+            serial: s.serialCode,
+            sku: s.product?.productCode || 'PROD',
+            itemName: s.product?.name || 'Solar Component',
+            customerName: s.customer?.fullName || 'Main Warehouse',
+            phone: s.customer?.phone || '9876543210',
+            orderId: s.salesOrder?.orderNumber || 'STOCK',
+            dispatchedDate: s.dispatchDate || new Date().toISOString().split('T')[0],
+            warrantyYears: s.product?.defaultWarrantyMonths ? Math.round(s.product.defaultWarrantyMonths / 12) : 2,
+            warrantyExpiry: new Date(Date.now() + 63072000000).toISOString().split('T')[0],
+            status: s.status === 'INSTALLED' ? 'Installed (Active Warranty)' : 'In Stock'
+          }));
+          setSerials(prev => {
+            const liveCodes = new Set(mappedSerials.map(m => m.serial));
+            return [...mappedSerials, ...prev.filter(p => !liveCodes.has(p.serial))];
+          });
+        }
+      } catch (err) {
+        console.warn('Backend live sync notice (fallback mode active):', err);
+      }
+    };
+
+    hydrateFromBackend();
   }, []);
 
   const saveAll = (
@@ -685,6 +769,26 @@ const SunPowerERP = () => {
     setNewEnqEmail('');
     setNewEnqPhone('');
     setNewEnqAddress('');
+
+    // Sync to Spring Boot MySQL database in real time
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
+    fetch(`${apiUrl}/api/enquiries/public`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        fullName: newEnqName.trim(),
+        phone: cleanPhone,
+        email: newEnqEmail.trim(),
+        address: newEnqAddress.trim(),
+        city: 'Chennai',
+        pincode: '600001',
+        requestedCapacityKw: Number(newEnqKw),
+        systemType: newEnqType === 'Off-Grid' ? 'OFF_GRID' : 'ON_GRID',
+        subsidyRequired: newEnqSubsidy,
+        notes: `Created via SunPowerERP UI. Source: ${newEnqSource}`
+      })
+    }).catch(e => console.warn('Background sync to Spring Boot notice:', e));
+
     notify(`Enquiry ${newId} logged into CRM! Will never vanish. Proceed to Screening Call & Roof Survey.`, 'success');
   };
 
