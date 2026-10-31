@@ -39,7 +39,7 @@ const isAdmin = computed(() => {
 });
 const isSales = computed(() => {
   const roles = authStore.user?.roles || [];
-  return roles.includes('ROLE_SALES') && !isAdmin.value;
+  return roles.includes('ROLE_SALES') || roles.includes('ROLE_ADMIN') || roles.includes('ROLE_DIRECTOR');
 });
 const isFinance = computed(() => {
   const roles = authStore.user?.roles || [];
@@ -149,18 +149,6 @@ onMounted(() => {
         <p class="text-sm text-slate-500">
           Conversion from accepted quotation • Hard inventory reservation • Advance payment gateway for dispatch
         </p>
-      </div>
-
-      <div class="flex items-center gap-2">
-        <button
-          v-if="isSales"
-          type="button"
-          @click="showConvertModal = true"
-          class="flex items-center space-x-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-semibold shadow-sm transition cursor-pointer"
-        >
-          <Plus class="w-4 h-4" />
-          <span>Convert Accepted Quotation</span>
-        </button>
       </div>
     </div>
 

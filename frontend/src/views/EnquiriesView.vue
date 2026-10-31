@@ -613,6 +613,16 @@ onBeforeUnmount(() => {
                 </template>
 
                 <button
+                  v-if="enq.status === 'SURVEY_SCHEDULED'"
+                  type="button"
+                  @click="router.push('/surveys')"
+                  class="px-2.5 py-1 text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded text-xs font-semibold cursor-pointer inline-flex items-center space-x-1"
+                >
+                  <Calendar class="w-3 h-3" />
+                  <span>📅 Survey Scheduled</span>
+                </button>
+
+                <button
                   v-if="enq.status === 'SURVEY_APPROVED' && isSales"
                   type="button"
                   @click="goToCreateQuote(enq)"
@@ -956,6 +966,16 @@ onBeforeUnmount(() => {
                   <span>Proceed to Schedule Survey</span>
                 </button>
               </template>
+
+              <button
+                v-if="selectedEnquiry.status === 'SURVEY_SCHEDULED'"
+                type="button"
+                @click="selectedEnquiry = null; router.push('/surveys')"
+                class="px-3 py-1.5 bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200 rounded-xl font-semibold inline-flex items-center space-x-1 cursor-pointer"
+              >
+                <Calendar class="w-3.5 h-3.5" />
+                <span>📅 View Scheduled Survey</span>
+              </button>
 
               <button
                 v-if="selectedEnquiry.status === 'SURVEY_APPROVED' && isSales"

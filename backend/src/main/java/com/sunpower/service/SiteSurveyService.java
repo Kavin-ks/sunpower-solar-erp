@@ -93,6 +93,13 @@ public class SiteSurveyService {
         if (request.getGridSuitability() != null) survey.setGridSuitability(request.getGridSuitability());
 
         if (request.getEnquiryId() != null) {
+            List<SiteSurvey> existingSurveys = siteSurveyRepository.findByEnquiryId(request.getEnquiryId());
+            boolean hasActiveSurvey = existingSurveys.stream()
+                    .anyMatch(s -> s.getStatus() != SurveyStatus.REJECTED);
+            if (hasActiveSurvey) {
+                throw new IllegalStateException("A site survey is already scheduled for this enquiry.");
+            }
+
             Enquiry enquiry = enquiryRepository.findById(request.getEnquiryId()).orElse(null);
             if (enquiry != null) {
                 // Enforce Lead Owner assignment before scheduling a survey

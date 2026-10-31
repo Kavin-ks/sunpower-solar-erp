@@ -5,11 +5,12 @@ import { api } from '../api/client';
 import type { Quotation, SiteSurvey, SolarPackage, QuotationStatus } from '../types';
 import StatusBadge from '../components/ui/StatusBadge.vue';
 import { useAuthStore } from '../stores/auth';
-import { Plus, CheckCircle2, Printer, Zap, AlertCircle } from 'lucide-vue-next';
+import { Plus, CheckCircle2, Printer, Zap, AlertCircle, Lock } from 'lucide-vue-next';
 
 const quotations = ref<Quotation[]>([]);
 const approvedSurveys = ref<SiteSurvey[]>([]);
 const packages = ref<SolarPackage[]>([]);
+const orders = ref<any[]>([]);
 const loading = ref(true);
 const showCreateModal = ref(false);
 const previewQuotation = ref<Quotation | null>(null);
@@ -30,8 +31,30 @@ const isAdmin = computed(() => {
 
 const isSales = computed(() => {
   const roles = authStore.user?.roles || [];
-  return roles.includes('ROLE_SALES') && !isAdmin.value;
+  return roles.includes('ROLE_SALES') || roles.includes('ROLE_ADMIN') || roles.includes('ROLE_DIRECTOR');
 });
+
+const availableSurveysForQuote = computed(() => {
+  const quotedSurveyIds = new Set(
+    quotations.value
+      .filter((q) => q.status !== 'REJECTED')
+      .map((q) => q.siteSurvey?.id || (q as any).siteSurveyId)
+      .filter(Boolean)
+  );
+  return approvedSurveys.value.filter((s) => {
+    if (selectedSurveyId.value && String(s.id) === String(selectedSurveyId.value)) {
+      return true;
+    }
+    return !quotedSurveyIds.has(s.id);
+  });
+});
+
+const getOrderForQuote = (quoteId: number | string) => {
+  return orders.value.find(
+    (o) => (o.quotation && o.quotation.id === Number(quoteId)) ||
+           o.quotationId === Number(quoteId)
+  );
+};
 
 const formatCurrency = (val: number | undefined) => {
   return new Intl.NumberFormat('en-IN', {
@@ -44,14 +67,16 @@ const formatCurrency = (val: number | undefined) => {
 const fetchData = async () => {
   loading.value = true;
   try {
-    const [quotesRes, survRes, pkgRes] = await Promise.all([
+    const [quotesRes, survRes, pkgRes, ordersRes] = await Promise.all([
       api.get('/quotations'),
       api.get('/surveys?status=APPROVED'),
       api.get('/packages'),
+      api.get('/orders'),
     ]);
     quotations.value = quotesRes.data;
     approvedSurveys.value = survRes.data;
     packages.value = pkgRes.data;
+    orders.value = Array.isArray(ordersRes.data) ? ordersRes.data : [];
     if (pkgRes.data.length > 0 && !selectedPackageId.value) {
       selectedPackageId.value = pkgRes.data[0].id.toString();
     }
@@ -127,18 +152,6 @@ onMounted(() => {
           Automated Bill of Materials (BOM), pricing, and survey-gated customer proposals
         </p>
       </div>
-
-      <div class="flex items-center gap-2">
-        <button
-          v-if="isSales"
-          type="button"
-          @click="showCreateModal = true"
-          class="flex items-center space-x-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-semibold shadow-sm transition cursor-pointer"
-        >
-          <Plus class="w-4 h-4" />
-          <span>Generate New Quotation</span>
-        </button>
-      </div>
     </div>
 
     <!-- Main Table -->
@@ -192,7 +205,7 @@ onMounted(() => {
                   Preview / Print
                 </button>
 
-                <template v-if="!isAdmin && isSales">
+                <template v-if="isSales">
                   <button
                     v-if="quote.status === 'DRAFT'"
                     type="button"
@@ -212,15 +225,24 @@ onMounted(() => {
                     <span>Accept & Confirm</span>
                   </button>
 
-                  <button
-                    v-if="quote.status === 'ACCEPTED'"
-                    type="button"
-                    @click="convertToOrder(quote)"
-                    class="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded font-semibold shadow-xs cursor-pointer inline-flex items-center space-x-1"
-                  >
-                    <Zap class="w-3 h-3" />
-                    <span>Convert to Order</span>
-                  </button>
+                  <template v-if="quote.status === 'ACCEPTED'">
+                    <span
+                      v-if="getOrderForQuote(quote.id)"
+                      class="px-2.5 py-1 text-blue-800 bg-blue-50 border border-blue-200 rounded font-semibold text-xs inline-flex items-center space-x-1"
+                    >
+                      <Lock class="w-3 h-3 text-blue-600" />
+                      <span>Order Created ({{ getOrderForQuote(quote.id)?.orderNumber }})</span>
+                    </span>
+                    <button
+                      v-else
+                      type="button"
+                      @click="convertToOrder(quote)"
+                      class="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded font-semibold shadow-xs cursor-pointer inline-flex items-center space-x-1"
+                    >
+                      <Zap class="w-3 h-3" />
+                      <span>Convert to Order</span>
+                    </button>
+                  </template>
                 </template>
               </td>
             </tr>
@@ -250,13 +272,13 @@ onMounted(() => {
               class="w-full px-3 py-2 border border-slate-200 rounded-lg text-xs focus:ring-2 focus:ring-emerald-500 focus:outline-none"
             >
               <option value="">-- Choose Approved Survey --</option>
-              <option v-for="s in approvedSurveys" :key="s.id" :value="s.id">
-                {{ s.surveyNumber }} - {{ s.customer.fullName }} ({{ s.availableRoofAreaSqFt }} sq.ft {{ s.roofDirection }})
+              <option v-for="s in availableSurveysForQuote" :key="s.id" :value="s.id">
+                {{ s.surveyNumber }} - {{ s.customer?.fullName }} ({{ s.availableRoofAreaSqFt }} sq.ft {{ s.roofDirection }})
               </option>
             </select>
-            <p v-if="approvedSurveys.length === 0" class="text-[11px] text-amber-600 mt-1 flex items-center space-x-1">
+            <p v-if="availableSurveysForQuote.length === 0" class="text-[11px] text-amber-600 mt-1 flex items-center space-x-1">
               <AlertCircle class="w-3.5 h-3.5" />
-              <span>No approved surveys found. Go to Site Surveys and approve one first.</span>
+              <span>No unquoted approved surveys found. All approved surveys already have quotations generated.</span>
             </p>
           </div>
 
@@ -314,7 +336,7 @@ onMounted(() => {
             </button>
             <button
               type="submit"
-              :disabled="approvedSurveys.length === 0"
+              :disabled="availableSurveysForQuote.length === 0"
               class="px-4 py-2 bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 font-semibold shadow-xs disabled:opacity-50 cursor-pointer"
             >
               Generate BOM Quotation

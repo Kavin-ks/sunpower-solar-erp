@@ -12,7 +12,16 @@ const surveys = ref<SiteSurvey[]>([]);
 const customers = ref<Customer[]>([]);
 const technicians = ref<Technician[]>([]);
 const enquiries = ref<Enquiry[]>([]);
+const quotations = ref<any[]>([]);
 const loading = ref(true);
+
+const getQuotationForSurvey = (surveyId: number | string) => {
+  return quotations.value.find(
+    (q) => (q.siteSurvey && (q.siteSurvey.id === Number(surveyId) || q.siteSurvey.id === surveyId)) ||
+           q.siteSurveyId === Number(surveyId) ||
+           q.siteSurveyId === surveyId
+  );
+};
 
 // Modals
 const showScheduleModal = ref(false);
@@ -114,16 +123,18 @@ const isTech = computed(() => {
 const fetchInitialData = async () => {
   loading.value = true;
   try {
-    const [survRes, custRes, techRes, enqRes] = await Promise.all([
+    const [survRes, custRes, techRes, enqRes, quoteRes] = await Promise.all([
       api.get('/surveys'),
       api.get('/customers'),
       api.get('/technicians'),
       api.get('/enquiries'),
+      api.get('/quotations'),
     ]);
     surveys.value = Array.isArray(survRes.data) ? survRes.data : [];
     customers.value = Array.isArray(custRes.data) ? custRes.data : [];
     technicians.value = Array.isArray(techRes.data) ? techRes.data : [];
     enquiries.value = Array.isArray(enqRes.data) ? enqRes.data : [];
+    quotations.value = Array.isArray(quoteRes.data) ? quoteRes.data : [];
     if (availableTechnicians.value.length > 0 && !scheduleData.value.technicianId) {
       scheduleData.value.technicianId = availableTechnicians.value[0].id.toString();
     }
@@ -261,18 +272,6 @@ onMounted(() => {
         <p class="text-sm text-slate-500">
           Separated responsibilities: Sales schedules appointments • Technician conducts physical inspection • Sales reviews & generates quotations
         </p>
-      </div>
-
-      <div class="flex items-center gap-2">
-        <button
-          v-if="isSales"
-          type="button"
-          @click="showScheduleModal = true"
-          class="flex items-center space-x-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-semibold shadow-sm transition cursor-pointer"
-        >
-          <Plus class="w-4 h-4" />
-          <span>Schedule Site Survey</span>
-        </button>
       </div>
     </div>
 
@@ -433,15 +432,24 @@ onMounted(() => {
                 </button>
 
                 <!-- Action: Sales Proceeds to Generate Quote -->
-                <button
-                  v-if="isSales && surv.status === 'APPROVED'"
-                  type="button"
-                  @click="proceedToQuotation(surv)"
-                  class="px-2.5 py-1 bg-emerald-700 hover:bg-emerald-800 text-white rounded font-semibold shadow-xs cursor-pointer inline-flex items-center space-x-1"
-                >
-                  <Zap class="w-3 h-3" />
-                  <span>Generate Quote</span>
-                </button>
+                <template v-if="isSales && surv.status === 'APPROVED'">
+                  <span
+                    v-if="getQuotationForSurvey(surv.id)"
+                    class="px-2.5 py-1 text-emerald-800 bg-emerald-50 border border-emerald-200 rounded font-semibold text-xs inline-flex items-center space-x-1"
+                  >
+                    <CheckCircle2 class="w-3 h-3 text-emerald-600" />
+                    <span>Quote Created ({{ getQuotationForSurvey(surv.id)?.quotationNumber }})</span>
+                  </span>
+                  <button
+                    v-else
+                    type="button"
+                    @click="proceedToQuotation(surv)"
+                    class="px-2.5 py-1 bg-emerald-700 hover:bg-emerald-800 text-white rounded font-semibold shadow-xs cursor-pointer inline-flex items-center space-x-1"
+                  >
+                    <Zap class="w-3 h-3" />
+                    <span>Generate Quote</span>
+                  </button>
+                </template>
               </td>
             </tr>
           </tbody>
