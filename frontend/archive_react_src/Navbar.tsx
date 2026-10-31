@@ -9,7 +9,7 @@ export const Navbar: React.FC = () => {
     { label: 'Admin (Full Access)', username: 'admin' },
     { label: 'Sales Lead', username: 'sales' },
     { label: 'Warehouse Manager', username: 'warehouse' },
-    { label: 'Technician Lead', username: 'technician' },
+    { label: 'Technician', username: 'technician' },
     { label: 'Support Officer', username: 'support' },
     { label: 'Finance Manager', username: 'finance' },
     { label: 'Managing Director', username: 'director' },

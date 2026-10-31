@@ -336,7 +336,7 @@ summary.setCapacityDistribution(dist);
         dto.setActiveTechniciansCount(allTechs.stream().filter(Technician::isActive).count());
         dto.setAvailableTechniciansCount(allTechs.stream().filter(t -> t.isActive() && t.isAvailable()).count());
 
-        boolean isLead = username == null || username.equalsIgnoreCase("admin") || username.equalsIgnoreCase("technician");
+        boolean isLead = username != null && username.equalsIgnoreCase("admin");
         dto.setLead(isLead);
 
         Technician tech = null;

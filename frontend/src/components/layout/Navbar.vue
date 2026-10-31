@@ -11,7 +11,7 @@ const roleOptions = [
   { label: 'Admin (Full Access & Oversight)', username: 'admin' },
   { label: 'Sales Lead', username: 'sales' },
   { label: 'Warehouse Manager', username: 'warehouse' },
-  { label: 'Technician Lead (Karthik Raja)', username: 'technician' },
+  { label: 'Technician (Karthik Raja)', username: 'technician' },
   { label: 'Technician (Ganesh Moorthy)', username: 'tech.ganesh' },
   { label: 'Technician (Selvakumar R)', username: 'tech.selva' },
   { label: 'Support Officer', username: 'support' },

@@ -134,7 +134,18 @@ public class SiteSurveyService {
         if (request.isDraft()) {
             survey.setStatus(SurveyStatus.IN_PROGRESS);
         } else {
-            survey.setStatus(SurveyStatus.REPORT_SUBMITTED);
+            if ("APPROVED".equalsIgnoreCase(request.getInspectionRecommendation())) {
+                survey.setStatus(SurveyStatus.APPROVED);
+                survey.setApprovedBy(technicianName);
+                survey.setApprovalDate(LocalDateTime.now());
+                survey.setApprovalNotes("Approved on-site by field technician: " + technicianName);
+            } else if ("REJECTED".equalsIgnoreCase(request.getInspectionRecommendation())) {
+                survey.setStatus(SurveyStatus.REJECTED);
+                survey.setApprovedBy(technicianName);
+                survey.setApprovalDate(LocalDateTime.now());
+            } else {
+                survey.setStatus(SurveyStatus.REPORT_SUBMITTED);
+            }
             survey.setReportSubmittedAt(LocalDateTime.now());
         }
 
@@ -142,11 +153,18 @@ public class SiteSurveyService {
 
         if (survey.getEnquiry() != null && !request.isDraft()) {
             Enquiry enquiry = survey.getEnquiry();
+            if (survey.getStatus() == SurveyStatus.APPROVED) {
+                enquiry.setStatus(EnquiryStatus.SURVEY_APPROVED);
+            } else if (survey.getStatus() == SurveyStatus.REJECTED) {
+                enquiry.setStatus(EnquiryStatus.REJECTED);
+            }
+            enquiryRepository.save(enquiry);
+
             EnquiryActivity act = new EnquiryActivity(
                     enquiry,
                     "INSPECTION_REPORT_SUBMITTED",
-                    "Technician " + technicianName + " submitted site inspection report. Recommendation: " +
-                            (survey.getInspectionRecommendation() != null ? survey.getInspectionRecommendation() : "Pending Sales Review"),
+                    "Technician " + technicianName + " submitted site inspection report. Status: " + survey.getStatus() +
+                            (survey.getInspectionRecommendation() != null ? " (" + survey.getInspectionRecommendation() + ")" : ""),
                     technicianName
             );
             enquiryActivityRepository.save(act);

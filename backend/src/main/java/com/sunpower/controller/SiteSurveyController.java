@@ -25,7 +25,7 @@ public class SiteSurveyController {
     private SiteSurveyService siteSurveyService;
 
     @GetMapping
-    @PreAuthorize("hasAnyRole('ADMIN', 'SALES', 'TECHNICIAN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SALES', 'TECHNICIAN', 'FINANCE')")
     public ResponseEntity<List<SiteSurvey>> getAllSurveys(@RequestParam(required = false) SurveyStatus status) {
         if (status != null) {
             return ResponseEntity.ok(siteSurveyService.getSurveysByStatus(status));
@@ -41,13 +41,13 @@ public class SiteSurveyController {
     }
 
     @GetMapping("/approved/customer/{customerId}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'SALES')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SALES', 'FINANCE')")
     public ResponseEntity<List<SiteSurvey>> getApprovedSurveysByCustomer(@PathVariable Long customerId) {
         return ResponseEntity.ok(siteSurveyService.getApprovedSurveysByCustomerId(customerId));
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'SALES', 'TECHNICIAN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SALES', 'TECHNICIAN', 'FINANCE')")
     public ResponseEntity<SiteSurvey> getSurveyById(@PathVariable Long id) {
         return ResponseEntity.ok(siteSurveyService.getSurveyById(id));
     }
@@ -81,7 +81,7 @@ public class SiteSurveyController {
     }
 
     @PatchMapping("/{id}/approval")
-    @PreAuthorize("hasAnyRole('SALES', 'ADMIN')")
+    @PreAuthorize("hasAnyRole('SALES', 'TECHNICIAN', 'ADMIN')")
     public ResponseEntity<SiteSurvey> reviewAndApprove(
             @PathVariable Long id,
             @Valid @RequestBody SurveyApprovalRequest request,

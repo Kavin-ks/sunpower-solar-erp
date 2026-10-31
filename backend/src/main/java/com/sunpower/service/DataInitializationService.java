@@ -92,6 +92,9 @@ public class DataInitializationService implements CommandLineRunner {
     @Autowired
     private InvoiceRepository invoiceRepository;
 
+    @Autowired
+    private TechnicianPaymentRepository technicianPaymentRepository;
+
     @Override
     @Transactional
     public void run(String... args) throws Exception {
@@ -101,6 +104,7 @@ public class DataInitializationService implements CommandLineRunner {
             ensurePanelSerializationAndStockSerials();
             ensureDemoHistoricalDataExists();
             ensureDispatchedOrdersHaveSerialNumbers();
+            ensureTechnicianNamingNormalized();
             return; // Already initialized roles/users
         }
 
@@ -114,7 +118,7 @@ public class DataInitializationService implements CommandLineRunner {
         createUser("admin", "Administrator", "admin@sunpower.com", "9876543210", roles.get(RoleName.ROLE_ADMIN));
         createUser("sales", "Suresh Kumar (Sales Lead)", "sales@sunpower.com", "9876543211", roles.get(RoleName.ROLE_SALES));
         createUser("warehouse", "Murugan V (Warehouse)", "warehouse@sunpower.com", "9876543212", roles.get(RoleName.ROLE_WAREHOUSE));
-        createUser("technician", "Karthik Raja (Field Lead)", "tech@sunpower.com", "9876543213", roles.get(RoleName.ROLE_TECHNICIAN));
+        createUser("technician", "Karthik Raja", "tech@sunpower.com", "9876543213", roles.get(RoleName.ROLE_TECHNICIAN));
         createUser("support", "Priya Nair (Support)", "support@sunpower.com", "9876543214", roles.get(RoleName.ROLE_SUPPORT));
         createUser("finance", "Ramanathan M (Finance)", "finance@sunpower.com", "9876543215", roles.get(RoleName.ROLE_FINANCE));
         createUser("director", "Venkatesh S (Director)", "director@sunpower.com", "9876543216", roles.get(RoleName.ROLE_DIRECTOR));
@@ -1257,5 +1261,33 @@ public class DataInitializationService implements CommandLineRunner {
         );
         serialNumberHistoryRepository.save(history);
         return sn;
+    }
+
+    private void ensureTechnicianNamingNormalized() {
+        userRepository.findByUsername("technician").ifPresent(user -> {
+            if (user.getFullName() != null && user.getFullName().contains("Field Lead")) {
+                user.setFullName("Karthik Raja");
+                userRepository.save(user);
+            }
+        });
+
+        technicianPaymentRepository.findAll().forEach(tp -> {
+            boolean modified = false;
+            if (tp.getStatus() == null) {
+                tp.setStatus(com.sunpower.entity.enums.Enums.TechnicianPayoutStatus.PAID);
+                modified = true;
+            }
+            if (tp.getAmountPaid() == null || tp.getAmountPaid().compareTo(java.math.BigDecimal.ZERO) == 0) {
+                tp.setAmountPaid(tp.getAmount() != null ? tp.getAmount() : java.math.BigDecimal.ZERO);
+                modified = true;
+            }
+            if (tp.getCalculatedAmount() == null) {
+                tp.setCalculatedAmount(tp.getAmount() != null ? tp.getAmount() : java.math.BigDecimal.ZERO);
+                modified = true;
+            }
+            if (modified) {
+                technicianPaymentRepository.save(tp);
+            }
+        });
     }
 }

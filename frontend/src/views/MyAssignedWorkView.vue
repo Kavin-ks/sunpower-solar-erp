@@ -69,12 +69,19 @@ const installCompleteForm = ref({
   hoursWorked: '8.0',
 });
 
-const showInstallPhotoModal = ref(false);
-const photoStage = ref('PANEL_MOUNTING');
+// Survey photo modals
+const photoModalSurvey = ref<any | null>(null);
+const viewPhotosSurvey = ref<any | null>(null);
 
-// Service ticket complete modal
+// Installation photo modals
+const photoModalInstallation = ref<any | null>(null);
+const viewPhotosInstallation = ref<any | null>(null);
+const installationPhotoStage = ref('STRUCTURE_MOUNTING');
+
+// Service ticket complete modal & camera fields
 const showServiceCompleteModal = ref(false);
 const selectedServiceTicket = ref<any | null>(null);
+const activeCameraField = ref<'before' | 'after' | null>(null);
 const serviceCompleteForm = ref({
   diagnosisNotes: '',
   resolutionNotes: '',
@@ -143,10 +150,64 @@ const handleSurveySubmit = async (isDraft: boolean) => {
     });
     showSurveyModal.value = false;
     await fetchMyWork();
-    alert(isDraft ? 'Inspection draft saved.' : 'Technical Inspection Report submitted to Sales for review.');
+    alert(
+      isDraft
+        ? 'Inspection draft saved.'
+        : surveyForm.value.inspectionRecommendation === 'APPROVED'
+        ? 'Site Survey APPROVED successfully! Sales Lead can now proceed immediately with BOM Quotation.'
+        : 'Technical Inspection Report submitted to Sales.'
+    );
   } catch (err: any) {
     alert(err.response?.data?.message || 'Failed to submit inspection report');
   }
+};
+
+const handleSurveyPhotoUploaded = async (photoUrl: string, caption: string) => {
+  if (!photoModalSurvey.value) return;
+  const sId = photoModalSurvey.value.id;
+  try {
+    await api.post(`/surveys/${sId}/photos`, {
+      photoUrl,
+      caption,
+    });
+    photoModalSurvey.value = null;
+    await fetchMyWork();
+    if (viewPhotosSurvey.value && viewPhotosSurvey.value.id === sId) {
+      const updated = surveys.value.find((s) => s.id === sId);
+      if (updated) viewPhotosSurvey.value = updated;
+    }
+  } catch (err: any) {
+    alert(err.response?.data?.message || 'Failed to attach photo to survey');
+  }
+};
+
+const handleInstallPhotoUploaded = async (photoUrl: string, caption: string) => {
+  if (!photoModalInstallation.value) return;
+  const instId = photoModalInstallation.value.id;
+  try {
+    await api.post(`/installations/${instId}/photos`, {
+      photoUrl,
+      stage: installationPhotoStage.value,
+      caption,
+    });
+    photoModalInstallation.value = null;
+    await fetchMyWork();
+    if (viewPhotosInstallation.value && viewPhotosInstallation.value.id === instId) {
+      const updated = installations.value.find((i) => i.id === instId);
+      if (updated) viewPhotosInstallation.value = updated;
+    }
+  } catch (err: any) {
+    alert(err.response?.data?.message || 'Failed to attach photo to installation');
+  }
+};
+
+const onServicePhotoCaptured = (photoUrl: string) => {
+  if (activeCameraField.value === 'before') {
+    serviceCompleteForm.value.beforePhotoUrl = photoUrl;
+  } else if (activeCameraField.value === 'after') {
+    serviceCompleteForm.value.afterPhotoUrl = photoUrl;
+  }
+  activeCameraField.value = null;
 };
 
 // --- INSTALLATION ACTIONS ---
@@ -407,6 +468,24 @@ onMounted(() => {
                 </td>
                 <td class="py-3 px-4 text-right space-x-1.5 whitespace-nowrap">
                   <button
+                    type="button"
+                    @click="viewPhotosSurvey = surv"
+                    class="px-2.5 py-1.5 text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg font-medium cursor-pointer inline-flex items-center space-x-1 text-xs"
+                  >
+                    <Camera class="w-3.5 h-3.5" />
+                    <span>Photos ({{ surv.photos ? surv.photos.length : 0 }})</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    @click="photoModalSurvey = surv"
+                    class="px-2.5 py-1.5 bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 rounded-lg font-semibold cursor-pointer inline-flex items-center space-x-1 text-xs"
+                  >
+                    <Plus class="w-3.5 h-3.5" />
+                    <span>Attach Photo</span>
+                  </button>
+
+                  <button
                     v-if="['SCHEDULED', 'IN_PROGRESS', 'DRAFT'].includes(surv.status)"
                     type="button"
                     @click="openSurveyInspection(surv)"
@@ -470,6 +549,24 @@ onMounted(() => {
                   <StatusBadge :status="inst.status" />
                 </td>
                 <td class="py-3 px-4 text-right space-x-1.5 whitespace-nowrap">
+                  <button
+                    type="button"
+                    @click="viewPhotosInstallation = inst"
+                    class="px-2.5 py-1.5 text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg font-medium cursor-pointer inline-flex items-center space-x-1 text-xs"
+                  >
+                    <Camera class="w-3.5 h-3.5" />
+                    <span>Photos ({{ inst.photos ? inst.photos.length : 0 }})</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    @click="photoModalInstallation = inst"
+                    class="px-2.5 py-1.5 bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 rounded-lg font-semibold cursor-pointer inline-flex items-center space-x-1 text-xs"
+                  >
+                    <Plus class="w-3.5 h-3.5" />
+                    <span>Attach Photo</span>
+                  </button>
+
                   <!-- Status-dependent installation actions -->
                   <template v-if="inst.status === 'SCHEDULED'">
                     <button
@@ -668,12 +765,19 @@ onMounted(() => {
             <textarea v-model="surveyForm.surveyNotes" rows="2" class="w-full border border-slate-200 rounded-lg p-2 text-xs"></textarea>
           </div>
 
+          <div class="p-3 bg-emerald-50 rounded-xl border border-emerald-200 text-xs">
+            <span class="font-bold text-emerald-900 block mb-0.5">Approval & Quotation Workflow Notice:</span>
+            <p class="text-emerald-700 text-[11px]">
+              Submitting recommendation <strong>APPROVED</strong> automatically marks this survey as APPROVED in the system, authorizing the Sales Lead to proceed immediately with BOM Quotation generation.
+            </p>
+          </div>
+
           <div class="flex justify-end space-x-2 pt-3 border-t border-slate-100">
             <button type="button" @click="handleSurveySubmit(true)" class="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-lg text-xs cursor-pointer">
               Save Draft
             </button>
-            <button type="submit" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-lg text-xs shadow-2xs cursor-pointer">
-              Submit Final Inspection
+            <button type="submit" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-lg text-xs shadow-2xs cursor-pointer">
+              {{ surveyForm.inspectionRecommendation === 'APPROVED' ? '✓ Approve & Send to Sales (Ready for Quotation)' : 'Submit Inspection' }}
             </button>
           </div>
         </form>
@@ -815,13 +919,36 @@ onMounted(() => {
 
           <!-- Photographs & Evidence -->
           <div class="grid grid-cols-2 gap-3">
-            <div>
-              <label class="block font-semibold text-slate-700 uppercase text-[10px] mb-1">Pre-Repair Photo</label>
-              <CameraPhotoUpload v-model="serviceCompleteForm.beforePhotoUrl" label="Capture/Upload Before Photo" />
+            <div class="border border-slate-200 rounded-xl p-3 bg-slate-50 text-center">
+              <label class="block font-bold text-slate-700 uppercase text-[10px] mb-2">1. Pre-Repair Photograph</label>
+              <div v-if="serviceCompleteForm.beforePhotoUrl" class="mb-2">
+                <img :src="serviceCompleteForm.beforePhotoUrl" class="w-full h-24 object-cover rounded-lg border border-slate-200" />
+                <button type="button" @click="serviceCompleteForm.beforePhotoUrl = ''" class="text-[10px] text-rose-600 hover:underline mt-1 cursor-pointer">Remove</button>
+              </div>
+              <button
+                type="button"
+                @click="activeCameraField = 'before'"
+                class="w-full py-1.5 px-2 bg-white hover:bg-slate-100 border border-slate-300 rounded-lg text-xs font-semibold text-slate-700 flex items-center justify-center space-x-1 cursor-pointer"
+              >
+                <Camera class="w-3.5 h-3.5" />
+                <span>{{ serviceCompleteForm.beforePhotoUrl ? 'Change Photo' : 'Capture / Upload Photo' }}</span>
+              </button>
             </div>
-            <div>
-              <label class="block font-semibold text-slate-700 uppercase text-[10px] mb-1">Post-Repair Evidence Photo</label>
-              <CameraPhotoUpload v-model="serviceCompleteForm.afterPhotoUrl" label="Capture/Upload After Photo" />
+
+            <div class="border border-slate-200 rounded-xl p-3 bg-slate-50 text-center">
+              <label class="block font-bold text-slate-700 uppercase text-[10px] mb-2">2. Post-Repair Verification Photo</label>
+              <div v-if="serviceCompleteForm.afterPhotoUrl" class="mb-2">
+                <img :src="serviceCompleteForm.afterPhotoUrl" class="w-full h-24 object-cover rounded-lg border border-slate-200" />
+                <button type="button" @click="serviceCompleteForm.afterPhotoUrl = ''" class="text-[10px] text-rose-600 hover:underline mt-1 cursor-pointer">Remove</button>
+              </div>
+              <button
+                type="button"
+                @click="activeCameraField = 'after'"
+                class="w-full py-1.5 px-2 bg-white hover:bg-slate-100 border border-slate-300 rounded-lg text-xs font-semibold text-slate-700 flex items-center justify-center space-x-1 cursor-pointer"
+              >
+                <Camera class="w-3.5 h-3.5" />
+                <span>{{ serviceCompleteForm.afterPhotoUrl ? 'Change Photo' : 'Capture / Upload Photo' }}</span>
+              </button>
             </div>
           </div>
 
@@ -836,5 +963,151 @@ onMounted(() => {
         </form>
       </div>
     </div>
+
+    <!-- Modal: Service Complaint On-Demand Camera / File Upload -->
+    <CameraPhotoUpload
+      v-if="activeCameraField"
+      :title="activeCameraField === 'before' ? 'Pre-Repair Photo Evidence' : 'Post-Repair Evidence'"
+      subtitle="Capture or upload photo using camera or file picker"
+      @photo-uploaded="onServicePhotoCaptured"
+      @close="activeCameraField = null"
+    />
+
+    <!-- Modal: View Site Survey Photos Gallery -->
+    <div v-if="viewPhotosSurvey" class="fixed inset-0 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center z-50 p-4">
+      <div class="bg-white rounded-2xl max-w-3xl w-full p-6 shadow-2xl max-h-[90vh] overflow-y-auto space-y-4">
+        <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+          <div>
+            <div class="flex items-center space-x-2">
+              <Camera class="w-5 h-5 text-emerald-600" />
+              <h2 class="text-lg font-bold text-slate-900">Rooftop Site Survey Photographs</h2>
+            </div>
+            <p class="text-xs text-slate-500 mt-0.5">
+              Survey {{ viewPhotosSurvey.surveyNumber }} • Customer: <span class="font-semibold text-slate-700">{{ viewPhotosSurvey.customer?.fullName }}</span>
+            </p>
+          </div>
+          <button type="button" @click="viewPhotosSurvey = null" class="text-slate-400 hover:text-slate-600 text-lg cursor-pointer">✕</button>
+        </div>
+
+        <div v-if="!viewPhotosSurvey.photos || viewPhotosSurvey.photos.length === 0" class="text-center py-12 bg-slate-50 rounded-xl border border-dashed border-slate-200">
+          <Camera class="w-10 h-10 text-slate-300 mx-auto mb-2" />
+          <p class="text-xs font-semibold text-slate-600">No rooftop photographs attached yet</p>
+          <p class="text-[11px] text-slate-400 mt-1">Attach photos of the terrace, azimuth angle, and shading obstacles.</p>
+        </div>
+
+        <div v-else class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+          <div v-for="p in viewPhotosSurvey.photos" :key="p.id" class="border border-slate-200 rounded-xl overflow-hidden bg-slate-50 shadow-2xs hover:shadow-md transition">
+            <a :href="p.photoUrl" target="_blank" rel="noopener noreferrer" class="block group relative">
+              <img :src="p.photoUrl" :alt="p.caption || 'Site survey photo'" class="w-full h-40 object-cover group-hover:opacity-95 transition" />
+              <div class="absolute inset-0 bg-black/0 group-hover:bg-black/20 flex items-center justify-center opacity-0 group-hover:opacity-100 transition text-white text-xs font-medium">
+                Click to view
+              </div>
+            </a>
+            <div class="p-2.5">
+              <p class="text-xs font-semibold text-slate-800 line-clamp-2">{{ p.caption || 'Rooftop inspection photo' }}</p>
+              <p class="text-[10px] text-slate-400 mt-1">{{ p.uploadedAt ? new Date(p.uploadedAt).toLocaleString() : '' }}</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="flex items-center justify-between pt-3 border-t border-slate-100">
+          <button
+            type="button"
+            @click="photoModalSurvey = viewPhotosSurvey"
+            class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-semibold cursor-pointer inline-flex items-center space-x-1"
+          >
+            <Plus class="w-3.5 h-3.5" />
+            <span>Attach Another Photo</span>
+          </button>
+          <button
+            type="button"
+            @click="viewPhotosSurvey = null"
+            class="px-4 py-2 bg-slate-100 text-slate-700 rounded-xl font-medium hover:bg-slate-200 cursor-pointer text-xs"
+          >
+            Close
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal: Live Camera & Photo Upload for Site Survey -->
+    <CameraPhotoUpload
+      v-if="photoModalSurvey"
+      title="Attach Rooftop Survey Photograph"
+      subtitle="Take photo using camera or choose image file from device"
+      caption-placeholder="e.g. South azimuth shadow analysis or terrace parapet angle"
+      @photo-uploaded="handleSurveyPhotoUploaded"
+      @close="photoModalSurvey = null"
+    />
+
+    <!-- Modal: View Installation Photos Gallery -->
+    <div v-if="viewPhotosInstallation" class="fixed inset-0 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center z-50 p-4">
+      <div class="bg-white rounded-2xl max-w-2xl w-full p-6 shadow-2xl max-h-[90vh] overflow-y-auto space-y-4">
+        <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+          <div>
+            <div class="flex items-center space-x-2">
+              <Camera class="w-5 h-5 text-emerald-600" />
+              <h2 class="text-lg font-bold text-slate-900">Installation Photographic Evidence</h2>
+            </div>
+            <p class="text-xs text-slate-500 mt-0.5">
+              Installation #{{ viewPhotosInstallation.id }} • Customer: <span class="font-semibold text-slate-700">{{ viewPhotosInstallation.customer?.fullName }}</span> • Capacity: <span class="font-semibold text-slate-700">{{ viewPhotosInstallation.salesOrder?.capacityKw || viewPhotosInstallation.installedCapacityKw || 5 }} kW</span>
+            </p>
+          </div>
+          <button type="button" @click="viewPhotosInstallation = null" class="text-slate-400 hover:text-slate-600 text-lg cursor-pointer">✕</button>
+        </div>
+
+        <div v-if="!viewPhotosInstallation.photos || viewPhotosInstallation.photos.length === 0" class="text-center py-12 bg-slate-50 rounded-xl border border-dashed border-slate-200">
+          <Camera class="w-10 h-10 text-slate-300 mx-auto mb-2" />
+          <p class="text-xs font-semibold text-slate-600">No installation photographs attached yet</p>
+          <p class="text-[11px] text-slate-400 mt-1">Upload milestone photos for structural mounting and inverter cabling.</p>
+        </div>
+
+        <div v-else class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+          <div v-for="p in viewPhotosInstallation.photos" :key="p.id" class="border border-slate-200 rounded-xl overflow-hidden bg-slate-50 shadow-2xs hover:shadow-md transition">
+            <a :href="p.photoUrl" target="_blank" rel="noopener noreferrer" class="block group relative">
+              <img :src="p.photoUrl" :alt="p.caption || 'Installation photo'" class="w-full h-36 object-cover group-hover:opacity-95 transition" />
+              <div class="absolute inset-0 bg-black/0 group-hover:bg-black/20 flex items-center justify-center opacity-0 group-hover:opacity-100 transition text-white text-xs font-medium">
+                Click to view
+              </div>
+            </a>
+            <div class="p-2.5">
+              <span class="font-bold text-emerald-800 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200 text-[10px] uppercase block w-fit mb-1">{{ p.stage }}</span>
+              <p class="text-xs text-slate-700 line-clamp-2">{{ p.caption || 'Field installation evidence' }}</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="flex items-center justify-between pt-3 border-t border-slate-100">
+          <button
+            type="button"
+            @click="photoModalInstallation = viewPhotosInstallation"
+            class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-semibold cursor-pointer inline-flex items-center space-x-1"
+          >
+            <Plus class="w-3.5 h-3.5" />
+            <span>Attach Another Photo</span>
+          </button>
+          <button
+            type="button"
+            @click="viewPhotosInstallation = null"
+            class="px-4 py-2 bg-slate-100 text-slate-700 rounded-xl font-medium hover:bg-slate-200 cursor-pointer text-xs"
+          >
+            Close
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal: Live Camera Photo Upload for Installation -->
+    <CameraPhotoUpload
+      v-if="photoModalInstallation"
+      title="Attach Installation Milestone Photograph"
+      subtitle="Take photo using camera or choose image file from device"
+      caption-placeholder="e.g. Structure anchor bolts or inverter terminal wiring"
+      :allowed-stages="['STRUCTURE_MOUNTING', 'PANEL_INSTALLATION', 'INVERTER_WIRING', 'TESTING_COMMISSIONING']"
+      :selected-stage="installationPhotoStage"
+      @stage-change="(s) => installationPhotoStage = s"
+      @photo-uploaded="handleInstallPhotoUploaded"
+      @close="photoModalInstallation = null"
+    />
   </div>
 </template>

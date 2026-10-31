@@ -24,6 +24,9 @@ const props = withDefaults(
 
 const emit = defineEmits<{
   (e: 'photoUploaded', photoUrl: string, caption: string): void;
+  (e: 'photo-uploaded', photoUrl: string, caption: string): void;
+  (e: 'photoCaptured', photoUrl: string): void;
+  (e: 'update:modelValue', photoUrl: string): void;
   (e: 'stageChange', stage: string): void;
   (e: 'close'): void;
 }>();
@@ -180,11 +183,14 @@ const handleUploadAndSave = async () => {
       emit('stageChange', stage.value);
     }
     emit('photoUploaded', photoUrl, finalCaption);
+    emit('photo-uploaded', photoUrl, finalCaption);
+    emit('photoCaptured', photoUrl);
+    emit('update:modelValue', photoUrl);
 
     uploadSuccess.value = true;
     setTimeout(() => {
       emit('close');
-    }, 1000);
+    }, 600);
   } catch (err: any) {
     console.error('Photo upload failed:', err);
     errorMessage.value = err.response?.data?.message || err.message || 'Failed to upload photo to central server.';

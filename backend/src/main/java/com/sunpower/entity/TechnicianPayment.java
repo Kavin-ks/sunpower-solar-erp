@@ -133,7 +133,7 @@ public class TechnicianPayment {
     public void setPaymentMethod(String paymentMethod) { this.paymentMethod = paymentMethod; }
     public String getReferenceNumber() { return referenceNumber; }
     public void setReferenceNumber(String referenceNumber) { this.referenceNumber = referenceNumber; }
-    public TechnicianPayoutStatus getStatus() { return status; }
+    public TechnicianPayoutStatus getStatus() { return status != null ? status : TechnicianPayoutStatus.PAID; }
     public void setStatus(TechnicianPayoutStatus status) { this.status = status; }
     public String getNotes() { return notes; }
     public void setNotes(String notes) { this.notes = notes; }

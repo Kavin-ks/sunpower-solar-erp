@@ -301,11 +301,8 @@ onMounted(() => {
           <span class="text-xs uppercase font-bold text-slate-400">Authenticated Technician Profile</span>
           <h2 class="text-lg font-bold text-slate-900 mt-0.5">
             {{ technicianData.technicianName }}
-            <span v-if="technicianData.isLead" class="ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-blue-100 text-blue-800 border border-blue-200">
-              Technician Lead
-            </span>
-            <span v-else class="ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800 border border-emerald-200">
-              Field Technician
+            <span class="ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800 border border-emerald-200">
+              Technician
             </span>
           </h2>
           <p class="text-xs text-slate-500">Specialization: {{ technicianData.specialization }} • Phone: {{ technicianData.phone }}</p>
@@ -320,7 +317,7 @@ onMounted(() => {
       </div>
 
       <!-- Live Database Metrics Grid -->
-      <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-3">
+      <div :class="['grid grid-cols-2 md:grid-cols-3 gap-3', technicianData.isLead ? 'lg:grid-cols-8' : 'lg:grid-cols-6']">
         <div v-if="technicianData.isLead" class="bg-white p-3 rounded-xl border border-slate-200 shadow-xs">
           <span class="text-[10px] uppercase font-bold text-slate-400 block truncate">Active Techs</span>
           <div class="text-xl font-bold text-emerald-700 mt-0.5">{{ technicianData.activeTechniciansCount ?? 0 }}</div>

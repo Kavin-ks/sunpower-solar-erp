@@ -22,9 +22,9 @@ print("="*70)
 
 # 1. Test individual technician logins
 print("\n[TEST 1] Testing individual technician logins...")
-lead_token, lead_data = login("technician")
-assert lead_token, "Lead login failed"
-print(f"✓ Lead login OK: {lead_data.get('fullName')} (User: {lead_data.get('username')})")
+karthik_token, karthik_data = login("technician")
+assert karthik_token, "Karthik login failed"
+print(f"✓ Karthik login OK: {karthik_data.get('fullName')} (User: {karthik_data.get('username')})")
 
 ganesh_token, ganesh_data = login("tech.ganesh")
 assert ganesh_token, "Ganesh login failed"
@@ -40,11 +40,11 @@ print(f"✓ Support login OK: {support_data.get('fullName')}")
 
 # 2. Test Workload & Dashboard separation
 print("\n[TEST 2] Testing Technician Dashboard separation & live DB metrics...")
-resp_lead_dash = requests.get(f"{BASE_URL}/dashboard/technician", headers=auth_headers(lead_token))
-assert resp_lead_dash.status_code == 200, f"Lead dash failed: {resp_lead_dash.text}"
-lead_dash = resp_lead_dash.json()
-assert lead_dash.get("isLead") == True, "Lead isLead must be true"
-print(f"✓ Lead Dashboard: isLead={lead_dash.get('isLead')}, Active Techs={lead_dash.get('activeTechniciansCount')}, Available={lead_dash.get('availableTechniciansCount')}, Workloads monitored={len(lead_dash.get('teamWorkloads', []))}")
+resp_karthik_dash = requests.get(f"{BASE_URL}/dashboard/technician", headers=auth_headers(karthik_token))
+assert resp_karthik_dash.status_code == 200, f"Karthik dash failed: {resp_karthik_dash.text}"
+karthik_dash = resp_karthik_dash.json()
+assert karthik_dash.get("isLead") == False, "Karthik is regular technician (isLead=False)"
+print(f"✓ Karthik Dashboard: isLead={karthik_dash.get('isLead')}, Surveys={karthik_dash.get('assignedSurveysCount')}, Installs={karthik_dash.get('inProgressInstallationsCount')}, Service={karthik_dash.get('assignedServiceVisitsCount')}")
 
 resp_ganesh_dash = requests.get(f"{BASE_URL}/dashboard/technician", headers=auth_headers(ganesh_token))
 assert resp_ganesh_dash.status_code == 200, f"Ganesh dash failed: {resp_ganesh_dash.text}"

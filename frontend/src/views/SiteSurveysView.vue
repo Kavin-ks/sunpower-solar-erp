@@ -20,6 +20,7 @@ const inspectionModalSurvey = ref<SiteSurvey | null>(null);
 const reviewModalSurvey = ref<SiteSurvey | null>(null);
 const viewReportSurvey = ref<SiteSurvey | null>(null);
 const photoModalSurvey = ref<SiteSurvey | null>(null);
+const viewPhotosSurvey = ref<SiteSurvey | null>(null);
 
 // Review Form State
 const reviewNotes = ref('');
@@ -170,13 +171,18 @@ const handleReviewSubmit = async () => {
 
 const handlePhotoUploaded = async (photoUrl: string, caption: string) => {
   if (!photoModalSurvey.value) return;
+  const currentSurvId = photoModalSurvey.value.id;
   try {
-    await api.post(`/surveys/${photoModalSurvey.value.id}/photos`, {
+    await api.post(`/surveys/${currentSurvId}/photos`, {
       photoUrl,
       caption,
     });
     photoModalSurvey.value = null;
-    fetchInitialData();
+    await fetchInitialData();
+    if (viewPhotosSurvey.value && viewPhotosSurvey.value.id === currentSurvId) {
+      const refreshed = surveys.value.find((s) => s.id === currentSurvId);
+      if (refreshed) viewPhotosSurvey.value = refreshed;
+    }
   } catch (err: any) {
     alert(err.response?.data?.message || 'Failed to attach photo to survey');
   }
@@ -276,14 +282,25 @@ onMounted(() => {
                 <StatusBadge :status="surv.status" />
               </td>
               <td class="py-3 px-4 text-right space-x-2 whitespace-nowrap">
-                <!-- Action: Attach Photos (Camera / File) -->
+                <!-- Action: View Photos (Sales Lead & All) -->
                 <button
                   type="button"
-                  @click="photoModalSurvey = surv"
+                  @click="viewPhotosSurvey = surv"
                   class="px-2.5 py-1 text-slate-700 bg-slate-100 hover:bg-slate-200 rounded font-medium cursor-pointer inline-flex items-center space-x-1"
                 >
                   <Camera class="w-3.5 h-3.5" />
                   <span>Photos ({{ surv.photos ? surv.photos.length : 0 }})</span>
+                </button>
+
+                <!-- Action: Attach Photo (Technician / Admin only - Sales does not upload survey photos) -->
+                <button
+                  v-if="isTech || isAdmin"
+                  type="button"
+                  @click="photoModalSurvey = surv"
+                  class="px-2.5 py-1 text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded font-semibold cursor-pointer inline-flex items-center space-x-1"
+                >
+                  <Plus class="w-3.5 h-3.5" />
+                  <span>Attach Photo</span>
                 </button>
 
                 <!-- Action: View Report -->
@@ -637,6 +654,70 @@ onMounted(() => {
               Close
             </button>
           </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal: View Site Survey Photos (For Sales Lead & Technical Review) -->
+    <div v-if="viewPhotosSurvey" class="fixed inset-0 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center z-50 p-4">
+      <div class="bg-white rounded-2xl max-w-3xl w-full p-6 shadow-2xl max-h-[90vh] overflow-y-auto space-y-4">
+        <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+          <div>
+            <div class="flex items-center space-x-2">
+              <Camera class="w-5 h-5 text-emerald-600" />
+              <h2 class="text-lg font-bold text-slate-900">Rooftop Site Survey Photographs</h2>
+            </div>
+            <p class="text-xs text-slate-500 mt-0.5">
+              Survey {{ viewPhotosSurvey.surveyNumber }} • Customer: <span class="font-semibold text-slate-700">{{ viewPhotosSurvey.customer?.fullName }}</span> • Technician: <span class="font-semibold text-slate-700">{{ viewPhotosSurvey.technician?.name || 'Assigned Crew' }}</span>
+            </p>
+          </div>
+          <button type="button" @click="viewPhotosSurvey = null" class="text-slate-400 hover:text-slate-600 text-lg cursor-pointer">✕</button>
+        </div>
+
+        <div v-if="!viewPhotosSurvey.photos || viewPhotosSurvey.photos.length === 0" class="text-center py-12 bg-slate-50 rounded-xl border border-dashed border-slate-200">
+          <Camera class="w-10 h-10 text-slate-300 mx-auto mb-2" />
+          <p class="text-xs font-semibold text-slate-600">No rooftop photographs attached yet</p>
+          <p class="text-[11px] text-slate-400 mt-1">Technician will upload photos during on-site physical inspection.</p>
+        </div>
+
+        <div v-else class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+          <div
+            v-for="p in viewPhotosSurvey.photos"
+            :key="p.id"
+            class="border border-slate-200 rounded-xl overflow-hidden bg-slate-50 shadow-2xs hover:shadow-md transition"
+          >
+            <a :href="p.photoUrl" target="_blank" rel="noopener noreferrer" class="block group relative">
+              <img :src="p.photoUrl" :alt="p.caption || 'Site survey photo'" class="w-full h-40 object-cover group-hover:opacity-95 transition" />
+              <div class="absolute inset-0 bg-black/0 group-hover:bg-black/20 flex items-center justify-center opacity-0 group-hover:opacity-100 transition text-white text-xs font-medium">
+                Click to view full photo
+              </div>
+            </a>
+            <div class="p-2.5">
+              <p class="text-xs font-semibold text-slate-800 line-clamp-2">{{ p.caption || 'Rooftop inspection photo' }}</p>
+              <p class="text-[10px] text-slate-400 mt-1">{{ p.uploadedAt ? new Date(p.uploadedAt).toLocaleString() : '' }}</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="flex items-center justify-between pt-3 border-t border-slate-100">
+          <div>
+            <button
+              v-if="isTech || isAdmin"
+              type="button"
+              @click="photoModalSurvey = viewPhotosSurvey"
+              class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-semibold cursor-pointer inline-flex items-center space-x-1"
+            >
+              <Plus class="w-3.5 h-3.5" />
+              <span>Attach Another Photo</span>
+            </button>
+          </div>
+          <button
+            type="button"
+            @click="viewPhotosSurvey = null"
+            class="px-4 py-2 bg-slate-100 text-slate-700 rounded-xl font-medium hover:bg-slate-200 cursor-pointer text-xs"
+          >
+            Close
+          </button>
         </div>
       </div>
     </div>

@@ -102,7 +102,6 @@ const config = computed(() => {
       items: [
         { name: 'Technician Dashboard', path: '/', icon: LayoutDashboard },
         { name: 'My Assigned Work', path: '/my-work', icon: Wrench },
-        { name: 'Assigned Site Surveys', path: '/surveys', icon: Compass },
         { name: 'Installations & On-Site Verification', path: '/installations', icon: Wrench },
         { name: 'Service Complaints', path: '/service-jobs', icon: Headphones },
       ],
@@ -134,10 +133,11 @@ const config = computed(() => {
       hideBadge: false,
       items: [
         { name: 'Finance Dashboard', path: '/', icon: LayoutDashboard },
-        { name: 'GST Invoices & Receivables', path: '/finance', icon: CircleDollarSign },
+        { name: 'GST Invoices & Receivables', path: '/finance?tab=invoices', icon: CircleDollarSign },
         { name: 'Payment Verification Ledger', path: '/orders', icon: ShoppingCart },
         { name: 'Approved Quotations', path: '/quotations', icon: FileText },
-        { name: 'Subsidy & Expense Tracker', path: '/finance', icon: CalendarCheck2 },
+        { name: 'Subsidy & Expense Tracker', path: '/finance?tab=subsidies', icon: CalendarCheck2 },
+        { name: 'Job-Wise Profitability & P&L', path: '/finance?tab=profitability', icon: TrendingUp },
       ],
     };
   }
@@ -161,7 +161,13 @@ const isItemActive = (path: string) => {
   if (path === '/') {
     return route.path === '/';
   }
-  return route.path.startsWith(path);
+  if (path.includes('?')) {
+    const [p, q] = path.split('?');
+    const param = new URLSearchParams(q);
+    const tab = param.get('tab');
+    return route.path === p && route.query.tab === tab;
+  }
+  return route.path === path || (route.path.startsWith(path) && !route.query.tab);
 };
 </script>
 

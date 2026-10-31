@@ -246,6 +246,9 @@ public class InstallationService {
                         tp.setTechnician(it.getTechnician());
                         tp.setInstallation(installation);
                         tp.setAmount(payout);
+                        tp.setCalculatedAmount(payout);
+                        tp.setAmountPaid(payout);
+                        tp.setStatus(com.sunpower.entity.enums.Enums.TechnicianPayoutStatus.PAID);
                         tp.setPaymentDate(LocalDate.now());
                         tp.setHoursCounted(hoursReq.getHoursWorked());
                         tp.setPaymentMethod("Bank Transfer");

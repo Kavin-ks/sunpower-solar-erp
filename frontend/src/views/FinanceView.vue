@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, watch } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
 import api from '../api/client';
 import type {
   JobProfitability,
@@ -48,7 +49,32 @@ import {
   XCircle,
 } from 'lucide-vue-next';
 
-const activeTab = ref<'dashboard' | 'payments' | 'profitability' | 'invoices' | 'payouts' | 'subsidies' | 'expenses' | 'suppliers' | 'reports'>('dashboard');
+const route = useRoute();
+const router = useRouter();
+
+const validTabs = ['dashboard', 'payments', 'profitability', 'invoices', 'payouts', 'subsidies', 'expenses', 'suppliers', 'reports'] as const;
+type TabType = typeof validTabs[number];
+
+const activeTab = ref<TabType>(
+  (route.query.tab && validTabs.includes(route.query.tab as TabType))
+    ? (route.query.tab as TabType)
+    : 'dashboard'
+);
+
+watch(
+  () => route.query.tab,
+  (newTab) => {
+    if (newTab && typeof newTab === 'string' && validTabs.includes(newTab as TabType) && activeTab.value !== newTab) {
+      activeTab.value = newTab as TabType;
+    }
+  }
+);
+
+watch(activeTab, (newTab) => {
+  if (route.query.tab !== newTab) {
+    router.replace({ query: { ...route.query, tab: newTab } });
+  }
+});
 
 const dashboardData = ref<FinanceDashboard | null>(null);
 const profitability = ref<JobProfitability[]>([]);
@@ -161,20 +187,21 @@ const fetchData = async () => {
   try {
     loading.value = true;
     error.value = null;
-    let supPurchasesRes: any = { data: [] };
-    let supPaymentsRes: any = { data: [] };
-    try {
-      const [spRes, spayRes] = await Promise.all([
-        api.get('/finance/suppliers/purchases'),
-        api.get('/finance/suppliers/payments'),
-      ]);
-      supPurchasesRes = spRes;
-      supPaymentsRes = spayRes;
-    } catch (e) {
-      console.warn('Supplier payments not yet loaded', e);
-    }
 
-    const [dashRes, profRes, invRes, expRes, subRes, payRes, payoRes, ordRes, techRes, instRes] = await Promise.all([
+    const [
+      dashRes,
+      profRes,
+      invRes,
+      expRes,
+      subRes,
+      payRes,
+      payoRes,
+      ordRes,
+      techRes,
+      instRes,
+      supPurchasesRes,
+      supPaymentsRes,
+    ] = await Promise.allSettled([
       api.get(`/finance/dashboard?period=${period.value}`),
       api.get('/finance/job-profitability'),
       api.get('/finance/invoices'),
@@ -185,20 +212,28 @@ const fetchData = async () => {
       api.get('/orders'),
       api.get('/technicians'),
       api.get('/installations'),
+      api.get('/finance/suppliers/purchases'),
+      api.get('/finance/suppliers/payments'),
     ]);
 
-    dashboardData.value = dashRes.data;
-    profitability.value = profRes.data;
-    invoices.value = invRes.data;
-    expenses.value = expRes.data;
-    subsidies.value = subRes.data;
-    payments.value = payRes.data;
-    payouts.value = payoRes.data;
-    orders.value = ordRes.data;
-    technicians.value = techRes.data;
-    installations.value = instRes.data;
-    supplierPurchases.value = supPurchasesRes.data || [];
-    supplierPayments.value = supPaymentsRes.data || [];
+    if (dashRes.status === 'fulfilled') dashboardData.value = dashRes.value.data;
+    if (profRes.status === 'fulfilled') profitability.value = profRes.value.data || [];
+    if (invRes.status === 'fulfilled') invoices.value = invRes.value.data || [];
+    if (expRes.status === 'fulfilled') expenses.value = expRes.value.data || [];
+    if (subRes.status === 'fulfilled') subsidies.value = subRes.value.data || [];
+    if (payRes.status === 'fulfilled') payments.value = payRes.value.data || [];
+    if (payoRes.status === 'fulfilled') payouts.value = payoRes.value.data || [];
+    if (ordRes.status === 'fulfilled') orders.value = ordRes.value.data || [];
+    if (techRes.status === 'fulfilled') technicians.value = techRes.value.data || [];
+    if (instRes.status === 'fulfilled') installations.value = instRes.value.data || [];
+    if (supPurchasesRes.status === 'fulfilled') supplierPurchases.value = supPurchasesRes.value.data || [];
+    if (supPaymentsRes.status === 'fulfilled') supplierPayments.value = supPaymentsRes.value.data || [];
+
+    if (dashRes.status === 'rejected') {
+      const err: any = dashRes.reason;
+      error.value = err.response?.data?.message || err.message || 'Partial financial data loaded. Retry to refresh dashboard.';
+    }
+
     fetchReports();
   } catch (err: any) {
     console.error('Failed to load financial data', err);
@@ -395,14 +430,14 @@ const printCurrentInvoice = () => {
 
 const fetchReports = async () => {
   try {
-    const [pnlRes, cfRes, gstRes] = await Promise.all([
+    const [pnlRes, cfRes, gstRes] = await Promise.allSettled([
       api.get(`/finance/reports/profit-and-loss?period=${period.value}`),
       api.get(`/finance/reports/cash-flow?period=${period.value}`),
       api.get(`/finance/reports/gst?period=${period.value}`),
     ]);
-    pnlReport.value = pnlRes.data;
-    cashFlowReport.value = cfRes.data;
-    gstReport.value = gstRes.data;
+    if (pnlRes.status === 'fulfilled') pnlReport.value = pnlRes.value.data;
+    if (cfRes.status === 'fulfilled') cashFlowReport.value = cfRes.value.data;
+    if (gstRes.status === 'fulfilled') gstReport.value = gstRes.value.data;
   } catch (e) {
     console.warn('Reports failed to load', e);
   }
@@ -620,8 +655,17 @@ onMounted(() => {
       </button>
     </div>
 
+    <!-- Loading State Skeleton -->
+    <div v-if="loading && !dashboardData" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 animate-pulse">
+      <div v-for="i in 5" :key="i" class="bg-white p-4 rounded-xl border border-slate-200 h-28 flex flex-col justify-between">
+        <div class="h-3 w-24 bg-slate-200 rounded"></div>
+        <div class="h-6 w-32 bg-slate-200 rounded"></div>
+        <div class="h-3 w-20 bg-slate-100 rounded"></div>
+      </div>
+    </div>
+
     <!-- Top 5 KPI Cards -->
-    <div v-if="dashboardData" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+    <div v-else-if="dashboardData" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
       <!-- Card 1: Recognized Revenue -->
       <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-xs flex flex-col justify-between">
         <div>
@@ -1002,7 +1046,7 @@ onMounted(() => {
               <div class="absolute inset-0 flex flex-col items-center justify-center text-center">
                 <span class="text-[10px] uppercase font-bold text-slate-400">Total Ops</span>
                 <span class="text-sm font-bold text-slate-800 font-mono mt-0.5">
-                  ₹{{ formatNumber(dashboardData.totalOperationalExpenses) }}
+                  ₹{{ formatNumber(dashboardData?.totalOperationalExpenses) }}
                 </span>
               </div>
             </div>
@@ -1035,7 +1079,7 @@ onMounted(() => {
           <div>
             <span class="text-[11px] uppercase font-bold text-slate-400 block">Pending Technician Disbursements</span>
             <div class="text-xl font-bold text-slate-900 font-mono mt-0.5">
-              ₹{{ formatNumber(dashboardData.pendingTechnicianPayouts) }}
+              ₹{{ formatNumber(dashboardData?.pendingTechnicianPayouts) }}
             </div>
             <span class="text-xs text-slate-500">Scheduled payroll pending installation audit</span>
           </div>
@@ -1054,7 +1098,7 @@ onMounted(() => {
           <div>
             <span class="text-[11px] uppercase font-bold text-slate-400 block">Subsidies Pending Receipt</span>
             <div class="text-xl font-bold text-slate-900 font-mono mt-0.5">
-              ₹{{ formatNumber(dashboardData.subsidiesPendingReceipt) }}
+              ₹{{ formatNumber(dashboardData?.subsidiesPendingReceipt) }}
             </div>
             <span class="text-xs text-slate-500">Approved by MNRE portal, awaiting treasury</span>
           </div>
@@ -1077,28 +1121,28 @@ onMounted(() => {
           <div class="p-3 bg-emerald-50/60 border border-emerald-100 rounded-lg">
             <span class="text-[11px] font-semibold text-emerald-800 uppercase block">Current (0–30 Days)</span>
             <span class="text-base font-bold font-mono text-emerald-900 mt-1 block">
-              ₹{{ formatNumber(dashboardData.aging0To30Days) }}
+              ₹{{ formatNumber(dashboardData?.aging0To30Days) }}
             </span>
             <span class="text-[10px] text-emerald-700">Active collection cycle</span>
           </div>
           <div class="p-3 bg-blue-50/60 border border-blue-100 rounded-lg">
             <span class="text-[11px] font-semibold text-blue-800 uppercase block">31–60 Days</span>
             <span class="text-base font-bold font-mono text-blue-900 mt-1 block">
-              ₹{{ formatNumber(dashboardData.aging31To60Days) }}
+              ₹{{ formatNumber(dashboardData?.aging31To60Days) }}
             </span>
             <span class="text-[10px] text-blue-700">First reminder phase</span>
           </div>
           <div class="p-3 bg-amber-50/60 border border-amber-100 rounded-lg">
             <span class="text-[11px] font-semibold text-amber-800 uppercase block">61–90 Days</span>
             <span class="text-base font-bold font-mono text-amber-900 mt-1 block">
-              ₹{{ formatNumber(dashboardData.aging61To90Days) }}
+              ₹{{ formatNumber(dashboardData?.aging61To90Days) }}
             </span>
             <span class="text-[10px] text-amber-700">Escalation phase</span>
           </div>
           <div class="p-3 bg-rose-50/60 border border-rose-100 rounded-lg">
             <span class="text-[11px] font-semibold text-rose-800 uppercase block">&gt; 90 Days Critical</span>
             <span class="text-base font-bold font-mono text-rose-900 mt-1 block">
-              ₹{{ formatNumber(dashboardData.agingOver90Days) }}
+              ₹{{ formatNumber(dashboardData?.agingOver90Days) }}
             </span>
             <span class="text-[10px] text-rose-700">Credit hold notice</span>
           </div>

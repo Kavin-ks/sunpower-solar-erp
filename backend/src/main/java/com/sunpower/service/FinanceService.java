@@ -788,7 +788,7 @@ public class FinanceService {
         // 9. Payment Status Distribution
         Map<String, Object[]> payMap = new HashMap<>();
         for (Payment p : allPayments) {
-            String s = p.getStatus().name();
+            String s = p.getStatus() != null ? p.getStatus().name() : "SUCCESS";
             Object[] val = payMap.computeIfAbsent(s, k -> new Object[]{0L, BigDecimal.ZERO});
             val[0] = (Long) val[0] + 1;
             val[1] = ((BigDecimal) val[1]).add(p.getAmount());
@@ -801,7 +801,7 @@ public class FinanceService {
         // 10. Subsidy Status Distribution
         Map<String, Object[]> subMap = new HashMap<>();
         for (SubsidyApplication sub : subsidyApplicationRepository.findAll()) {
-            String s = sub.getStatus().name();
+            String s = sub.getStatus() != null ? sub.getStatus().name() : "SUBMITTED";
             Object[] val = subMap.computeIfAbsent(s, k -> new Object[]{0L, BigDecimal.ZERO});
             val[0] = (Long) val[0] + 1;
             val[1] = ((BigDecimal) val[1]).add(sub.getSubsidyAmountApproved() != null ? sub.getSubsidyAmountApproved() : sub.getSubsidyAmountClaimed());
@@ -821,7 +821,7 @@ public class FinanceService {
                     "Customer payment received for " + (p.getSalesOrder() != null ? p.getSalesOrder().getOrderNumber() : "Order"),
                     p.getAmount(),
                     "INFLOW",
-                    p.getStatus().name()
+                    p.getStatus() != null ? p.getStatus().name() : "SUCCESS"
             ));
         }
         for (TechnicianPayment tp : technicianPaymentRepository.findAll()) {
@@ -832,7 +832,7 @@ public class FinanceService {
                     "Field labor payout to " + (tp.getTechnician() != null ? tp.getTechnician().getName() : "Technician"),
                     tp.getAmountPaid(),
                     "OUTFLOW",
-                    tp.getStatus().name()
+                    tp.getStatus() != null ? tp.getStatus().name() : "PAID"
             ));
         }
         for (Expense exp : allExpenses) {
@@ -843,7 +843,7 @@ public class FinanceService {
                     exp.getTitle(),
                     exp.getAmount(),
                     "OUTFLOW",
-                    exp.getStatus().name()
+                    exp.getStatus() != null ? exp.getStatus().name() : "APPROVED"
             ));
         }
         for (SupplierPayment sp : supplierPaymentRepository.findAll()) {
@@ -854,7 +854,7 @@ public class FinanceService {
                     "Payment to supplier " + sp.getSupplierName(),
                     sp.getAmount(),
                     "OUTFLOW",
-                    sp.getStatus()
+                    sp.getStatus() != null ? sp.getStatus() : "PAID"
             ));
         }
         recentList.sort((a, b) -> {

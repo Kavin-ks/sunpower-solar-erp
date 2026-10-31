@@ -85,7 +85,7 @@ public class InstallationController {
             @PathVariable Long id,
             @Valid @RequestBody CompleteInstallationRequest request,
             Authentication authentication) {
-        String actor = authentication != null ? authentication.getName() : "Technician Lead";
+        String actor = authentication != null ? authentication.getName() : "Technician";
         Installation installation = installationService.completeInstallation(id, request, actor);
         return ResponseEntity.ok(installation);
     }

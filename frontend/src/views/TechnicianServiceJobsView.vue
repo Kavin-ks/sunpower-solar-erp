@@ -54,6 +54,7 @@ const completeForm = ref({
 
 const selectedPartId = ref('');
 const selectedPartQty = ref(1);
+const activeCameraField = ref<'before' | 'after' | null>(null);
 
 const fetchJobs = async () => {
   try {
@@ -419,19 +420,52 @@ onMounted(() => {
           <div class="space-y-3">
             <label class="block font-bold text-slate-700">Upload Before & After Repair Evidence</label>
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div>
-                <CameraPhotoUpload
-                  label="Before Repair Photo"
-                  :existingUrl="completeForm.beforePhotoUrl"
-                  @photoCaptured="(url) => completeForm.beforePhotoUrl = url"
-                />
+              <!-- Before Photo Box -->
+              <div class="p-3 border border-slate-200 rounded-xl bg-slate-50 space-y-2">
+                <span class="block text-xs font-semibold text-slate-700">1. Pre-Repair Photograph</span>
+                <div v-if="completeForm.beforePhotoUrl" class="relative group rounded-lg overflow-hidden border border-slate-200 bg-white">
+                  <img :src="completeForm.beforePhotoUrl" alt="Before Repair" class="w-full h-32 object-cover" />
+                  <button
+                    type="button"
+                    @click="activeCameraField = 'before'"
+                    class="absolute bottom-2 right-2 px-2.5 py-1 bg-slate-900/80 hover:bg-slate-900 text-white rounded text-[10px] font-semibold flex items-center gap-1 cursor-pointer"
+                  >
+                    <Camera class="w-3 h-3" /> Retake Photo
+                  </button>
+                </div>
+                <button
+                  v-else
+                  type="button"
+                  @click="activeCameraField = 'before'"
+                  class="w-full py-3 px-3 border-2 border-dashed border-slate-300 hover:border-emerald-500 rounded-lg text-slate-600 hover:text-emerald-700 text-xs font-semibold flex flex-col items-center justify-center gap-1 bg-white cursor-pointer transition"
+                >
+                  <Camera class="w-5 h-5 text-emerald-600" />
+                  <span>Snap / Upload Before Photo</span>
+                </button>
               </div>
-              <div>
-                <CameraPhotoUpload
-                  label="After Repair & Generation Photo"
-                  :existingUrl="completeForm.afterPhotoUrl"
-                  @photoCaptured="(url) => completeForm.afterPhotoUrl = url"
-                />
+
+              <!-- After Photo Box -->
+              <div class="p-3 border border-slate-200 rounded-xl bg-slate-50 space-y-2">
+                <span class="block text-xs font-semibold text-slate-700">2. Post-Repair Verification Photo</span>
+                <div v-if="completeForm.afterPhotoUrl" class="relative group rounded-lg overflow-hidden border border-slate-200 bg-white">
+                  <img :src="completeForm.afterPhotoUrl" alt="After Repair" class="w-full h-32 object-cover" />
+                  <button
+                    type="button"
+                    @click="activeCameraField = 'after'"
+                    class="absolute bottom-2 right-2 px-2.5 py-1 bg-slate-900/80 hover:bg-slate-900 text-white rounded text-[10px] font-semibold flex items-center gap-1 cursor-pointer"
+                  >
+                    <Camera class="w-3 h-3" /> Retake Photo
+                  </button>
+                </div>
+                <button
+                  v-else
+                  type="button"
+                  @click="activeCameraField = 'after'"
+                  class="w-full py-3 px-3 border-2 border-dashed border-slate-300 hover:border-emerald-500 rounded-lg text-slate-600 hover:text-emerald-700 text-xs font-semibold flex flex-col items-center justify-center gap-1 bg-white cursor-pointer transition"
+                >
+                  <Camera class="w-5 h-5 text-emerald-600" />
+                  <span>Snap / Upload After Photo</span>
+                </button>
               </div>
             </div>
           </div>
@@ -477,5 +511,19 @@ onMounted(() => {
         </form>
       </div>
     </div>
+
+    <!-- Camera Modal for Repair Evidence -->
+    <CameraPhotoUpload
+      v-if="activeCameraField"
+      :title="activeCameraField === 'before' ? 'Capture Pre-Repair Photograph' : 'Capture Post-Repair & Generation Photo'"
+      :subtitle="activeCameraField === 'before' ? 'Photograph physical damaged part, inverter error display, or wire fault' : 'Photograph inverter operational LCD, green LED status, and restored installation'"
+      caption-placeholder="Describe fault or restored operation"
+      @photo-uploaded="(url) => {
+        if (activeCameraField === 'before') completeForm.beforePhotoUrl = url;
+        else completeForm.afterPhotoUrl = url;
+        activeCameraField = null;
+      }"
+      @close="activeCameraField = null"
+    />
   </div>
 </template>
