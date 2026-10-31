@@ -44,6 +44,12 @@ public class InventoryService {
 
     @Transactional
     public InventoryStock adjustStock(Long productId, int quantityDelta, String reason, String performedBy) {
+        if (quantityDelta == 0) {
+            throw new IllegalArgumentException("Validation Error: Adjustment quantity cannot be zero");
+        }
+        if (reason == null || reason.trim().isEmpty()) {
+            throw new IllegalArgumentException("Validation Error: Adjustment reason is mandatory for inventory audit trail");
+        }
         Product product = productRepository.findById(productId)
                 .orElseThrow(() -> new IllegalArgumentException("Product not found with id: " + productId));
 

@@ -69,7 +69,8 @@ public class ServiceTicketController {
         return ResponseEntity.ok(ticket);
     }
 
-    @PostMapping("/{id}/confirm-and-close")
+    @PostMapping({ "/{id}/confirm-and-close", "/{id}/confirm-customer" })
+    @PreAuthorize("hasRole('SUPPORT')")
     public ResponseEntity<ServiceTicket> confirmAndClose(
             @PathVariable Long id,
             @Valid @RequestBody CustomerConfirmationRequest request,

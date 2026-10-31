@@ -22,6 +22,7 @@ public class OrderController {
     private OrderService orderService;
 
     @GetMapping
+    @PreAuthorize("hasAnyRole('ADMIN', 'SALES', 'WAREHOUSE', 'TECHNICIAN', 'FINANCE')")
     public ResponseEntity<List<SalesOrder>> getAllOrders(@RequestParam(required = false) OrderStatus status) {
         if (status != null) {
             return ResponseEntity.ok(orderService.getOrdersByStatus(status));
@@ -30,11 +31,13 @@ public class OrderController {
     }
 
     @GetMapping("/{id}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SALES', 'WAREHOUSE', 'TECHNICIAN', 'FINANCE')")
     public ResponseEntity<SalesOrder> getOrderById(@PathVariable Long id) {
         return ResponseEntity.ok(orderService.getOrderById(id));
     }
 
     @PostMapping("/convert")
+    @PreAuthorize("hasAnyRole('SALES')")
     public ResponseEntity<SalesOrder> convertQuotationToOrder(
             @Valid @RequestBody OrderConvertRequest request,
             Authentication authentication) {
@@ -44,6 +47,7 @@ public class OrderController {
     }
 
     @PatchMapping("/{id}/status")
+    @PreAuthorize("hasAnyRole('SALES', 'WAREHOUSE')")
     public ResponseEntity<SalesOrder> updateOrderStatus(
             @PathVariable Long id,
             @Valid @RequestBody OrderStatusUpdateRequest request) {

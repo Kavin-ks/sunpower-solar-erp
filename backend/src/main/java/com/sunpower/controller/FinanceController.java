@@ -19,7 +19,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/finance")
-@PreAuthorize("hasAnyRole('FINANCE', 'DIRECTOR', 'ADMIN')")
+@PreAuthorize("hasAnyRole('FINANCE', 'ADMIN')")
 public class FinanceController {
 
     @Autowired
@@ -45,11 +45,13 @@ public class FinanceController {
     }
 
     @GetMapping("/invoices")
+    @PreAuthorize("hasAnyRole('ADMIN', 'FINANCE', 'SALES')")
     public ResponseEntity<List<Invoice>> getAllInvoices() {
         return ResponseEntity.ok(financeService.getAllInvoices());
     }
 
     @GetMapping("/invoices/{id}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'FINANCE', 'SALES')")
     public ResponseEntity<Invoice> getInvoiceById(@PathVariable Long id) {
         return ResponseEntity.ok(financeService.getInvoiceById(id));
     }

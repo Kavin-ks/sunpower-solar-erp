@@ -81,7 +81,13 @@ public class DispatchService {
 
         dispatch = dispatchRepository.save(dispatch);
         if (dispatch.getDispatchNumber() == null) {
-            dispatch.setDispatchNumber("DSP-" + String.format("%05d", dispatch.getId()));
+            String dspNum;
+            long offset = 0;
+            do {
+                dspNum = "DSP-" + String.format("%05d", dispatch.getId() + offset);
+                offset++;
+            } while (dispatchRepository.findByDispatchNumber(dspNum).isPresent());
+            dispatch.setDispatchNumber(dspNum);
             dispatch = dispatchRepository.save(dispatch);
         }
 
@@ -148,6 +154,26 @@ public class DispatchService {
         serialNumberHistoryRepository.save(history);
 
         return item.getDispatch();
+        Dispatch dispatch = item.getDispatch();
+        // Check if all serialized items in this dispatch have now been scanned/assigned
+        boolean allPicked = true;
+        for (DispatchItem di : dispatch.getItems()) {
+            if (di.getProduct().isSerialized()) {
+                if (di.getId().equals(item.getId())) {
+                    continue; // this item was just allocated
+                }
+                if (di.getSerialNumber() == null) {
+                    allPicked = false;
+                    break;
+                }
+            }
+        }
+        if (allPicked && dispatch.getStatus() == DispatchStatus.PICKING) {
+            dispatch.setStatus(DispatchStatus.READY_FOR_DISPATCH);
+            dispatch = dispatchRepository.save(dispatch);
+        }
+
+        return dispatch;
     }
 
     @Transactional

@@ -22,32 +22,12 @@ public class EnquiryController {
     private EnquiryService enquiryService;
 
     @GetMapping
-    public ResponseEntity<List<Enquiry>> getAllEnquiries(
-            @RequestParam(required = false) String search,
-            @RequestParam(required = false) EnquiryStatus status) {
-        if (status != null) {
-            return ResponseEntity.ok(enquiryService.getEnquiriesByStatus(status));
-        }
-        if (search != null && !search.trim().isEmpty()) {
-            return ResponseEntity.ok(enquiryService.searchEnquiries(search));
-        }
-        return ResponseEntity.ok(enquiryService.getAllEnquiries());
-    }
-
-    @GetMapping("/{id}")
-    public ResponseEntity<Enquiry> getEnquiryById(@PathVariable Long id) {
+    @PreAuthorize("hasAnyRole('ADMIN', 'SALES')")    public ResponseEntity<Enquiry> getEnquiryById(@PathVariable Long id) {
         return ResponseEntity.ok(enquiryService.getEnquiryById(id));
     }
 
     @PostMapping
-    public ResponseEntity<Enquiry> createEnquiry(@Valid @RequestBody EnquiryCreateRequest request, Authentication authentication) {
-        String actor = authentication != null ? authentication.getName() : "Sales Team";
-        Enquiry enquiry = enquiryService.createEnquiry(request, actor);
-        return ResponseEntity.status(HttpStatus.CREATED).body(enquiry);
-    }
-
-    @PatchMapping("/{id}/status")
-    public ResponseEntity<Enquiry> updateStatus(
+    @PreAuthorize("hasAnyRole('SALES')")    public ResponseEntity<Enquiry> updateStatus(
             @PathVariable Long id,
             @Valid @RequestBody EnquiryStatusUpdateRequest request,
             Authentication authentication) {
@@ -57,6 +37,7 @@ public class EnquiryController {
     }
 
     @PatchMapping("/{id}/assign/{userId}")
+    @PreAuthorize("hasAnyRole('SALES')")
     public ResponseEntity<Enquiry> assignToSales(
             @PathVariable Long id,
             @PathVariable Long userId,

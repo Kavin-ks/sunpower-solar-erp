@@ -64,6 +64,46 @@ public class OrderService {
             quotationRepository.save(quotation);
         }
 
+        // 2. Prevent duplicate conversion
+        if (salesOrderRepository.existsByQuotationId(quotation.getId())) {
+            throw new IllegalStateException("A sales order has already been created for quotation " + quotation.getQuotationNumber());
+        }
+
+        // 3. Pre-validate stock availability for all required BOM products before making any reservations
+        List<QuotationItem> checkItems = quotation.getItems();
+        if (checkItems != null && !checkItems.isEmpty()) {
+            for (QuotationItem qItem : checkItems) {
+                InventoryStock stock = inventoryStockRepository.findByProductId(qItem.getProduct().getId())
+                        .orElseThrow(() -> new IllegalStateException("Inventory record missing for product: " + qItem.getProduct().getName()));
+                if (stock.getAvailableQuantity() < qItem.getQuantity()) {
+                    throw new IllegalStateException("Insufficient inventory: Product '" + qItem.getProduct().getName() +
+                            "' requires " + qItem.getQuantity() + " units, but only " + stock.getAvailableQuantity() + " are available in warehouse.");
+                }
+            }
+        } else if (quotation.getSolarPackage() != null) {
+            List<PackageBOM> bomList = packageBOMRepository.findBySolarPackageId(quotation.getSolarPackage().getId());
+            for (PackageBOM bom : bomList) {
+                InventoryStock stock = inventoryStockRepository.findByProductId(bom.getProduct().getId())
+                        .orElseThrow(() -> new IllegalStateException("Inventory record missing for product: " + bom.getProduct().getName()));
+                if (stock.getAvailableQuantity() < bom.getQuantity()) {
+                    throw new IllegalStateException("Insufficient inventory: Product '" + bom.getProduct().getName() +
+                            "' requires " + bom.getQuantity() + " units, but only " + stock.getAvailableQuantity() + " are available in warehouse.");
+                }
+            }
+        }
+
+        // 4. Generate guaranteed unique Order Number
+        String orderNumber;
+        int attempts = 0;
+        do {
+            orderNumber = "ORD-" + LocalDate.now().getYear() + "-" + String.format("%04d", (int)(Math.random() * 9000 + 1000));
+            attempts++;
+            if (attempts > 50) {
+                orderNumber = "ORD-" + System.currentTimeMillis();
+                break;
+            }
+        } while (salesOrderRepository.existsByOrderNumber(orderNumber));
+
         SalesOrder order = new SalesOrder();
         order.setCustomer(quotation.getCustomer());
         order.setQuotation(quotation);
@@ -170,6 +210,122 @@ public class OrderService {
     public SalesOrder updateOrderStatus(Long id, OrderStatusUpdateRequest request) {
         SalesOrder order = getOrderById(id);
         order.setStatus(request.getStatus());
-        return salesOrderRepository.save(order);
+        order = salesOrderRepository.save(order);
+
+        if (request.getStatus() == OrderStatus.CONFIRMED) {
+            ensureDispatchAndInstallation(order);
+        } else if (request.getStatus() == OrderStatus.CANCELLED) {
+            releaseOrderReservations(order);
+        }
+
+        return order;
+    }
+
+    @Transactional
+    public void releaseOrderReservations(SalesOrder order) {
+        if (order == null || order.getId() == null) return;
+        List<OrderItem> items = order.getItems() != null && !order.getItems().isEmpty() ?
+                order.getItems() : orderItemRepository.findBySalesOrderId(order.getId());
+        for (OrderItem item : items) {
+            inventoryStockRepository.findByProductId(item.getProduct().getId()).ifPresent(stock -> {
+                int toRelease = Math.min(stock.getReservedQuantity(), item.getQuantity());
+                if (toRelease > 0) {
+                    stock.setReservedQuantity(stock.getReservedQuantity() - toRelease);
+                    stock.setAvailableQuantity(stock.getAvailableQuantity() + toRelease);
+                    inventoryStockRepository.save(stock);
+
+                    StockMovement movement = new StockMovement(
+                            item.getProduct(),
+                            StockMovementType.RETURN,
+                            toRelease,
+                            order.getOrderNumber(),
+                            "Reservation released due to cancellation of order " + order.getOrderNumber(),
+                            "Warehouse Inventory System"
+                    );
+                    stockMovementRepository.save(movement);
+                }
+            });
+        }
+    }
+
+    @Transactional
+    public void ensureDispatchAndInstallation(SalesOrder order) {
+        if (order == null || order.getId() == null) return;
+
+        // 1. Ensure Dispatch exists
+        List<Dispatch> existingDispatches = dispatchRepository.findBySalesOrderId(order.getId());
+        if (existingDispatches == null || existingDispatches.isEmpty()) {
+            Dispatch dispatch = new Dispatch();
+            dispatch.setSalesOrder(order);
+            dispatch.setCustomer(order.getCustomer());
+            dispatch.setStatus(com.sunpower.entity.enums.Enums.DispatchStatus.PICKING);
+            dispatch.setDispatchNotes("Auto-created on order confirmation");
+            dispatch = dispatchRepository.save(dispatch);
+            if (dispatch.getDispatchNumber() == null) {
+                String dspNum;
+                long offset = 0;
+                do {
+                    dspNum = "DSP-" + String.format("%05d", dispatch.getId() + offset);
+                    offset++;
+                } while (dispatchRepository.findByDispatchNumber(dspNum).isPresent());
+                dispatch.setDispatchNumber(dspNum);
+                dispatch = dispatchRepository.save(dispatch);
+            }
+
+            List<DispatchItem> dispatchItems = new ArrayList<>();
+            List<OrderItem> items = order.getItems() != null && !order.getItems().isEmpty() ?
+                    order.getItems() : orderItemRepository.findBySalesOrderId(order.getId());
+            for (OrderItem orderItem : items) {
+                Product product = orderItem.getProduct();
+                if (product.isSerialized() && (product.getProductCode() == null || !product.getProductCode().toUpperCase().contains("PANEL"))) {
+                    for (int i = 0; i < orderItem.getQuantity(); i++) {
+                        dispatchItems.add(new DispatchItem(dispatch, product, 1, null));
+                    }
+                } else {
+                    dispatchItems.add(new DispatchItem(dispatch, product, orderItem.getQuantity(), null));
+                }
+            }
+            dispatchItemRepository.saveAll(dispatchItems);
+            dispatch.setItems(dispatchItems);
+        }
+
+        // 2. Ensure Installation exists
+        java.util.Optional<Installation> existingInstallation = installationRepository.findBySalesOrderId(order.getId());
+        if (existingInstallation.isEmpty()) {
+            Installation installation = new Installation();
+            installation.setSalesOrder(order);
+            installation.setCustomer(order.getCustomer());
+            installation.setScheduledDate(LocalDate.now().plusDays(3));
+            installation.setInstalledCapacityKw(order.getCapacityKw());
+            installation.setStatus(com.sunpower.entity.enums.Enums.InstallationStatus.SCHEDULED);
+            installation.setWorkNotes("Auto-scheduled on order confirmation");
+            installation = installationRepository.save(installation);
+            if (installation.getInstallationNumber() == null) {
+                installation.setInstallationNumber("INS-" + String.format("%05d", installation.getId()));
+                installationRepository.save(installation);
+            }
+        }
+
+        // 3. Ensure SubsidyApplication exists if subsidy was opted
+        boolean subsidyOpted = (order.getQuotation() != null &&
+                order.getQuotation().getSiteSurvey() != null &&
+                order.getQuotation().getSiteSurvey().getEnquiry() != null &&
+                order.getQuotation().getSiteSurvey().getEnquiry().isSubsidyRequired());
+
+        if (subsidyOpted) {
+            java.util.Optional<SubsidyApplication> existingSubsidy = subsidyApplicationRepository.findBySalesOrderId(order.getId());
+            if (existingSubsidy.isEmpty()) {
+                SubsidyApplication subsidy = new SubsidyApplication();
+                subsidy.setCustomer(order.getCustomer());
+                subsidy.setSalesOrder(order);
+                subsidy.setSubsidyAmountClaimed(BigDecimal.valueOf(78000.00));
+                subsidy.setStatus(com.sunpower.entity.enums.Enums.SubsidyStatus.DOCUMENTS_PENDING);
+                subsidy = subsidyApplicationRepository.save(subsidy);
+                if (subsidy.getApplicationNumber() == null) {
+                    subsidy.setApplicationNumber("SUB-" + LocalDate.now().getYear() + "-" + String.format("%04d", subsidy.getId()));
+                    subsidyApplicationRepository.save(subsidy);
+                }
+            }
+        }
     }
 }

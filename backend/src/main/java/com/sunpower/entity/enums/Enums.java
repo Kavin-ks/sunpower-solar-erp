@@ -8,7 +8,7 @@ public class Enums {
         ROLE_TECHNICIAN,
         ROLE_SUPPORT,
         ROLE_FINANCE,
-        ROLE_DIRECTOR
+        ROLE_CUSTOMER
     }
 
     public enum CustomerType {
