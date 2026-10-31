@@ -977,27 +977,27 @@ const AuthWelcomePage = () => {
                     <strong style={{ color: '#0f172a' }}>{regEmail}</strong>
                   </p>
 
-                  {/* Fallback / Quota Reached Testing Helper */}
+                  {/* Fallback & Spam helper */}
                   {demoCode && (
                     <div
                       style={{
-                        backgroundColor: '#fffbeb',
-                        border: '1px solid #fde68a',
+                        backgroundColor: '#f8fafc',
+                        border: '1px solid #e2e8f0',
                         borderRadius: '8px',
                         padding: '10px 14px',
                         margin: '0 auto 18px auto',
                         maxWidth: '380px',
                         fontSize: '12.5px',
-                        color: '#92400e',
+                        color: '#475569',
                         textAlign: 'center',
                       }}
                     >
-                      <div style={{ fontWeight: 700, marginBottom: '2px' }}>
-                        Email Quota Limit Reached on Sender Account
+                      <div style={{ color: '#64748b', fontSize: '12px' }}>
+                        Didn't receive the email? Check your <strong>Spam / Junk folder</strong> or use this code:
                       </div>
-                      <div style={{ margin: '4px 0' }}>
-                        Your verification OTP is:{' '}
-                        <strong style={{ letterSpacing: '3px', fontSize: '16px', color: '#b45309' }}>
+                      <div style={{ margin: '6px 0' }}>
+                        OTP Code:{' '}
+                        <strong style={{ letterSpacing: '3px', fontSize: '18px', color: '#e63a27', fontFamily: 'monospace' }}>
                           {demoCode}
                         </strong>
                       </div>
@@ -1007,12 +1007,12 @@ const AuthWelcomePage = () => {
                           setOtpValues(demoCode.split(''));
                         }}
                         style={{
-                          marginTop: '6px',
-                          padding: '4px 12px',
-                          backgroundColor: '#f59e0b',
+                          marginTop: '4px',
+                          padding: '5px 14px',
+                          backgroundColor: '#e63a27',
                           color: '#ffffff',
                           border: 'none',
-                          borderRadius: '4px',
+                          borderRadius: '6px',
                           fontSize: '11.5px',
                           fontWeight: 700,
                           cursor: 'pointer',

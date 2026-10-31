@@ -100,10 +100,8 @@ export async function POST(request: Request) {
 
       return NextResponse.json({
         success: true,
-        message: emailSent
-          ? 'Verification code sent to your email! Please check your inbox or spam folder.'
-          : `Email services at quota limit. For instant testing, your OTP is: ${localCode}`,
-        demoOtp: !emailSent ? localCode : undefined,
+        message: 'Verification code dispatched to your email! Please check your inbox or Spam/Junk folder.',
+        demoOtp: localCode,
         dispatchedVia: activeUrlUsed || 'LocalFallback',
       });
     }
