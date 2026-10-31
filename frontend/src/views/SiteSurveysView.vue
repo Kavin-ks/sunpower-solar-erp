@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, watch } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { api } from '../api/client';
 import type { SiteSurvey, Customer, Technician, SurveyStatus, Enquiry } from '../types';
@@ -32,6 +32,23 @@ const scheduleData = ref({
   technicianId: '',
   scheduledDate: new Date().toISOString().split('T')[0],
   surveyNotes: '',
+});
+
+const availableTechnicians = computed(() => {
+  if (!technicians.value || technicians.value.length === 0) return [];
+  const activeTechs = technicians.value.filter((t) => t.active !== false);
+  const available = activeTechs.filter((t) => t.available !== false);
+  return available.length > 0 ? available : activeTechs;
+});
+
+const selectedCustomerInfo = computed(() => {
+  if (!scheduleData.value.customerId) return null;
+  return customers.value.find((c) => String(c.id) === String(scheduleData.value.customerId)) || null;
+});
+
+const selectedEnquiryInfo = computed(() => {
+  if (!scheduleData.value.enquiryId) return null;
+  return enquiries.value.find((e) => String(e.id) === String(scheduleData.value.enquiryId)) || null;
 });
 
 // Technician Inspection Report Form
@@ -76,15 +93,15 @@ const fetchInitialData = async () => {
       api.get('/technicians'),
       api.get('/enquiries'),
     ]);
-    surveys.value = survRes.data;
-    customers.value = custRes.data;
-    technicians.value = techRes.data;
-    enquiries.value = enqRes.data;
-    if (techRes.data.length > 0 && !scheduleData.value.technicianId) {
-      scheduleData.value.technicianId = techRes.data[0].id.toString();
+    surveys.value = Array.isArray(survRes.data) ? survRes.data : [];
+    customers.value = Array.isArray(custRes.data) ? custRes.data : [];
+    technicians.value = Array.isArray(techRes.data) ? techRes.data : [];
+    enquiries.value = Array.isArray(enqRes.data) ? enqRes.data : [];
+    if (availableTechnicians.value.length > 0 && !scheduleData.value.technicianId) {
+      scheduleData.value.technicianId = availableTechnicians.value[0].id.toString();
     }
   } catch (err) {
-    console.error(err);
+    console.error('Failed to load site surveys data', err);
   } finally {
     loading.value = false;
   }
@@ -189,15 +206,22 @@ const proceedToQuotation = (surv: SiteSurvey) => {
   });
 };
 
+watch(
+  () => route.query,
+  (q) => {
+    if (q.customerId) {
+      scheduleData.value.customerId = String(q.customerId);
+      if (q.enquiryId) {
+        scheduleData.value.enquiryId = String(q.enquiryId);
+      }
+      showScheduleModal.value = true;
+    }
+  },
+  { immediate: true }
+);
+
 onMounted(() => {
   fetchInitialData();
-  if (route.query.customerId) {
-    scheduleData.value.customerId = String(route.query.customerId);
-    if (route.query.enquiryId) {
-      scheduleData.value.enquiryId = String(route.query.enquiryId);
-    }
-    showScheduleModal.value = true;
-  }
 });
 </script>
 
@@ -345,6 +369,18 @@ onMounted(() => {
         </div>
 
         <form @submit.prevent="handleScheduleSubmit" class="space-y-4 text-xs">
+          <!-- Auto-Selected Customer & Enquiry Badge when opened via pre-selection -->
+          <div v-if="selectedCustomerInfo" class="p-3 bg-emerald-50 rounded-xl border border-emerald-200 flex items-center justify-between">
+            <div>
+              <span class="text-[10px] uppercase font-bold text-emerald-800 tracking-wider">Target Customer & Lead</span>
+              <div class="text-xs font-bold text-slate-900 mt-0.5">{{ selectedCustomerInfo.fullName }} ({{ selectedCustomerInfo.phone }})</div>
+              <div v-if="selectedEnquiryInfo" class="text-[11px] text-slate-500 font-mono mt-0.5">Enquiry: {{ selectedEnquiryInfo.enquiryNumber }}</div>
+            </div>
+            <span class="px-2.5 py-1 bg-white text-emerald-700 font-bold text-[11px] rounded-lg border border-emerald-200 shadow-2xs">
+              ✓ Auto-Selected
+            </span>
+          </div>
+
           <div>
             <label class="block font-semibold text-slate-700 mb-1">Select Customer *</label>
             <select
@@ -353,7 +389,7 @@ onMounted(() => {
               class="w-full px-3 py-2 border border-slate-200 rounded-lg text-xs focus:ring-2 focus:ring-emerald-500 focus:outline-none"
             >
               <option value="">-- Choose Customer --</option>
-              <option v-for="c in customers" :key="c.id" :value="c.id">
+              <option v-for="c in customers" :key="c.id" :value="String(c.id)">
                 {{ c.fullName }} ({{ c.phone }}) - {{ c.city }}
               </option>
             </select>
@@ -366,7 +402,7 @@ onMounted(() => {
               class="w-full px-3 py-2 border border-slate-200 rounded-lg text-xs focus:ring-2 focus:ring-emerald-500 focus:outline-none"
             >
               <option value="">-- Direct Booking (No Prior Enquiry) --</option>
-              <option v-for="e in enquiries" :key="e.id" :value="e.id">
+              <option v-for="e in enquiries" :key="e.id" :value="String(e.id)">
                 {{ e.enquiryNumber }} - {{ e.customer.fullName }} ({{ e.requestedCapacityKw }} kW)
               </option>
             </select>
@@ -380,8 +416,9 @@ onMounted(() => {
                 v-model="scheduleData.technicianId"
                 class="w-full px-3 py-2 border border-slate-200 rounded-lg text-xs focus:ring-2 focus:ring-emerald-500 focus:outline-none"
               >
-                <option v-for="t in technicians" :key="t.id" :value="t.id">
-                  {{ t.name }} ({{ t.phone }})
+                <option value="">-- Select Certified Solar Technician --</option>
+                <option v-for="t in availableTechnicians" :key="t.id" :value="String(t.id)">
+                  {{ t.name }} — {{ t.skills || (t as any).specialization || 'Certified Solar Technician' }}
                 </option>
               </select>
             </div>

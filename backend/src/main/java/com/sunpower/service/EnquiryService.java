@@ -42,10 +42,15 @@ public class EnquiryService {
     }
 
     public List<Enquiry> searchEnquiries(String query) {
-        if (query == null || query.trim().isEmpty()) {
+        return searchEnquiries(query, null);
+    }
+
+    public List<Enquiry> searchEnquiries(String query, EnquiryStatus status) {
+        String trimmedQuery = (query != null && !query.trim().isEmpty()) ? query.trim() : null;
+        if (trimmedQuery == null && status == null) {
             return enquiryRepository.findAll();
         }
-        return enquiryRepository.searchEnquiries(query.trim());
+        return enquiryRepository.searchEnquiriesWithStatus(trimmedQuery, status);
     }
 
     public List<Enquiry> getEnquiriesByStatus(EnquiryStatus status) {

@@ -89,6 +89,9 @@ public class DataInitializationService implements CommandLineRunner {
     @Autowired
     private InvoiceRepository invoiceRepository;
 
+    @Autowired
+    private EnquiryRepository enquiryRepository;
+
     @Override
     @Transactional
     public void run(String... args) throws Exception {
@@ -97,6 +100,7 @@ public class DataInitializationService implements CommandLineRunner {
             ensurePickingDispatchExists();
             ensurePanelSerializationAndStockSerials();
             ensureDemoHistoricalDataExists();
+            ensureDemoEnquiriesExist();
             return; // Already initialized roles/users
         }
 
@@ -290,6 +294,7 @@ public class DataInitializationService implements CommandLineRunner {
         ensurePickingDispatchExists();
         ensurePanelSerializationAndStockSerials();
         ensureDemoHistoricalDataExists();
+        ensureDemoEnquiriesExist();
     }
 
     private void createUser(String username, String fullName, String email, String phone, Role role) {
@@ -1194,6 +1199,66 @@ public class DataInitializationService implements CommandLineRunner {
                     warrantyRepository.save(warPnlC);
                 }
             }
+        }
+    }
+
+    private void ensureDemoEnquiriesExist() {
+        Customer custVikram = customerRepository.findByPhone("9840112233").orElseGet(() -> {
+            Customer c = new Customer();
+            c.setFullName("Vikram Nair");
+            c.setPhone("9840112233");
+            c.setEmail("vikram.nair@example.com");
+            c.setAddress("42, Avinashi Road, Peelamedu");
+            c.setCity("Coimbatore");
+            c.setState("Tamil Nadu");
+            c.setPincode("641004");
+            c.setCustomerType(CustomerType.RESIDENTIAL);
+            return customerRepository.save(c);
+        });
+
+        if (enquiryRepository.findByCustomerId(custVikram.getId()).isEmpty()) {
+            Enquiry enq = new Enquiry();
+            enq.setEnquiryNumber("ENQ-00100");
+            enq.setCustomer(custVikram);
+            enq.setRequestedCapacityKw(new BigDecimal("3.00"));
+            enq.setSystemType(SystemType.ON_GRID);
+            enq.setSubsidyRequired(true);
+            enq.setMonthlyElectricityBill(new BigDecimal("3800.00"));
+            enq.setShadowFreeAreaSqFt(new BigDecimal("400.00"));
+            enq.setGridSuitable(true);
+            enq.setSource(EnquirySource.PHONE);
+            enq.setStatus(EnquiryStatus.QUALIFIED);
+            enq.setNotes("Pre-qualified phone lead: 3 kW on-grid solar system with shadow-free south roof and PM Surya Ghar subsidy.");
+            enquiryRepository.save(enq);
+        }
+
+        Customer custBalaji = customerRepository.findByPhone("9840112250").orElseGet(() -> {
+            Customer c = new Customer();
+            c.setFullName("Balaji Subramanian");
+            c.setPhone("9840112250");
+            c.setEmail("balaji.sub@example.com");
+            c.setAddress("14, Gandhi Nagar, Adyar");
+            c.setCity("Chennai");
+            c.setState("Tamil Nadu");
+            c.setPincode("600020");
+            c.setCustomerType(CustomerType.RESIDENTIAL);
+            return customerRepository.save(c);
+        });
+
+        if (enquiryRepository.findByCustomerId(custBalaji.getId()).isEmpty()) {
+            Enquiry enq2 = new Enquiry();
+            enq2.setEnquiryNumber("ENQ-00101");
+            enq2.setCustomer(custBalaji);
+            enq2.setRequestedCapacityKw(new BigDecimal("5.00"));
+            enq2.setSystemType(SystemType.ON_GRID);
+            enq2.setSubsidyRequired(true);
+            enq2.setMonthlyElectricityBill(5200.00 != 0 ? new BigDecimal("5200.00") : null);
+            enq2.setShadowFreeAreaSqFt(new BigDecimal("600.00"));
+            enq2.setGridSuitable(true);
+            enq2.setSource(EnquirySource.WHATSAPP);
+            enq2.setStatus(EnquiryStatus.NEW);
+            enq2.setNotes("WhatsApp inquiry: Interested in 5 kW system for duplex villa.");
+            enquiryRepository.save(enq2);
         }
     }
 }
