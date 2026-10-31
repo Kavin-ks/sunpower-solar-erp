@@ -31,6 +31,14 @@ const createForm = ref({
   complaintDescription: '',
 });
 
+const selectDemoSerial = (serialCode: string, customerName: string) => {
+  createForm.value.serialCode = serialCode;
+  const match = customers.value.find((c: any) => c.fullName && c.fullName.toLowerCase().includes(customerName.toLowerCase()));
+  if (match) {
+    createForm.value.customerId = String(match.id);
+  }
+};
+
 const assignTechId = ref('');
 
 const resolveForm = ref({
@@ -363,7 +371,27 @@ onMounted(() => {
           </div>
 
           <div>
-            <label class="block font-semibold text-slate-700 mb-1">Defective Component Serial Code (Optional)</label>
+            <div class="flex items-center justify-between mb-1">
+              <label class="block font-semibold text-slate-700">Defective Component Serial Code</label>
+              <div class="flex items-center gap-1.5">
+                <button
+                  type="button"
+                  @click="selectDemoSerial('INV-2025-1801', 'Vikram')"
+                  class="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200 cursor-pointer transition-colors"
+                  title="Auto-selects Vikram Nair (18m old, In-Warranty -> ₹0 Free)"
+                >
+                  🟢 Demo In-Warranty: INV-2025-1801
+                </button>
+                <button
+                  type="button"
+                  @click="selectDemoSerial('INV-2023-9901', 'Meera')"
+                  class="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-200 cursor-pointer transition-colors"
+                  title="Auto-selects Meera Krishnan (30m old, Expired -> Auto-Bill)"
+                >
+                  🔴 Demo Expired: INV-2023-9901
+                </button>
+              </div>
+            </div>
             <input
               type="text"
               v-model="createForm.serialCode"
