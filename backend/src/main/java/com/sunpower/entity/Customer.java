@@ -36,6 +36,10 @@ public class Customer {
     @Column(nullable = false, length = 30)
     private CustomerType customerType = CustomerType.RESIDENTIAL;
 
+    // Link to user account (nullable — existing customers without portal accounts remain valid)
+    @Column(name = "user_id")
+    private Long userId;
+
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
@@ -70,6 +74,8 @@ public class Customer {
     public void setState(String state) { this.state = state; }
     public CustomerType getCustomerType() { return customerType; }
     public void setCustomerType(CustomerType customerType) { this.customerType = customerType; }
+    public Long getUserId() { return userId; }
+    public void setUserId(Long userId) { this.userId = userId; }
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
     public LocalDateTime getUpdatedAt() { return updatedAt; }

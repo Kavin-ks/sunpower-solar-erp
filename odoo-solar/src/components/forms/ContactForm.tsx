@@ -32,6 +32,33 @@ const ContactForm = () => {
   const onSubmit = async (data: FormData) => {   
     toast.success("Inquiry submitted successfully! Our team will contact you shortly.");
 
+    // 0. REAL API: Submit to Spring Boot backend (shared database — syncs to staff dashboard in real time!)
+    try {
+      const capacityMap: Record<string, number> = { '1kW': 1, '2kW': 2, '3kW': 3, '4kW': 4, '5kW': 5 };
+      const systemTypeMap: Record<string, string> = { 'On-Grid': 'ON_GRID', 'Off-Grid': 'OFF_GRID', 'Hybrid': 'ON_GRID' };
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
+
+      await fetch(`${apiUrl}/api/enquiries/public`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          fullName: data.Fullname,
+          phone: data.phone,
+          email: data.email,
+          address: data.message || 'Not provided',
+          city: 'Chennai',
+          pincode: '600001',
+          requestedCapacityKw: capacityMap[data.solarSystem] || 3,
+          systemType: systemTypeMap[data.systemType] || 'ON_GRID',
+          subsidyRequired: true,
+          notes: data.message,
+        }),
+      });
+      console.log('✅ Enquiry saved to Spring Boot backend (synced to staff dashboard!)');
+    } catch (backendErr) {
+      console.error('Backend API submission error (non-blocking):', backendErr);
+    }
+
     // 1. Dispatch enquiry to Next.js API route (which reads .env and forwards to Google Apps Script)
     try {
       fetch('/api/enquiry', {

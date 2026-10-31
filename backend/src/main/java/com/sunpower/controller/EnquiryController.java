@@ -77,4 +77,21 @@ public class EnquiryController {
         Enquiry enquiry = enquiryService.assignToSales(id, userId, actor);
         return ResponseEntity.ok(enquiry);
     }
+
+    @GetMapping("/public/status/{enquiryNumber}")
+    public ResponseEntity<?> getPublicEnquiryStatus(@PathVariable String enquiryNumber) {
+        List<Enquiry> enquiries = enquiryService.getAllEnquiries().stream()
+                .filter(e -> enquiryNumber.equals(e.getEnquiryNumber()))
+                .collect(java.util.stream.Collectors.toList());
+        if (enquiries.isEmpty()) {
+            return ResponseEntity.notFound().build();
+        }
+        Enquiry e = enquiries.get(0);
+        return ResponseEntity.ok(java.util.Map.of(
+            "enquiryNumber", e.getEnquiryNumber(),
+            "status", e.getStatus(),
+            "customerName", e.getCustomer().getFullName(),
+            "createdAt", e.getCreatedAt()
+        ));
+    }
 }

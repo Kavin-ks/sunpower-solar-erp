@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import SunPowerERP from '@/components/erp/SunPowerERP';
+import { staffLogin, setToken } from '@/lib/api';
 
 interface UserSession {
   username: string;
@@ -70,13 +71,36 @@ export default function LoginPage() {
     }
   }, []);
 
-  const handleLogin = (e?: React.FormEvent) => {
+  const handleLogin = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     setError('');
     setLoading(true);
 
-    setTimeout(() => {
-      const cleanUser = username.trim().toLowerCase();
+    const cleanUser = username.trim().toLowerCase();
+
+    // Try real Spring Boot JWT authentication first
+    try {
+      const authResp = await staffLogin({ username: cleanUser, password });
+      const persona: UserSession = {
+        username: authResp.username,
+        fullName: authResp.fullName,
+        role: authResp.roles?.[0]?.replace('ROLE_', '') || 'Staff',
+        email: authResp.email || `${cleanUser}@sunpowersolutions.in`,
+      };
+
+      // Store JWT token for API calls
+      setToken(authResp.token);
+
+      setUser(persona);
+      try {
+        localStorage.setItem('odoo_erp_user_session', JSON.stringify({ ...persona, token: authResp.token, roles: authResp.roles }));
+      } catch (err) {
+        console.error('Failed to store session', err);
+      }
+      setLoading(false);
+    } catch (authErr) {
+      console.warn('Backend auth failed, falling back to demo persona:', authErr);
+      // Fallback: use demo personas if backend is not reachable
       const persona = DEMO_PERSONAS[cleanUser] || {
         username: cleanUser,
         fullName: cleanUser.toUpperCase(),
@@ -91,14 +115,25 @@ export default function LoginPage() {
         console.error('Failed to store session', err);
       }
       setLoading(false);
-    }, 200);
+    }
   };
 
-  const handleQuickPersona = (personaKey: string) => {
+  const handleQuickPersona = async (personaKey: string) => {
     const persona = DEMO_PERSONAS[personaKey];
-    if (persona) {
-      setUsername(persona.username);
-      setPassword('password123');
+    if (!persona) return;
+
+    setUsername(persona.username);
+    setPassword('password123');
+
+    // Try real auth for this persona
+    try {
+      const authResp = await staffLogin({ username: persona.username, password: 'password123' });
+      setToken(authResp.token);
+      const enrichedPersona = { ...persona, token: authResp.token, roles: authResp.roles };
+      setUser(persona);
+      localStorage.setItem('odoo_erp_user_session', JSON.stringify(enrichedPersona));
+    } catch {
+      // Fallback to demo mode
       setUser(persona);
       try {
         localStorage.setItem('odoo_erp_user_session', JSON.stringify(persona));
@@ -112,6 +147,7 @@ export default function LoginPage() {
     setUser(null);
     try {
       localStorage.removeItem('odoo_erp_user_session');
+      localStorage.removeItem('sunpower_erp_state_next_v1');
     } catch (err) {
       console.error('Failed to clear session', err);
     }

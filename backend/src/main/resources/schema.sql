@@ -598,3 +598,11 @@ ALTER TABLE installations ADD COLUMN IF NOT EXISTS customer_signature_url LONGTE
 ALTER TABLE invoices MODIFY COLUMN sales_order_id BIGINT NULL;
 ALTER TABLE invoices ADD COLUMN IF NOT EXISTS service_ticket_id BIGINT NULL;
 
+
+-- Customer Portal: Link customers to user accounts (nullable for backward compatibility)
+ALTER TABLE customers ADD COLUMN IF NOT EXISTS user_id BIGINT NULL;
+ALTER TABLE customers ADD COLUMN IF NOT EXISTS state VARCHAR(50) NULL DEFAULT 'Tamil Nadu';
+ALTER TABLE customers ADD INDEX IF NOT EXISTS idx_customer_user_id (user_id);
+
+-- Customer Portal: Seed ROLE_CUSTOMER into roles table if not present
+INSERT IGNORE INTO roles (name) VALUES ('ROLE_CUSTOMER');
