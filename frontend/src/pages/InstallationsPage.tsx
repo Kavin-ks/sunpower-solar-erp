@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { api } from '../api/client';
 import { Installation, SalesOrder, Technician, SerialNumber } from '../types';
 import { StatusBadge } from '../components/ui/Badge';
@@ -24,6 +24,8 @@ import {
   MapPin,
 } from 'lucide-react';
 import { useLocation } from 'react-router-dom';
+import { BrowserMultiFormatReader } from '@zxing/browser';
+import { NotFoundException } from '@zxing/library';
 
 export const InstallationsPage: React.FC = () => {
   const [installations, setInstallations] = useState<Installation[]>([]);
@@ -43,10 +45,13 @@ export const InstallationsPage: React.FC = () => {
   const [verifying, setVerifying] = useState(false);
   const [scanFeedback, setScanFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
-  // Camera Barcode Scanning State
+  // Camera Barcode Scanning State (ZXing)
   const [cameraActive, setCameraActive] = useState(false);
+  const [lastCamScanned, setLastCamScanned] = useState<string>('');
   const videoRef = useRef<HTMLVideoElement | null>(null);
-  const streamRef = useRef<MediaStream | null>(null);
+  const codeReaderRef = useRef<BrowserMultiFormatReader | null>(null);
+  const scanningRef = useRef<boolean>(false);
+  const selectedInstallationRef = useRef<Installation | null>(null);
 
   // Schedule Form State
   const [selectedOrderId, setSelectedOrderId] = useState('');
@@ -173,29 +178,95 @@ export const InstallationsPage: React.FC = () => {
     }
   };
 
+  // Keep ref in sync with state for use inside ZXing callback closure
+  useEffect(() => { selectedInstallationRef.current = selectedInstallation; }, [selectedInstallation]);
+
+  const handleBarcodeFromCamera = useCallback(async (code: string) => {
+    if (!code || !selectedInstallationRef.current) return;
+    if (code === lastCamScanned) return;
+    setLastCamScanned(code);
+    setTimeout(() => setLastCamScanned(''), 2500);
+
+    setVerifying(true);
+    setScanFeedback(null);
+    try {
+      const res = await api.post(`/installations/${selectedInstallationRef.current.id}/verify-product`, {
+        barcode: code,
+      });
+      try {
+        const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.frequency.setValueAtTime(880, ctx.currentTime);
+        gain.gain.setValueAtTime(0.15, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.15);
+        osc.start(ctx.currentTime);
+        osc.stop(ctx.currentTime + 0.15);
+      } catch (e) {}
+      setScanFeedback({
+        type: 'success',
+        message: `✓ Camera-scanned & Verified: "${res.data.product?.name}" (${code}) marked SITE_RECEIVED!`,
+      });
+      const serialRes = await api.get(`/serial-numbers/order/${selectedInstallationRef.current.salesOrder.id}`);
+      setOrderSerials(serialRes.data);
+      fetchInitialData();
+    } catch (err: any) {
+      setScanFeedback({
+        type: 'error',
+        message: err.response?.data?.message || `Barcode ${code} not found in dispatch or invalid.`,
+      });
+    } finally {
+      setVerifying(false);
+    }
+  }, [lastCamScanned]);
+
   const startCamera = async () => {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: 'environment' },
-      });
-      streamRef.current = stream;
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        videoRef.current.play();
+      const reader = new BrowserMultiFormatReader();
+      codeReaderRef.current = reader;
+      scanningRef.current = true;
+
+      const devices = await BrowserMultiFormatReader.listVideoInputDevices();
+      if (devices.length === 0) {
+        alert('No camera found. Use USB barcode scanner or manual entry below.');
+        return;
       }
+
+      const preferredDevice = devices.find((d) => d.label.toLowerCase().includes('back')) || devices[0];
+
+      await reader.decodeFromVideoDevice(
+        preferredDevice.deviceId,
+        videoRef.current!,
+        (result, err) => {
+          if (!scanningRef.current) return;
+          if (result) {
+            handleBarcodeFromCamera(result.getText());
+          }
+          if (err && !(err instanceof NotFoundException)) {
+            console.warn('ZXing decode error:', err);
+          }
+        }
+      );
+
       setCameraActive(true);
     } catch (err) {
-      console.warn('Camera access error:', err);
-      alert('Could not access live camera. Please use USB Barcode scanner input or manual entry below.');
+      console.warn('Camera/ZXing error:', err);
+      alert('Could not access camera. Allow camera permission or use manual entry below.');
     }
   };
 
   const stopCamera = () => {
-    if (streamRef.current) {
-      streamRef.current.getTracks().forEach((track) => track.stop());
-      streamRef.current = null;
+    scanningRef.current = false;
+    codeReaderRef.current = null;
+    if (videoRef.current && videoRef.current.srcObject) {
+      const stream = videoRef.current.srcObject as MediaStream;
+      stream.getTracks().forEach((track) => track.stop());
+      videoRef.current.srcObject = null;
     }
     setCameraActive(false);
+    setLastCamScanned('');
   };
 
   const openVerifyModal = async (inst: Installation) => {
@@ -517,7 +588,7 @@ export const InstallationsPage: React.FC = () => {
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center space-x-2">
                     <Camera className="w-4 h-4 text-emerald-400" />
-                    <span className="font-semibold text-xs">Live Mobile / Tablet Camera Scanner</span>
+                    <span className="font-semibold text-xs">Live Camera — ZXing Auto-Decoder (Laptop / Mobile)</span>
                   </div>
                   {cameraActive ? (
                     <button
@@ -539,15 +610,29 @@ export const InstallationsPage: React.FC = () => {
                 </div>
 
                 {cameraActive ? (
-                  <div className="relative w-full h-44 bg-black rounded-lg overflow-hidden flex items-center justify-center border border-slate-700">
+                  <div className="relative w-full h-52 bg-black rounded-xl overflow-hidden flex items-center justify-center border border-emerald-500/40">
                     <video ref={videoRef} playsInline autoPlay muted className="w-full h-full object-cover" />
-                    <div className="absolute inset-x-8 inset-y-6 border-2 border-dashed border-emerald-400 rounded pointer-events-none flex items-center justify-center">
-                      <div className="w-full h-0.5 bg-rose-500 shadow-xs shadow-rose-500 animate-pulse" />
+                    {/* Scanning reticle */}
+                    <div className="absolute inset-x-8 inset-y-6 border-2 border-dashed border-emerald-400 rounded-lg pointer-events-none flex items-center justify-center">
+                      <div className="w-full h-0.5 bg-emerald-400 shadow-xs shadow-emerald-400 animate-pulse" />
+                    </div>
+                    {/* ZXing live indicator */}
+                    <div className="absolute top-2 left-2 flex items-center gap-1.5 bg-emerald-900/80 border border-emerald-500/60 px-2 py-0.5 rounded-full">
+                      <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-ping inline-block"></span>
+                      <span className="text-[10px] font-semibold text-emerald-300">ZXing Auto-Scan Active</span>
+                    </div>
+                    {lastCamScanned && (
+                      <div className="absolute top-2 right-2 bg-emerald-700/90 px-2 py-0.5 rounded-lg text-[10px] text-white font-mono">
+                        Read: {lastCamScanned}
+                      </div>
+                    )}
+                    <div className="absolute bottom-1.5 bg-slate-900/80 px-3 py-0.5 rounded-full text-[10px] text-slate-300">
+                      Auto-submits when a barcode or QR is detected
                     </div>
                   </div>
                 ) : (
                   <p className="text-[11px] text-slate-400 py-1">
-                    Camera is off. Click "Start Camera" or type/scan with USB handheld scanner below.
+                    Camera is off. Click "Start Camera" to enable ZXing live scanning, or type/scan with USB handheld scanner below.
                   </p>
                 )}
               </div>

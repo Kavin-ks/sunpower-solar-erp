@@ -22,6 +22,7 @@ public class Enums {
     }
 
     public enum EnquirySource {
+        CUSTOMER_PORTAL,
         WEBSITE,
         WHATSAPP,
         PHONE,

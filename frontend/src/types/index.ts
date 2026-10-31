@@ -1,6 +1,6 @@
 export type CustomerType = 'RESIDENTIAL' | 'SMALL_FACTORY';
 export type SystemType = 'ON_GRID' | 'OFF_GRID';
-export type EnquirySource = 'WEBSITE' | 'WHATSAPP' | 'PHONE' | 'MANUAL';
+export type EnquirySource = 'CUSTOMER_PORTAL' | 'WEBSITE' | 'WHATSAPP' | 'PHONE' | 'MANUAL';
 export type EnquiryStatus = 'NEW' | 'CONTACTED' | 'QUALIFIED' | 'SURVEY_SCHEDULED' | 'SURVEY_APPROVED' | 'QUOTED' | 'CONVERTED' | 'REJECTED';
 export type SurveyStatus = 'PENDING' | 'SCHEDULED' | 'IN_PROGRESS' | 'REPORT_SUBMITTED' | 'APPROVED' | 'REJECTED' | 'REVISIT_REQUIRED';
 export type QuotationStatus = 'DRAFT' | 'SENT' | 'ACCEPTED' | 'REJECTED' | 'EXPIRED';
@@ -32,6 +32,7 @@ export interface Customer {
   email: string;
   address: string;
   city: string;
+  state?: string;
   pincode: string;
   customerType: CustomerType;
   createdAt: string;

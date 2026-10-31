@@ -105,6 +105,8 @@ public class EnquiryDTOs {
         @NotBlank(message = "City is required")
         private String city;
 
+        private String state;
+
         private String pincode;
 
         private CustomerType customerType = CustomerType.RESIDENTIAL;
@@ -120,6 +122,7 @@ public class EnquiryDTOs {
         private boolean subsidyRequired = true;
         private BigDecimal monthlyElectricityBill;
         private String notes;
+        private EnquirySource source = EnquirySource.CUSTOMER_PORTAL;
 
         public PublicEnquiryRequest() {}
 
@@ -133,6 +136,8 @@ public class EnquiryDTOs {
         public void setAddress(String address) { this.address = address; }
         public String getCity() { return city; }
         public void setCity(String city) { this.city = city; }
+        public String getState() { return state; }
+        public void setState(String state) { this.state = state; }
         public String getPincode() { return pincode; }
         public void setPincode(String pincode) { this.pincode = pincode; }
         public CustomerType getCustomerType() { return customerType; }
@@ -147,5 +152,32 @@ public class EnquiryDTOs {
         public void setMonthlyElectricityBill(BigDecimal monthlyElectricityBill) { this.monthlyElectricityBill = monthlyElectricityBill; }
         public String getNotes() { return notes; }
         public void setNotes(String notes) { this.notes = notes; }
+        public EnquirySource getSource() { return source; }
+        public void setSource(EnquirySource source) { this.source = source; }
+    }
+
+    public static class PublicEnquiryResponseDTO {
+        private boolean success;
+        private String enquiryNumber;
+        private String message;
+        private LocalDateTime submissionTime;
+
+        public PublicEnquiryResponseDTO() {}
+
+        public PublicEnquiryResponseDTO(boolean success, String enquiryNumber, String message, LocalDateTime submissionTime) {
+            this.success = success;
+            this.enquiryNumber = enquiryNumber;
+            this.message = message;
+            this.submissionTime = submissionTime;
+        }
+
+        public boolean isSuccess() { return success; }
+        public void setSuccess(boolean success) { this.success = success; }
+        public String getEnquiryNumber() { return enquiryNumber; }
+        public void setEnquiryNumber(String enquiryNumber) { this.enquiryNumber = enquiryNumber; }
+        public String getMessage() { return message; }
+        public void setMessage(String message) { this.message = message; }
+        public LocalDateTime getSubmissionTime() { return submissionTime; }
+        public void setSubmissionTime(LocalDateTime submissionTime) { this.submissionTime = submissionTime; }
     }
 }

@@ -26,6 +26,9 @@ public class Customer {
     @Column(length = 100)
     private String city;
 
+    @Column(length = 50)
+    private String state;
+
     @Column(length = 20)
     private String pincode;
 
@@ -64,6 +67,8 @@ public class Customer {
     public void setAddress(String address) { this.address = address; }
     public String getCity() { return city; }
     public void setCity(String city) { this.city = city; }
+    public String getState() { return state; }
+    public void setState(String state) { this.state = state; }
     public String getPincode() { return pincode; }
     public void setPincode(String pincode) { this.pincode = pincode; }
     public String getState() { return state; }
