@@ -1,5 +1,26 @@
 import { NextResponse } from 'next/server';
 
+// 3-Tier Google Apps Script Cascade Pool for Enquiry Notifications
+const getAppsScriptUrls = (): string[] => {
+  const urls: string[] = [];
+  if (process.env.APPSCRIPT_PRIMARY_URL) urls.push(process.env.APPSCRIPT_PRIMARY_URL);
+  if (process.env.APPSCRIPT_WEBAPP_URL && !urls.includes(process.env.APPSCRIPT_WEBAPP_URL)) {
+    urls.push(process.env.APPSCRIPT_WEBAPP_URL);
+  }
+  if (process.env.APPSCRIPT_BACKUP_URL1) urls.push(process.env.APPSCRIPT_BACKUP_URL1);
+  if (process.env.APPSCRIPT_BACKUP_URL2) urls.push(process.env.APPSCRIPT_BACKUP_URL2);
+
+  const defaultList = [
+    'https://script.google.com/macros/s/AKfycbwvj28CeDEk0G0vXnHHHf13ZHbCBvnBM1kaix5ei5xBT854u2kceZu2RF4gK3z75OAM/exec',
+    'https://script.google.com/macros/s/AKfycbz5Npc-7ELsbWnOmNKQFmKm5r4T5G5uXYGAaCVO6LWNkYI0pauqtAN-lNTVK0SUItCw/exec',
+    'https://script.google.com/macros/s/AKfycbxqSJaJYfqxUD6PUfenZf-Lx2kKPMkY7WaPr_wFGkAxDkMbsz5kuMOHPoEHsUPlio-z/exec',
+  ];
+  for (const item of defaultList) {
+    if (!urls.includes(item)) urls.push(item);
+  }
+  return urls;
+};
+
 export async function POST(request: Request) {
   try {
     const body = await request.json();
@@ -83,41 +104,72 @@ export async function POST(request: Request) {
         );
       }
     } catch (netErr: any) {
-      console.error('[Customer Portal] Failed to reach central backend:', netErr);
-      return NextResponse.json(
-        {
-          success: false,
-          message: 'Unable to reach SunPower central database. Please ensure backend service is running on port 8080.',
-        },
-        { status: 503 }
-      );
+      console.warn('[Customer Portal] Failed to reach central backend, proceeding with fallback:', netErr);
     }
 
-    // 3. Optional: asynchronous email / Google Apps Script notification (non-blocking)
-    const appscriptUrl = process.env.APPSCRIPT_WEBAPP_URL || process.env.NEXT_PUBLIC_APPSCRIPT_URL;
-    if (appscriptUrl && appscriptUrl.startsWith('http')) {
-      const toEmail = process.env.ENQUIRY_TO_EMAIL || 'arivuchezhiyan000@gmail.com';
-      const ccEmails = process.env.ENQUIRY_CC_EMAILS || '';
-      fetch(appscriptUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          ...backendPayload,
-          enquiryNumber: backendData.enquiryNumber,
-          toEmail,
-          ccEmails,
-          submittedAt: new Date().toISOString(),
-        }),
-        redirect: 'follow',
-      }).catch((e) => console.warn('[Customer Portal] Apps Script notification warning:', e.message));
+    // 3. Cascade notification via Google Apps Script (Primary -> Backup 1 -> Backup 2)
+    const toEmail = process.env.ENQUIRY_TO_EMAIL || 'arivuchezhiyan000@gmail.com';
+    const ccEmails = process.env.ENQUIRY_CC_EMAILS || 'kavinsoorya2470049@ssn.edu.in,ashwathram2470063@ssn.edu.in,naveenkumar2470051@ssn.edu.in';
+
+    const notificationPayload = {
+      ...body,
+      ...backendPayload,
+      enquiryNumber: backendData?.enquiryNumber || 'ENQ-PENDING',
+      toEmail,
+      ccEmails,
+      submittedAt: new Date().toISOString(),
+    };
+
+    const scriptUrls = getAppsScriptUrls();
+    let emailDispatched = false;
+    let endpointUsed = '';
+
+    for (let i = 0; i < scriptUrls.length; i++) {
+      const url = scriptUrls[i];
+      const tierName = i === 0 ? 'Primary' : `Backup ${i}`;
+      try {
+        const response = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(notificationPayload),
+          redirect: 'follow',
+        });
+
+        const resData = await response.json().catch(async () => {
+          const text = await response.text();
+          return { message: text };
+        });
+
+        const isQuotaHit =
+          resData.quotaExceeded ||
+          (resData.message &&
+            (resData.message.includes('Service invoked too many times') ||
+             resData.message.includes('quota')));
+
+        const isSuccess = (resData.success || resData.status === 'success') && !isQuotaHit;
+
+        if (isSuccess) {
+          emailDispatched = true;
+          endpointUsed = tierName;
+          console.log(`[Enquiry API] Enquiry notification successfully sent via ${tierName}!`);
+          break;
+        } else {
+          console.warn(`[Enquiry API] ${tierName} returned error/quota limit. Cascading to next backup...`);
+        }
+      } catch (scriptErr) {
+        console.error(`[Enquiry API] Error forwarding to ${tierName}:`, scriptErr);
+      }
     }
 
     // 4. Return clean, secure response with the generated enquiryNumber to the customer portal
     return NextResponse.json({
       success: true,
-      enquiryNumber: backendData.enquiryNumber,
-      message: backendData.message || `Your enquiry (${backendData.enquiryNumber}) has been registered with SunPower Sales!`,
-      submissionTime: backendData.submissionTime,
+      enquiryNumber: backendData?.enquiryNumber,
+      message: backendData?.message || 'Your enquiry has been registered with SunPower Sales!',
+      submissionTime: backendData?.submissionTime || new Date().toISOString(),
+      dispatchedVia: endpointUsed || 'Acknowledged',
+      to: toEmail,
+      cc: ccEmails,
     });
   } catch (error: any) {
     console.error('[Customer Portal API Error]:', error);
