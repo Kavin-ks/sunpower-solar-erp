@@ -50,6 +50,7 @@ const supportData = ref<SupportDashboardData | null>(null);
 const financeData = ref<FinanceDashboardData | null>(null);
 
 const loading = ref(true);
+const selectedPeriod = ref('ALL');
 
 // Quick serial lookup for Support
 const quickSerial = ref('');
@@ -68,7 +69,7 @@ const fetchDepartmentDashboard = async () => {
   loading.value = true;
   try {
     if (isAdmin.value) {
-      const res = await api.get('/dashboard/admin');
+      const res = await api.get(`/dashboard/admin?period=${selectedPeriod.value}`);
       adminData.value = res.data;
     } else if (isSales.value) {
       const res = await api.get('/dashboard/sales');
@@ -86,7 +87,7 @@ const fetchDepartmentDashboard = async () => {
       const res = await api.get('/dashboard/finance');
       financeData.value = res.data;
     } else {
-      const res = await api.get('/dashboard/admin');
+      const res = await api.get(`/dashboard/admin?period=${selectedPeriod.value}`);
       adminData.value = res.data;
     }
   } catch (err) {
@@ -122,6 +123,10 @@ watch(
   }
 );
 
+watch(selectedPeriod, () => {
+  fetchDepartmentDashboard();
+});
+
 onMounted(() => {
   fetchDepartmentDashboard();
 });
@@ -138,6 +143,26 @@ onMounted(() => {
         <p class="text-sm text-slate-500">
           Department: <strong class="text-slate-800">{{ authStore.user?.roles?.[0]?.replace('ROLE_', '') }}</strong> • Logged in as <strong class="text-slate-800">{{ authStore.user?.fullName }}</strong>
         </p>
+      </div>
+      <div class="flex items-center gap-1 bg-slate-100 p-1 rounded-lg">
+        <button
+          v-for="p in [
+            { value: 'TODAY', label: 'Today' },
+            { value: 'THIS_WEEK', label: 'This Week' },
+            { value: 'THIS_MONTH', label: 'This Month' },
+            { value: 'ALL', label: 'All Time' },
+          ]"
+          :key="p.value"
+          @click="selectedPeriod = p.value"
+          :class="[
+            'px-3 py-1.5 rounded-md text-xs font-semibold transition-all cursor-pointer',
+            selectedPeriod === p.value
+              ? 'bg-slate-900 text-white shadow-sm'
+              : 'text-slate-600 hover:text-slate-900 hover:bg-white',
+          ]"
+        >
+          {{ p.label }}
+        </button>
       </div>
     </div>
 

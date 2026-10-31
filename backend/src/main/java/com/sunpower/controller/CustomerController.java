@@ -35,21 +35,21 @@ public class CustomerController {
     }
 
     @PostMapping
-    @PreAuthorize("hasRole('SALES')")
+    @PreAuthorize("hasAnyRole('SALES', 'ADMIN', 'DIRECTOR')")
     public ResponseEntity<Customer> createCustomer(@Valid @RequestBody CustomerDTO dto) {
         Customer customer = customerService.createCustomer(dto);
         return ResponseEntity.status(HttpStatus.CREATED).body(customer);
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasRole('SALES')")
+    @PreAuthorize("hasAnyRole('SALES', 'ADMIN', 'DIRECTOR')")
     public ResponseEntity<Customer> updateCustomer(@PathVariable Long id, @Valid @RequestBody CustomerDTO dto) {
         Customer customer = customerService.updateCustomer(id, dto);
         return ResponseEntity.ok(customer);
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasRole('SALES')")
+    @PreAuthorize("hasAnyRole('SALES', 'ADMIN', 'DIRECTOR')")
     public ResponseEntity<Void> deleteCustomer(@PathVariable Long id) {
         customerService.deleteCustomer(id);
         return ResponseEntity.noContent().build();
