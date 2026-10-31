@@ -518,9 +518,35 @@ export const ServiceTicketsPage: React.FC = () => {
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-700 uppercase mb-1">
-                  Product Serial Number (Optional - Auto-verifies Warranty)
-                </label>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block text-xs font-semibold text-slate-700 uppercase">
+                    Product Serial Number (Auto-verifies Warranty)
+                  </label>
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const match = customers.find((c: any) => c.fullName && c.fullName.toLowerCase().includes('vikram'));
+                        setCreateForm(prev => ({ ...prev, serialCode: 'INV-2025-1801', customerId: match ? String(match.id) : prev.customerId }));
+                      }}
+                      className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200 cursor-pointer transition-colors"
+                      title="Auto-selects Vikram Nair (18m old, In-Warranty -> ₹0 Free)"
+                    >
+                      🟢 Demo In-Warranty: INV-2025-1801
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const match = customers.find((c: any) => c.fullName && c.fullName.toLowerCase().includes('meera'));
+                        setCreateForm(prev => ({ ...prev, serialCode: 'INV-2023-9901', customerId: match ? String(match.id) : prev.customerId }));
+                      }}
+                      className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-200 cursor-pointer transition-colors"
+                      title="Auto-selects Meera Krishnan (30m old, Expired -> Auto-Bill)"
+                    >
+                      🔴 Demo Expired: INV-2023-9901
+                    </button>
+                  </div>
+                </div>
                 <input
                   type="text"
                   placeholder="e.g. INV-GROWATT-2026-9041"
