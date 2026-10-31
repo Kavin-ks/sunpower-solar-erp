@@ -9,6 +9,7 @@ import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
@@ -22,6 +23,7 @@ public class OrderController {
     private OrderService orderService;
 
     @GetMapping
+    @PreAuthorize("hasAnyRole('ADMIN', 'SALES', 'WAREHOUSE', 'TECHNICIAN', 'FINANCE', 'DIRECTOR')")
     public ResponseEntity<List<SalesOrder>> getAllOrders(@RequestParam(required = false) OrderStatus status) {
         if (status != null) {
             return ResponseEntity.ok(orderService.getOrdersByStatus(status));
@@ -30,11 +32,13 @@ public class OrderController {
     }
 
     @GetMapping("/{id}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SALES', 'WAREHOUSE', 'TECHNICIAN', 'FINANCE', 'DIRECTOR')")
     public ResponseEntity<SalesOrder> getOrderById(@PathVariable Long id) {
         return ResponseEntity.ok(orderService.getOrderById(id));
     }
 
     @PostMapping("/convert")
+    @PreAuthorize("hasAnyRole('SALES', 'DIRECTOR')")
     public ResponseEntity<SalesOrder> convertQuotationToOrder(
             @Valid @RequestBody OrderConvertRequest request,
             Authentication authentication) {
@@ -44,6 +48,7 @@ public class OrderController {
     }
 
     @PatchMapping("/{id}/status")
+    @PreAuthorize("hasAnyRole('SALES', 'WAREHOUSE', 'DIRECTOR')")
     public ResponseEntity<SalesOrder> updateOrderStatus(
             @PathVariable Long id,
             @Valid @RequestBody OrderStatusUpdateRequest request) {

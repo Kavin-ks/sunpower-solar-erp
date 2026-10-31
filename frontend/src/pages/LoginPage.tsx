@@ -39,6 +39,14 @@ export const LoginPage: React.FC = () => {
           </div>
           <h1 className="text-2xl font-bold text-slate-900 tracking-tight">SunPower Solutions</h1>
           <p className="text-sm text-slate-500 mt-1">Solar Installation Management System</p>
+          <div className="mt-3">
+            <a
+              href="/enquiry"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-800 text-xs font-semibold rounded-lg transition"
+            >
+              <span>Prospective Customer? Submit Solar Enquiry →</span>
+            </a>
+          </div>
         </div>
 
         {error && (

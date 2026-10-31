@@ -153,4 +153,47 @@ public class EnquiryService {
         EnquiryActivity activity = new EnquiryActivity(enquiry, action, notes, performedBy);
         return activityRepository.save(activity);
     }
+
+    @Transactional
+    public Enquiry createPublicEnquiry(com.sunpower.dto.EnquiryDTOs.PublicEnquiryRequest request) {
+        // Prevent duplicate customer creation if phone already exists
+        Customer customer = customerRepository.findByPhone(request.getPhone().trim())
+                .orElseGet(() -> {
+                    Customer c = new Customer();
+                    c.setFullName(request.getFullName().trim());
+                    c.setPhone(request.getPhone().trim());
+                    c.setEmail(request.getEmail() != null ? request.getEmail().trim() : null);
+                    c.setAddress(request.getAddress().trim());
+                    c.setCity(request.getCity().trim());
+                    c.setPincode(request.getPincode() != null ? request.getPincode().trim() : "600001");
+                    c.setCustomerType(request.getCustomerType() != null ? request.getCustomerType() : com.sunpower.entity.enums.Enums.CustomerType.RESIDENTIAL);
+                    return customerRepository.save(c);
+                });
+
+        Enquiry enquiry = new Enquiry();
+        enquiry.setCustomer(customer);
+        enquiry.setRequestedCapacityKw(request.getRequestedCapacityKw());
+        enquiry.setSystemType(request.getSystemType());
+        enquiry.setSubsidyRequired(request.isSubsidyRequired());
+        enquiry.setMonthlyElectricityBill(request.getMonthlyElectricityBill());
+        enquiry.setSource(com.sunpower.entity.enums.Enums.EnquirySource.WEBSITE);
+        enquiry.setStatus(EnquiryStatus.NEW);
+        enquiry.setNotes(request.getNotes());
+
+        enquiry = enquiryRepository.save(enquiry);
+        if (enquiry.getEnquiryNumber() == null) {
+            enquiry.setEnquiryNumber("ENQ-" + String.format("%05d", enquiry.getId()));
+            enquiry = enquiryRepository.save(enquiry);
+        }
+
+        EnquiryActivity activity = new EnquiryActivity(
+                enquiry,
+                "PUBLIC_ENQUIRY_SUBMITTED",
+                "New lead submitted via public website form for " + enquiry.getRequestedCapacityKw() + " kW " + enquiry.getSystemType() + " rooftop installation.",
+                "Customer Web Portal"
+        );
+        activityRepository.save(activity);
+
+        return enquiry;
+    }
 }

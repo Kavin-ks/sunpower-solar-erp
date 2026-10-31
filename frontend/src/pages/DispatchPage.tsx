@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { api } from '../api/client';
 import { Dispatch, SalesOrder, SerialNumber, DispatchItem } from '../types';
 import { StatusBadge } from '../components/ui/Badge';
+import { useAuth } from '../context/AuthContext';
 import {
   Truck,
   Plus,
@@ -145,8 +146,20 @@ export const DispatchPage: React.FC = () => {
     }
   };
 
+  const { user } = useAuth();
+  const isAdmin = user?.roles?.includes('ROLE_ADMIN');
+  const isWarehouse = user?.roles?.includes('ROLE_WAREHOUSE') || user?.roles?.includes('ROLE_DIRECTOR');
+
   return (
     <div className="space-y-6">
+      {/* Admin Read-Only Notice */}
+      {isAdmin && (
+        <div className="bg-amber-50 border-l-4 border-amber-500 p-4 rounded-r-xl text-amber-900 text-xs shadow-xs">
+          <span className="font-bold text-sm block mb-0.5">Admin Central Oversight Mode</span>
+          Material picking, unique product serial scanning, and delivery handovers are executed by the Warehouse team. Admin has read-only tracking oversight across picking lists and serialized assets.
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-slate-200">
         <div>
@@ -158,13 +171,15 @@ export const DispatchPage: React.FC = () => {
           </p>
         </div>
 
-        <button
-          onClick={() => setShowCreateModal(true)}
-          className="flex items-center space-x-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-semibold shadow-sm transition cursor-pointer"
-        >
-          <Plus className="w-4 h-4" />
-          <span>New Dispatch Picking List</span>
-        </button>
+        {isWarehouse && (
+          <button
+            onClick={() => setShowCreateModal(true)}
+            className="flex items-center space-x-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-semibold shadow-sm transition cursor-pointer"
+          >
+            <Plus className="w-4 h-4" />
+            <span>New Dispatch Picking List</span>
+          </button>
+        )}
       </div>
 
       {/* Dispatches List */}
@@ -216,27 +231,31 @@ export const DispatchPage: React.FC = () => {
                         Picking Sheet ({disp.items?.length || 0})
                       </button>
 
-                      {disp.status === 'PICKING' && (
-                        <button
-                          onClick={() => handleConfirmDispatch(disp.id)}
-                          className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded font-semibold shadow-xs cursor-pointer inline-flex items-center space-x-1"
-                        >
-                          <PackageCheck className="w-3.5 h-3.5" />
-                          <span>Confirm Dispatch</span>
-                        </button>
-                      )}
+                      {!isAdmin && isWarehouse && (
+                        <>
+                          {disp.status === 'PICKING' && (
+                            <button
+                              onClick={() => handleConfirmDispatch(disp.id)}
+                              className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded font-semibold shadow-xs cursor-pointer inline-flex items-center space-x-1"
+                            >
+                              <PackageCheck className="w-3.5 h-3.5" />
+                              <span>Confirm Dispatch</span>
+                            </button>
+                          )}
 
-                      {disp.status === 'DISPATCHED' && (
-                        <button
-                          onClick={() => {
-                            setSelectedDispatch(disp);
-                            setShowDeliveryModal(true);
-                          }}
-                          className="px-2.5 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded font-semibold shadow-xs cursor-pointer inline-flex items-center space-x-1"
-                        >
-                          <CheckCircle2 className="w-3.5 h-3.5" />
-                          <span>Confirm Delivery</span>
-                        </button>
+                          {disp.status === 'DISPATCHED' && (
+                            <button
+                              onClick={() => {
+                                setSelectedDispatch(disp);
+                                setShowDeliveryModal(true);
+                              }}
+                              className="px-2.5 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded font-semibold shadow-xs cursor-pointer inline-flex items-center space-x-1"
+                            >
+                              <CheckCircle2 className="w-3.5 h-3.5" />
+                              <span>Confirm Delivery</span>
+                            </button>
+                          )}
+                        </>
                       )}
                     </td>
                   </tr>
@@ -319,7 +338,7 @@ export const DispatchPage: React.FC = () => {
                         )}
                       </td>
                       <td className="py-2.5 px-3 text-right">
-                        {item.product.serialized && selectedDispatch.status === 'PICKING' && (
+                        {item.product.serialized && selectedDispatch.status === 'PICKING' && !isAdmin && isWarehouse && (
                           <button
                             onClick={() => openSerialAssign(item)}
                             className="px-2.5 py-1 bg-purple-50 hover:bg-purple-100 text-purple-800 border border-purple-200 rounded font-semibold cursor-pointer"
@@ -346,7 +365,7 @@ export const DispatchPage: React.FC = () => {
                 >
                   Close
                 </button>
-                {selectedDispatch.status === 'PICKING' && (
+                {selectedDispatch.status === 'PICKING' && !isAdmin && isWarehouse && (
                   <button
                     onClick={() => handleConfirmDispatch(selectedDispatch.id)}
                     className="px-4 py-2 bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 font-semibold text-xs shadow-xs"

@@ -10,6 +10,7 @@ import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
@@ -23,6 +24,7 @@ public class ServiceTicketController {
     private ServiceTicketService serviceTicketService;
 
     @GetMapping
+    @PreAuthorize("hasAnyRole('SUPPORT', 'ADMIN', 'TECHNICIAN')")
     public ResponseEntity<List<ServiceTicket>> getAllTickets(
             @RequestParam(required = false) String search,
             @RequestParam(required = false) TicketStatus status) {
@@ -36,11 +38,13 @@ public class ServiceTicketController {
     }
 
     @GetMapping("/{id}")
+    @PreAuthorize("hasAnyRole('SUPPORT', 'ADMIN', 'TECHNICIAN')")
     public ResponseEntity<ServiceTicket> getTicketById(@PathVariable Long id) {
         return ResponseEntity.ok(serviceTicketService.getTicketById(id));
     }
 
     @PostMapping
+    @PreAuthorize("hasRole('SUPPORT')")
     public ResponseEntity<ServiceTicket> createTicket(
             @Valid @RequestBody TicketCreateRequest request,
             Authentication authentication) {
@@ -50,6 +54,7 @@ public class ServiceTicketController {
     }
 
     @PatchMapping("/{id}/assign/{technicianId}")
+    @PreAuthorize("hasRole('SUPPORT')")
     public ResponseEntity<ServiceTicket> assignTechnician(
             @PathVariable Long id,
             @PathVariable Long technicianId,
@@ -60,6 +65,7 @@ public class ServiceTicketController {
     }
 
     @PostMapping("/{id}/resolve")
+    @PreAuthorize("hasAnyRole('SUPPORT', 'TECHNICIAN')")
     public ResponseEntity<ServiceTicket> resolveTicket(
             @PathVariable Long id,
             @Valid @RequestBody TicketResolveRequest request,
@@ -70,6 +76,7 @@ public class ServiceTicketController {
     }
 
     @PostMapping("/{id}/confirm-and-close")
+    @PreAuthorize("hasRole('SUPPORT')")
     public ResponseEntity<ServiceTicket> confirmAndClose(
             @PathVariable Long id,
             @Valid @RequestBody CustomerConfirmationRequest request,

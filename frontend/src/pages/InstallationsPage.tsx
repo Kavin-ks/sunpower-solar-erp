@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { api } from '../api/client';
 import { Installation, SalesOrder, Technician } from '../types';
 import { StatusBadge } from '../components/ui/Badge';
+import { useAuth } from '../context/AuthContext';
 import {
   Wrench,
   Plus,
@@ -142,8 +143,20 @@ export const InstallationsPage: React.FC = () => {
     }
   };
 
+  const { user } = useAuth();
+  const isAdmin = user?.roles?.includes('ROLE_ADMIN');
+  const isTech = user?.roles?.includes('ROLE_TECHNICIAN') || user?.roles?.includes('ROLE_DIRECTOR');
+
   return (
     <div className="space-y-6">
+      {/* Admin Read-Only Notice */}
+      {isAdmin && (
+        <div className="bg-amber-50 border-l-4 border-amber-500 p-4 rounded-r-xl text-amber-900 text-xs shadow-xs">
+          <span className="font-bold text-sm block mb-0.5">Admin Central Oversight Mode</span>
+          Rooftop installation, electrical grid integration, and commissioning testing are performed on-site by certified Technicians. Admin has read-only tracking oversight into progress, checklist verification, and sign-offs.
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-slate-200">
         <div>
@@ -153,13 +166,15 @@ export const InstallationsPage: React.FC = () => {
           </p>
         </div>
 
-        <button
-          onClick={() => setShowScheduleModal(true)}
-          className="flex items-center space-x-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-semibold shadow-sm transition cursor-pointer"
-        >
-          <Plus className="w-4 h-4" />
-          <span>Assign Crew & Schedule</span>
-        </button>
+        {isTech && (
+          <button
+            onClick={() => setShowScheduleModal(true)}
+            className="flex items-center space-x-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-semibold shadow-sm transition cursor-pointer"
+          >
+            <Plus className="w-4 h-4" />
+            <span>Assign Crew & Schedule</span>
+          </button>
+        )}
       </div>
 
       {/* Installations Table */}
@@ -223,7 +238,7 @@ export const InstallationsPage: React.FC = () => {
                       <StatusBadge status={inst.status} />
                     </td>
                     <td className="py-3 px-4 text-right space-x-2 whitespace-nowrap">
-                      {inst.status !== 'COMPLETED' && (
+                      {!isAdmin && isTech && inst.status !== 'COMPLETED' && (
                         <button
                           onClick={() => {
                             setSelectedInstallation(inst);
@@ -238,7 +253,11 @@ export const InstallationsPage: React.FC = () => {
                         </button>
                       )}
 
-                      {inst.status === 'COMPLETED' && (
+                      {isAdmin && (
+                        <span className="text-xs text-slate-400 font-medium italic">View Only</span>
+                      )}
+
+                      {!isAdmin && inst.status === 'COMPLETED' && (
                         <span className="text-xs text-slate-400 font-medium italic">Commissioned</span>
                       )}
                     </td>

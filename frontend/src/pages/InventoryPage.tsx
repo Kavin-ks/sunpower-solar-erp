@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../api/client';
 import { InventoryStock, StockMovement, Product } from '../types';
+import { useAuth } from '../context/AuthContext';
 import {
   Boxes,
   Plus,
@@ -67,8 +68,20 @@ export const InventoryPage: React.FC = () => {
     }).format(val || 0);
   };
 
+  const { user } = useAuth();
+  const isAdmin = user?.roles?.includes('ROLE_ADMIN');
+  const isWarehouse = user?.roles?.includes('ROLE_WAREHOUSE') || user?.roles?.includes('ROLE_DIRECTOR');
+
   return (
     <div className="space-y-6">
+      {/* Admin Read-Only Notice */}
+      {isAdmin && (
+        <div className="bg-amber-50 border-l-4 border-amber-500 p-4 rounded-r-xl text-amber-900 text-xs shadow-xs">
+          <span className="font-bold text-sm block mb-0.5">Admin Central Oversight Mode</span>
+          Inventory levels and stock movements are managed by Warehouse personnel. Admin has read-only visibility into stock availability, reservations, and movement audit logs.
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-slate-200">
         <div>
@@ -185,15 +198,19 @@ export const InventoryPage: React.FC = () => {
                     </td>
                     <td className="py-3 px-4 text-slate-500">{stock.warehouseLocation}</td>
                     <td className="py-3 px-4 text-right">
-                      <button
-                        onClick={() => {
-                          setSelectedStock(stock);
-                          setShowAdjustModal(true);
-                        }}
-                        className="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded text-xs font-semibold cursor-pointer"
-                      >
-                        Adjust
-                      </button>
+                      {!isAdmin && isWarehouse ? (
+                        <button
+                          onClick={() => {
+                            setSelectedStock(stock);
+                            setShowAdjustModal(true);
+                          }}
+                          className="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded text-xs font-semibold cursor-pointer"
+                        >
+                          Adjust
+                        </button>
+                      ) : (
+                        <span className="text-slate-400 italic text-[11px]">View Only</span>
+                      )}
                     </td>
                   </tr>
                 );

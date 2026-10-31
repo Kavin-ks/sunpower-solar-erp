@@ -59,12 +59,41 @@ public class OrderService {
         Quotation quotation = quotationRepository.findById(request.getQuotationId())
                 .orElseThrow(() -> new IllegalArgumentException("Quotation not found with id: " + request.getQuotationId()));
 
+        // 1. Validate quotation acceptance before conversion
         if (quotation.getStatus() != QuotationStatus.ACCEPTED) {
-            quotation.setStatus(QuotationStatus.ACCEPTED);
-            quotationRepository.save(quotation);
+            throw new IllegalStateException("Quotation " + quotation.getQuotationNumber() +
+                    " must be ACCEPTED by the customer before it can be converted to an order. Current status is " + quotation.getStatus());
         }
 
+        // 2. Prevent duplicate conversion
+        if (salesOrderRepository.existsByQuotationId(quotation.getId())) {
+            throw new IllegalStateException("A sales order has already been created for quotation " + quotation.getQuotationNumber());
+        }
+
+        // 3. Pre-validate stock availability for all required BOM products before making any reservations
+        for (QuotationItem qItem : quotation.getItems()) {
+            InventoryStock stock = inventoryStockRepository.findByProductId(qItem.getProduct().getId())
+                    .orElseThrow(() -> new IllegalStateException("Inventory record missing for product: " + qItem.getProduct().getName()));
+            if (stock.getAvailableQuantity() < qItem.getQuantity()) {
+                throw new IllegalStateException("Insufficient inventory: Product '" + qItem.getProduct().getName() +
+                        "' requires " + qItem.getQuantity() + " units, but only " + stock.getAvailableQuantity() + " are available in warehouse.");
+            }
+        }
+
+        // 4. Generate guaranteed unique Order Number
+        String orderNumber;
+        int attempts = 0;
+        do {
+            orderNumber = "ORD-" + LocalDate.now().getYear() + "-" + String.format("%04d", (int)(Math.random() * 9000 + 1000));
+            attempts++;
+            if (attempts > 50) {
+                orderNumber = "ORD-" + System.currentTimeMillis();
+                break;
+            }
+        } while (salesOrderRepository.existsByOrderNumber(orderNumber));
+
         SalesOrder order = new SalesOrder();
+        order.setOrderNumber(orderNumber);
         order.setCustomer(quotation.getCustomer());
         order.setQuotation(quotation);
         order.setSolarPackage(quotation.getSolarPackage());
@@ -76,49 +105,38 @@ public class OrderService {
         order.setRemainingBalance(quotation.getTotalAmount());
         order.setStatus(OrderStatus.PENDING_PAYMENT);
 
-        // Calculate advance required
+        // Calculate advance required (default 30% per standard Solar EPC terms)
         BigDecimal advancePercentage = request.getAdvancePercentage() != null ?
-                request.getAdvancePercentage() : BigDecimal.valueOf(20.00);
+                request.getAdvancePercentage() : BigDecimal.valueOf(30.00);
         BigDecimal advanceRequired = request.getAdvanceRequiredAmount() != null ?
                 request.getAdvanceRequiredAmount() :
                 quotation.getTotalAmount().multiply(advancePercentage).divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
         order.setAdvanceRequired(advanceRequired);
 
         order = salesOrderRepository.save(order);
-        if (order.getOrderNumber() == null) {
-            order.setOrderNumber("ORD-" + String.format("%05d", order.getId()));
-            order = salesOrderRepository.save(order);
-        }
 
-        // Copy quotation items to order items and reserve inventory stock
+        // Copy quotation items to order items and reserve inventory stock transactionally
         List<OrderItem> orderItems = new ArrayList<>();
         for (QuotationItem qItem : quotation.getItems()) {
             OrderItem oItem = new OrderItem(order, qItem.getProduct(), qItem.getQuantity(), qItem.getUnitPrice());
             orderItems.add(oItem);
 
-            // Reserve stock
-            InventoryStock stock = inventoryStockRepository.findByProductId(qItem.getProduct().getId())
-                    .orElseGet(() -> {
-                        InventoryStock s = new InventoryStock(qItem.getProduct(), qItem.getProduct().getCurrentStock(), 0, "Main Warehouse");
-                        return inventoryStockRepository.save(s);
-                    });
-
-            int available = stock.getAvailableQuantity();
+            // Reserve the needed stock
+            InventoryStock stock = inventoryStockRepository.findByProductId(qItem.getProduct().getId()).get();
             int needed = qItem.getQuantity();
 
-            // Reserve the needed stock
             stock.setReservedQuantity(stock.getReservedQuantity() + needed);
-            stock.setAvailableQuantity(Math.max(0, available - needed));
+            stock.setAvailableQuantity(stock.getAvailableQuantity() - needed);
             inventoryStockRepository.save(stock);
 
-            // Log movement
+            // Log stock movement audit
             StockMovement movement = new StockMovement(
                     qItem.getProduct(),
                     StockMovementType.ADJUSTMENT,
                     -needed,
                     order.getOrderNumber(),
-                    "Reserved " + needed + " units for order " + order.getOrderNumber(),
-                    createdBy != null ? createdBy : "System"
+                    "Hard-reserved " + needed + " units for confirmed sales order " + order.getOrderNumber(),
+                    createdBy != null ? createdBy : "Sales System"
             );
             stockMovementRepository.save(movement);
         }
@@ -126,13 +144,16 @@ public class OrderService {
         orderItemRepository.saveAll(orderItems);
         order.setItems(orderItems);
 
-        // Generate preliminary invoice
+        // Generate GST Tax Invoice with reconciled Subtotal + Tax = Total
+        BigDecimal installationCharge = quotation.getInstallationFee() != null ? quotation.getInstallationFee() : BigDecimal.ZERO;
+        BigDecimal taxableSubtotal = quotation.getSubtotal().add(installationCharge);
+
         Invoice invoice = new Invoice();
         invoice.setSalesOrder(order);
         invoice.setCustomer(order.getCustomer());
         invoice.setInvoiceDate(LocalDate.now());
         invoice.setDueDate(LocalDate.now().plusDays(15));
-        invoice.setSubtotal(quotation.getSubtotal());
+        invoice.setSubtotal(taxableSubtotal);
         invoice.setTaxAmount(quotation.getTaxAmount());
         invoice.setTotalAmount(quotation.getTotalAmount());
         invoice.setPaidAmount(BigDecimal.ZERO);
@@ -140,20 +161,20 @@ public class OrderService {
         invoice.setStatus("ISSUED");
         invoice = invoiceRepository.save(invoice);
         if (invoice.getInvoiceNumber() == null) {
-            invoice.setInvoiceNumber("INV-" + String.format("%05d", invoice.getId()));
+            invoice.setInvoiceNumber("INV-" + LocalDate.now().getYear() + "-" + String.format("%04d", invoice.getId()));
             invoiceRepository.save(invoice);
         }
 
-        // If subsidy required from enquiry, initialize subsidy application
+        // If subsidy required from enquiry, initialize PM Surya Ghar subsidy application
         if (quotation.getSiteSurvey().getEnquiry() != null && quotation.getSiteSurvey().getEnquiry().isSubsidyRequired()) {
             SubsidyApplication subsidy = new SubsidyApplication();
             subsidy.setCustomer(order.getCustomer());
             subsidy.setSalesOrder(order);
-            subsidy.setSubsidyAmountClaimed(BigDecimal.valueOf(78000.00)); // Default PM Surya Ghar subsidy estimate
+            subsidy.setSubsidyAmountClaimed(BigDecimal.valueOf(78000.00)); // Standard PM Surya Ghar DBT subsidy
             subsidy.setStatus(com.sunpower.entity.enums.Enums.SubsidyStatus.DOCUMENTS_PENDING);
             subsidy = subsidyApplicationRepository.save(subsidy);
             if (subsidy.getApplicationNumber() == null) {
-                subsidy.setApplicationNumber("SUB-" + String.format("%05d", subsidy.getId()));
+                subsidy.setApplicationNumber("SUB-" + LocalDate.now().getYear() + "-" + String.format("%04d", subsidy.getId()));
                 subsidyApplicationRepository.save(subsidy);
             }
         }

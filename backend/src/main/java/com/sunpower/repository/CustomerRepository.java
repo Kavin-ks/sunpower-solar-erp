@@ -10,6 +10,7 @@ import java.util.List;
 
 @Repository
 public interface CustomerRepository extends JpaRepository<Customer, Long> {
+    java.util.Optional<Customer> findByPhone(String phone);
     List<Customer> findByFullNameContainingIgnoreCaseOrPhoneContainingOrEmailContainingIgnoreCase(
             String fullName, String phone, String email);
 

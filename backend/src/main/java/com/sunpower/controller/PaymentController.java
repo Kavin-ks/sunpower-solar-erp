@@ -7,6 +7,7 @@ import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -19,6 +20,7 @@ public class PaymentController {
     private PaymentService paymentService;
 
     @GetMapping
+    @PreAuthorize("hasAnyRole('ADMIN', 'FINANCE', 'SALES', 'DIRECTOR')")
     public ResponseEntity<List<Payment>> getAllPayments(
             @RequestParam(required = false) Long orderId,
             @RequestParam(required = false) Long customerId) {
@@ -32,6 +34,7 @@ public class PaymentController {
     }
 
     @PostMapping
+    @PreAuthorize("hasAnyRole('FINANCE', 'DIRECTOR')")
     public ResponseEntity<Payment> recordPayment(@Valid @RequestBody PaymentRecordRequest request) {
         Payment payment = paymentService.recordPayment(request);
         return ResponseEntity.status(HttpStatus.CREATED).body(payment);

@@ -9,6 +9,7 @@ import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
@@ -22,16 +23,19 @@ public class DispatchController {
     private DispatchService dispatchService;
 
     @GetMapping
+    @PreAuthorize("hasAnyRole('ADMIN', 'WAREHOUSE', 'TECHNICIAN', 'DIRECTOR')")
     public ResponseEntity<List<Dispatch>> getAllDispatches() {
         return ResponseEntity.ok(dispatchService.getAllDispatches());
     }
 
     @GetMapping("/{id}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'WAREHOUSE', 'TECHNICIAN', 'DIRECTOR')")
     public ResponseEntity<Dispatch> getDispatchById(@PathVariable Long id) {
         return ResponseEntity.ok(dispatchService.getDispatchById(id));
     }
 
     @PostMapping
+    @PreAuthorize("hasAnyRole('WAREHOUSE', 'DIRECTOR')")
     public ResponseEntity<Dispatch> createDispatch(
             @Valid @RequestBody DispatchCreateRequest request,
             Authentication authentication) {
@@ -41,6 +45,7 @@ public class DispatchController {
     }
 
     @PostMapping("/assign-serial")
+    @PreAuthorize("hasAnyRole('WAREHOUSE', 'DIRECTOR')")
     public ResponseEntity<Dispatch> assignSerialNumber(
             @Valid @RequestBody AssignSerialNumberRequest request,
             Authentication authentication) {
@@ -50,6 +55,7 @@ public class DispatchController {
     }
 
     @PostMapping("/{id}/confirm-dispatch")
+    @PreAuthorize("hasAnyRole('WAREHOUSE', 'DIRECTOR')")
     public ResponseEntity<Dispatch> confirmDispatch(
             @PathVariable Long id,
             Authentication authentication) {
@@ -59,6 +65,7 @@ public class DispatchController {
     }
 
     @PostMapping("/{id}/confirm-delivery")
+    @PreAuthorize("hasAnyRole('WAREHOUSE', 'DIRECTOR')")
     public ResponseEntity<Dispatch> confirmDelivery(
             @PathVariable Long id,
             @Valid @RequestBody ConfirmDeliveryRequest request,

@@ -10,6 +10,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -21,7 +22,14 @@ public class EnquiryController {
     @Autowired
     private EnquiryService enquiryService;
 
+    @PostMapping("/public")
+    public ResponseEntity<Enquiry> submitPublicEnquiry(@Valid @RequestBody com.sunpower.dto.EnquiryDTOs.PublicEnquiryRequest request) {
+        Enquiry enquiry = enquiryService.createPublicEnquiry(request);
+        return ResponseEntity.status(HttpStatus.CREATED).body(enquiry);
+    }
+
     @GetMapping
+    @PreAuthorize("hasAnyRole('ADMIN', 'SALES', 'DIRECTOR')")
     public ResponseEntity<List<Enquiry>> getAllEnquiries(
             @RequestParam(required = false) String search,
             @RequestParam(required = false) EnquiryStatus status) {
@@ -35,11 +43,13 @@ public class EnquiryController {
     }
 
     @GetMapping("/{id}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SALES', 'DIRECTOR')")
     public ResponseEntity<Enquiry> getEnquiryById(@PathVariable Long id) {
         return ResponseEntity.ok(enquiryService.getEnquiryById(id));
     }
 
     @PostMapping
+    @PreAuthorize("hasAnyRole('SALES', 'DIRECTOR')")
     public ResponseEntity<Enquiry> createEnquiry(@Valid @RequestBody EnquiryCreateRequest request, Authentication authentication) {
         String actor = authentication != null ? authentication.getName() : "Sales Team";
         Enquiry enquiry = enquiryService.createEnquiry(request, actor);
@@ -47,6 +57,7 @@ public class EnquiryController {
     }
 
     @PatchMapping("/{id}/status")
+    @PreAuthorize("hasAnyRole('SALES', 'DIRECTOR')")
     public ResponseEntity<Enquiry> updateStatus(
             @PathVariable Long id,
             @Valid @RequestBody EnquiryStatusUpdateRequest request,
@@ -57,11 +68,12 @@ public class EnquiryController {
     }
 
     @PatchMapping("/{id}/assign/{userId}")
+    @PreAuthorize("hasAnyRole('SALES', 'DIRECTOR')")
     public ResponseEntity<Enquiry> assignToSales(
             @PathVariable Long id,
             @PathVariable Long userId,
             Authentication authentication) {
-        String actor = authentication != null ? authentication.getName() : "Admin";
+        String actor = authentication != null ? authentication.getName() : "Sales Manager";
         Enquiry enquiry = enquiryService.assignToSales(id, userId, actor);
         return ResponseEntity.ok(enquiry);
     }
