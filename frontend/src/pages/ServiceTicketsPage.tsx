@@ -199,9 +199,9 @@ export const ServiceTicketsPage: React.FC = () => {
   });
 
   const { user } = useAuth();
-  const isAdmin = user?.roles?.includes('ROLE_ADMIN');
-  const isSupport = user?.roles?.includes('ROLE_SUPPORT') || user?.roles?.includes('ROLE_DIRECTOR');
-  const isTech = user?.roles?.includes('ROLE_TECHNICIAN') || user?.roles?.includes('ROLE_DIRECTOR');
+  const isAdmin = user?.roles?.includes('ROLE_ADMIN') || user?.roles?.includes('ROLE_DIRECTOR');
+  const isSupport = user?.roles?.includes('ROLE_SUPPORT') && !isAdmin;
+  const isTech = user?.roles?.includes('ROLE_TECHNICIAN') && !isAdmin;
 
   return (
     <div className="space-y-6">
@@ -216,15 +216,23 @@ export const ServiceTicketsPage: React.FC = () => {
             End-to-end fault logging, serial warranty verification (₹0 warranty coverage vs paid), technician dispatch, & customer closure gate.
           </p>
         </div>
-        {isSupport && (
-          <button
-            onClick={() => setIsCreateModalOpen(true)}
-            className="inline-flex items-center px-4 py-2.5 rounded-lg bg-emerald-600 text-white font-medium shadow-sm hover:bg-emerald-700 transition cursor-pointer"
-          >
-            <Plus className="w-4 h-4 mr-2" />
-            Log New Service Ticket
-          </button>
-        )}
+        <div className="flex items-center gap-2">
+          {isAdmin && (
+            <span className="px-3 py-1.5 bg-amber-50 text-amber-800 border border-amber-200 rounded-xl text-xs font-semibold">
+              Director Audit Mode (Read-Only)
+            </span>
+          )}
+
+          {isSupport && (
+            <button
+              onClick={() => setIsCreateModalOpen(true)}
+              className="inline-flex items-center px-4 py-2.5 rounded-lg bg-emerald-600 text-white font-medium shadow-sm hover:bg-emerald-700 transition cursor-pointer"
+            >
+              <Plus className="w-4 h-4 mr-2" />
+              Log New Service Ticket
+            </button>
+          )}
+        </div>
       </div>
 
       {/* KPI Cards */}

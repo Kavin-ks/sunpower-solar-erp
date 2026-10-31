@@ -189,6 +189,11 @@ public class OrderService {
         }
 
         orderItemRepository.saveAll(orderItems);
+        if (order.getItems() == null) {
+            order.setItems(new ArrayList<>());
+        } else {
+            order.getItems().clear();
+        }
         order.getItems().addAll(orderItems);
 
         // Generate GST Tax Invoice with reconciled Subtotal + Tax = Total

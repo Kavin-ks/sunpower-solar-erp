@@ -196,9 +196,9 @@ export const SiteSurveysPage: React.FC = () => {
   };
 
   const { user } = useAuth();
-  const isAdmin = user?.roles?.includes('ROLE_ADMIN');
-  const isSales = user?.roles?.includes('ROLE_SALES') || user?.roles?.includes('ROLE_DIRECTOR');
-  const isTech = user?.roles?.includes('ROLE_TECHNICIAN') || user?.roles?.includes('ROLE_DIRECTOR');
+  const isAdmin = user?.roles?.includes('ROLE_ADMIN') || user?.roles?.includes('ROLE_DIRECTOR');
+  const isSales = user?.roles?.includes('ROLE_SALES') && !isAdmin;
+  const isTech = user?.roles?.includes('ROLE_TECHNICIAN') && !isAdmin;
 
   const openInspectionModal = (surv: SiteSurvey) => {
     setInspectionModalSurvey(surv);
@@ -227,15 +227,23 @@ export const SiteSurveysPage: React.FC = () => {
           </p>
         </div>
 
-        {isSales && (
-          <button
-            onClick={() => setShowScheduleModal(true)}
-            className="flex items-center space-x-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-semibold shadow-sm transition cursor-pointer"
-          >
-            <Plus className="w-4 h-4" />
-            <span>Schedule Site Survey</span>
-          </button>
-        )}
+        <div className="flex items-center gap-2">
+          {isAdmin && (
+            <span className="px-3 py-1.5 bg-amber-50 text-amber-800 border border-amber-200 rounded-xl text-xs font-semibold">
+              Director Audit Mode (Read-Only)
+            </span>
+          )}
+
+          {isSales && (
+            <button
+              onClick={() => setShowScheduleModal(true)}
+              className="flex items-center space-x-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-semibold shadow-sm transition cursor-pointer"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Schedule Site Survey</span>
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Info Callout */}

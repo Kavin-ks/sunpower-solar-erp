@@ -33,12 +33,20 @@ public class SubsidyApplication {
     @Column(precision = 10, scale = 2)
     private BigDecimal subsidyAmountApproved = BigDecimal.ZERO;
 
+    @Column(precision = 10, scale = 2)
+    private BigDecimal amountReceived = BigDecimal.ZERO;
+
+    @Column(precision = 10, scale = 2)
+    private BigDecimal pendingSubsidyAmount = BigDecimal.ZERO;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 30)
     private SubsidyStatus status = SubsidyStatus.NOT_STARTED;
 
     private LocalDate submissionDate;
     private LocalDate approvalDate;
+    private LocalDate sanctionDate;
+    private LocalDate actualReceiptDate;
 
     @Column(columnDefinition = "TEXT")
     private String notes;
@@ -53,11 +61,22 @@ public class SubsidyApplication {
         if (applicationNumber == null && id != null) {
             applicationNumber = "SUB-" + String.format("%05d", id);
         }
+        recalculatePending();
     }
 
     @PreUpdate
     protected void onUpdate() {
         updatedAt = LocalDateTime.now();
+        recalculatePending();
+    }
+
+    public void recalculatePending() {
+        BigDecimal approved = subsidyAmountApproved != null ? subsidyAmountApproved : BigDecimal.ZERO;
+        BigDecimal received = amountReceived != null ? amountReceived : BigDecimal.ZERO;
+        pendingSubsidyAmount = approved.subtract(received);
+        if (pendingSubsidyAmount.compareTo(BigDecimal.ZERO) < 0) {
+            pendingSubsidyAmount = BigDecimal.ZERO;
+        }
     }
 
     public SubsidyApplication() {}
@@ -75,13 +94,27 @@ public class SubsidyApplication {
     public BigDecimal getSubsidyAmountClaimed() { return subsidyAmountClaimed; }
     public void setSubsidyAmountClaimed(BigDecimal subsidyAmountClaimed) { this.subsidyAmountClaimed = subsidyAmountClaimed; }
     public BigDecimal getSubsidyAmountApproved() { return subsidyAmountApproved; }
-    public void setSubsidyAmountApproved(BigDecimal subsidyAmountApproved) { this.subsidyAmountApproved = subsidyAmountApproved; }
+    public void setSubsidyAmountApproved(BigDecimal subsidyAmountApproved) {
+        this.subsidyAmountApproved = subsidyAmountApproved;
+        recalculatePending();
+    }
+    public BigDecimal getAmountReceived() { return amountReceived; }
+    public void setAmountReceived(BigDecimal amountReceived) {
+        this.amountReceived = amountReceived;
+        recalculatePending();
+    }
+    public BigDecimal getPendingSubsidyAmount() { return pendingSubsidyAmount; }
+    public void setPendingSubsidyAmount(BigDecimal pendingSubsidyAmount) { this.pendingSubsidyAmount = pendingSubsidyAmount; }
     public SubsidyStatus getStatus() { return status; }
     public void setStatus(SubsidyStatus status) { this.status = status; }
     public LocalDate getSubmissionDate() { return submissionDate; }
     public void setSubmissionDate(LocalDate submissionDate) { this.submissionDate = submissionDate; }
     public LocalDate getApprovalDate() { return approvalDate; }
     public void setApprovalDate(LocalDate approvalDate) { this.approvalDate = approvalDate; }
+    public LocalDate getSanctionDate() { return sanctionDate; }
+    public void setSanctionDate(LocalDate sanctionDate) { this.sanctionDate = sanctionDate; }
+    public LocalDate getActualReceiptDate() { return actualReceiptDate; }
+    public void setActualReceiptDate(LocalDate actualReceiptDate) { this.actualReceiptDate = actualReceiptDate; }
     public String getNotes() { return notes; }
     public void setNotes(String notes) { this.notes = notes; }
     public LocalDateTime getCreatedAt() { return createdAt; }

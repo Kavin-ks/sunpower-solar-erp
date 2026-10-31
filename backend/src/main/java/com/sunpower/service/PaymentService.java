@@ -15,6 +15,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
@@ -33,15 +34,20 @@ public class PaymentService {
     private OrderService orderService;
 
     public List<Payment> getAllPayments() {
-        return paymentRepository.findAll();
+        return paymentRepository.findAllByOrderByPaymentDateDesc();
     }
 
     public List<Payment> getPaymentsByOrderId(Long orderId) {
-        return paymentRepository.findBySalesOrderId(orderId);
+        return paymentRepository.findBySalesOrderIdOrderByPaymentDateDesc(orderId);
     }
 
     public List<Payment> getPaymentsByCustomerId(Long customerId) {
         return paymentRepository.findByCustomerId(customerId);
+    }
+
+    public Payment getPaymentById(Long id) {
+        return paymentRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Payment record not found with id: " + id));
     }
 
     @Transactional
@@ -49,11 +55,20 @@ public class PaymentService {
         SalesOrder order = salesOrderRepository.findById(request.getSalesOrderId())
                 .orElseThrow(() -> new IllegalArgumentException("Sales order not found with id: " + request.getSalesOrderId()));
 
-        if (request.getAmount().compareTo(BigDecimal.ZERO) <= 0) {
+        if (request.getAmount() == null || request.getAmount().compareTo(BigDecimal.ZERO) <= 0) {
             throw new IllegalArgumentException("Payment amount must be greater than zero.");
         }
 
-        BigDecimal remaining = order.getRemainingBalance();
+        // Duplicate Reference Number Prevention
+        if (request.getReferenceNumber() != null && !request.getReferenceNumber().trim().isEmpty()) {
+            String ref = request.getReferenceNumber().trim();
+            if (paymentRepository.existsByReferenceNumberAndStatus(ref, PaymentStatus.SUCCESS)) {
+                throw new IllegalArgumentException("Duplicate transaction error: A payment with reference/UTR '" +
+                        ref + "' has already been recorded in the system.");
+            }
+        }
+
+        BigDecimal remaining = order.getRemainingBalance() != null ? order.getRemainingBalance() : order.getTotalAmount();
         if (request.getAmount().compareTo(remaining) > 0) {
             throw new IllegalArgumentException("Overpayment error: Payment amount (₹" + request.getAmount() +
                     ") exceeds remaining balance (₹" + remaining + ")");
@@ -67,7 +82,7 @@ public class PaymentService {
         payment.setMethod(request.getMethod());
         payment.setType(request.getType());
         payment.setStatus(PaymentStatus.SUCCESS);
-        payment.setReferenceNumber(request.getReferenceNumber());
+        payment.setReferenceNumber(request.getReferenceNumber() != null ? request.getReferenceNumber().trim() : null);
         payment.setNotes(request.getNotes());
 
         payment = paymentRepository.save(payment);
@@ -77,7 +92,8 @@ public class PaymentService {
         }
 
         // Update SalesOrder balances
-        BigDecimal newTotalPaid = (order.getTotalPaid() != null ? order.getTotalPaid() : BigDecimal.ZERO).add(request.getAmount());
+        BigDecimal currentPaid = order.getTotalPaid() != null ? order.getTotalPaid() : BigDecimal.ZERO;
+        BigDecimal newTotalPaid = currentPaid.add(request.getAmount());
         order.setTotalPaid(newTotalPaid);
         order.setRemainingBalance(order.getTotalAmount().subtract(newTotalPaid));
 
@@ -97,13 +113,66 @@ public class PaymentService {
         invoiceRepository.findBySalesOrderId(savedOrder.getId()).ifPresent(invoice -> {
             invoice.setPaidAmount(newTotalPaid);
             invoice.setBalanceAmount(savedOrder.getRemainingBalance());
-            if (invoice.getBalanceAmount().compareTo(BigDecimal.ZERO) == 0) {
+            if (invoice.getBalanceAmount().compareTo(BigDecimal.ZERO) <= 0) {
                 invoice.setStatus("PAID");
             } else if (newTotalPaid.compareTo(BigDecimal.ZERO) > 0) {
                 invoice.setStatus("PARTIALLY_PAID");
             }
             invoiceRepository.save(invoice);
         });
+
+        return payment;
+    }
+
+    @Transactional
+    public Payment reversePayment(Long paymentId, String reason, String reversedBy) {
+        Payment payment = getPaymentById(paymentId);
+
+        if (payment.getStatus() == PaymentStatus.REVERSED) {
+            throw new IllegalStateException("Payment " + payment.getPaymentNumber() + " is already reversed.");
+        }
+
+        if (payment.getStatus() != PaymentStatus.SUCCESS) {
+            throw new IllegalStateException("Only successful payments can be reversed. Current status: " + payment.getStatus());
+        }
+
+        payment.setStatus(PaymentStatus.REVERSED);
+        payment.setReversalReason(reason);
+        payment.setReversedAt(LocalDateTime.now());
+        payment.setReversedBy(reversedBy != null ? reversedBy : "Finance Controller");
+        payment = paymentRepository.save(payment);
+
+        // Adjust Sales Order balances
+        SalesOrder order = payment.getSalesOrder();
+        if (order != null) {
+            BigDecimal currentPaid = order.getTotalPaid() != null ? order.getTotalPaid() : BigDecimal.ZERO;
+            BigDecimal newTotalPaid = currentPaid.subtract(payment.getAmount());
+            if (newTotalPaid.compareTo(BigDecimal.ZERO) < 0) {
+                newTotalPaid = BigDecimal.ZERO;
+            }
+            order.setTotalPaid(newTotalPaid);
+            order.setRemainingBalance(order.getTotalAmount().subtract(newTotalPaid));
+
+            // If advance payment was reversed and order was CONFIRMED without dispatch, revert to PENDING_PAYMENT
+            if (order.getStatus() == OrderStatus.CONFIRMED && newTotalPaid.compareTo(order.getAdvanceRequired()) < 0) {
+                order.setStatus(OrderStatus.PENDING_PAYMENT);
+            }
+            salesOrderRepository.save(order);
+
+            // Adjust Invoice
+            invoiceRepository.findBySalesOrderId(order.getId()).ifPresent(invoice -> {
+                invoice.setPaidAmount(order.getTotalPaid());
+                invoice.setBalanceAmount(order.getRemainingBalance());
+                if (invoice.getBalanceAmount().compareTo(BigDecimal.ZERO) <= 0) {
+                    invoice.setStatus("PAID");
+                } else if (invoice.getPaidAmount().compareTo(BigDecimal.ZERO) > 0) {
+                    invoice.setStatus("PARTIALLY_PAID");
+                } else {
+                    invoice.setStatus("ISSUED");
+                }
+                invoiceRepository.save(invoice);
+            });
+        }
 
         return payment;
     }
