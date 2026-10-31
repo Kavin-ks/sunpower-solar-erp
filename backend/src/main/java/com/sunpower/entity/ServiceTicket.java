@@ -144,7 +144,16 @@ public class ServiceTicket {
     public List<ServiceActivity> getActivities() { return activities; }
     public void setActivities(List<ServiceActivity> activities) { this.activities = activities; }
     public List<ServicePart> getParts() { return parts; }
-    public void setParts(List<ServicePart> parts) { this.parts = parts; }
+    public void setParts(List<ServicePart> parts) {
+        if (this.parts == null) {
+            this.parts = new ArrayList<>();
+        } else {
+            this.parts.clear();
+        }
+        if (parts != null) {
+            this.parts.addAll(parts);
+        }
+    }
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
     public LocalDateTime getUpdatedAt() { return updatedAt; }

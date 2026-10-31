@@ -13,6 +13,7 @@ import java.util.List;
 public interface EnquiryRepository extends JpaRepository<Enquiry, Long> {
     List<Enquiry> findByStatus(EnquiryStatus status);
     List<Enquiry> findByCustomerId(Long customerId);
+    List<Enquiry> findByCustomerOrderByCreatedAtDesc(com.sunpower.entity.Customer customer);
 
     @Query("SELECT e FROM Enquiry e WHERE LOWER(e.enquiryNumber) LIKE LOWER(CONCAT('%', :query, '%')) " +
            "OR LOWER(e.customer.fullName) LIKE LOWER(CONCAT('%', :query, '%')) " +

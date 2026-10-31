@@ -6,6 +6,7 @@ import com.sunpower.dto.ServiceTicketDTOs.TicketCreateRequest;
 import com.sunpower.dto.ServiceTicketDTOs.TicketResolveRequest;
 import com.sunpower.entity.*;
 import com.sunpower.entity.enums.Enums.ExpenseCategory;
+import com.sunpower.entity.enums.Enums.SerialNumberStatus;
 import com.sunpower.entity.enums.Enums.TicketStatus;
 import com.sunpower.entity.enums.Enums.WarrantyStatus;
 import com.sunpower.repository.*;
@@ -195,7 +196,11 @@ public class ServiceTicketService {
         ticket.setLaborCharges(laborCharges);
 
         BigDecimal partsTotal = BigDecimal.ZERO;
-        List<ServicePart> parts = new ArrayList<>();
+        if (ticket.getParts() == null) {
+            ticket.setParts(new ArrayList<>());
+        } else {
+            ticket.getParts().clear();
+        }
 
         if (request.getReplacedParts() != null && !request.getReplacedParts().isEmpty()) {
             for (ServicePartRequest partReq : request.getReplacedParts()) {
@@ -204,7 +209,7 @@ public class ServiceTicketService {
                 BigDecimal unitPrice = partReq.getUnitPrice() != null ? partReq.getUnitPrice() : product.getSellingPrice();
 
                 ServicePart sp = new ServicePart(ticket, product, partReq.getQuantity(), unitPrice, underWarranty);
-                parts.add(sp);
+                ticket.getParts().add(sp);
                 partsTotal = partsTotal.add(sp.getFinalCharge());
 
                 // Record company repair expense
@@ -218,13 +223,31 @@ public class ServiceTicketService {
                 exp.setPaidTo("Warehouse Inventory");
                 expenseRepository.save(exp);
             }
-            servicePartRepository.saveAll(parts);
         }
 
-        ticket.setParts(parts);
         ticket.setPartsCharges(underWarranty ? BigDecimal.ZERO : partsTotal);
         BigDecimal totalCharges = underWarranty ? BigDecimal.ZERO : laborCharges.add(partsTotal);
         ticket.setTotalCustomerCharges(totalCharges);
+
+        // EDGE CASE 2 (Blueprint): Replacement Serial Number Swap During Warranty Repair
+        if (request.getReplacementSerialCode() != null && !request.getReplacementSerialCode().trim().isEmpty()) {
+            if (ticket.getSerialNumber() != null) {
+                SerialNumber oldSerial = ticket.getSerialNumber();
+                oldSerial.setStatus(SerialNumberStatus.DEFECTIVE);
+                serialNumberRepository.save(oldSerial);
+            }
+            Optional<SerialNumber> repOpt = serialNumberRepository.findBySerialCode(request.getReplacementSerialCode().trim());
+            if (repOpt.isPresent()) {
+                SerialNumber newSerial = repOpt.get();
+                newSerial.setStatus(SerialNumberStatus.INSTALLED);
+                newSerial.setCustomer(ticket.getCustomer());
+                if (ticket.getInstallation() != null) {
+                    newSerial.setInstallationId(ticket.getInstallation().getId());
+                }
+                serialNumberRepository.save(newSerial);
+                ticket.setSerialNumber(newSerial);
+            }
+        }
 
         // If out-of-warranty and chargeable, create invoice linked to service_ticket_id
         if (!underWarranty && totalCharges.compareTo(BigDecimal.ZERO) > 0) {

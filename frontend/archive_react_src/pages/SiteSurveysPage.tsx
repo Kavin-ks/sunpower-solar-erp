@@ -23,6 +23,7 @@ import {
   Edit3,
 } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { CameraPhotoUpload } from '../components/common/CameraPhotoUpload';
 
 export const SiteSurveysPage: React.FC = () => {
   const [surveys, setSurveys] = useState<SiteSurvey[]>([]);
@@ -228,12 +229,6 @@ export const SiteSurveysPage: React.FC = () => {
         </div>
 
         <div className="flex items-center gap-2">
-          {isAdmin && (
-            <span className="px-3 py-1.5 bg-amber-50 text-amber-800 border border-amber-200 rounded-xl text-xs font-semibold">
-              Director Audit Mode (Read-Only)
-            </span>
-          )}
-
           {isSales && (
             <button
               onClick={() => setShowScheduleModal(true)}
@@ -860,58 +855,21 @@ export const SiteSurveysPage: React.FC = () => {
         </div>
       )}
 
-      {/* 5. Modal: Add Photo */}
+      {/* 5. Modal: Add Photo via Camera & File Upload */}
       {photoModalSurvey && (
-        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl">
-            <h2 className="text-lg font-bold text-slate-900 mb-1">Attach Physical Roof Photo</h2>
-            <p className="text-xs text-slate-500 mb-4">
-              Upload rooftop photo evidence for Survey #{photoModalSurvey.surveyNumber}
-            </p>
-
-            <form onSubmit={handleAddPhoto} className="space-y-4 text-xs">
-              <div>
-                <label className="block font-semibold text-slate-700 mb-1">Photo URL *</label>
-                <input
-                  type="url"
-                  required
-                  value={photoUrl}
-                  onChange={(e) => setPhotoUrl(e.target.value)}
-                  placeholder="https://images.unsplash.com/photo-1508873696983-2df57046475a?auto=format&fit=crop&w=800&q=80"
-                  className="w-full px-3 py-2 border border-slate-200 rounded-lg text-xs focus:ring-2 focus:ring-emerald-500 focus:outline-none"
-                />
-              </div>
-
-              <div>
-                <label className="block font-semibold text-slate-700 mb-1">Photo Caption / Direction *</label>
-                <input
-                  type="text"
-                  required
-                  value={photoCaption}
-                  onChange={(e) => setPhotoCaption(e.target.value)}
-                  placeholder="e.g. South facing parapet wall & shadow-free roof terrace"
-                  className="w-full px-3 py-2 border border-slate-200 rounded-lg text-xs focus:ring-2 focus:ring-emerald-500 focus:outline-none"
-                />
-              </div>
-
-              <div className="flex justify-end space-x-3 pt-3 border-t border-slate-100">
-                <button
-                  type="button"
-                  onClick={() => setPhotoModalSurvey(null)}
-                  className="px-4 py-2 border border-slate-200 text-slate-600 rounded-xl hover:bg-slate-50 font-medium"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="px-4 py-2 bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 font-semibold shadow-xs"
-                >
-                  Upload Evidence
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
+        <CameraPhotoUpload
+          title={`Attach Roof Photo Evidence — Survey #${photoModalSurvey.surveyNumber}`}
+          subtitle="Snap photo with device camera or upload image from file picker"
+          captionPlaceholder="e.g. South-facing parapet wall & shadow-free roof terrace"
+          onPhotoUploaded={async (uploadedUrl, captionText) => {
+            await api.post(`/surveys/${photoModalSurvey.id}/photos`, {
+              photoUrl: uploadedUrl,
+              caption: captionText,
+            });
+            fetchInitialData();
+          }}
+          onClose={() => setPhotoModalSurvey(null)}
+        />
       )}
     </div>
   );

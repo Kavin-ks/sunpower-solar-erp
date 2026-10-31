@@ -153,7 +153,7 @@ type copy_right_text_type = {
 
 const copy_right_text: copy_right_text_type = {
   copy_right: <>
-     ©{new Date().getFullYear()} | Alrights reserved by <a href="https://themeforest.net/user/theme_house" target="_blank">ThemeHouse</a>
+     ©{new Date().getFullYear()} | All rights reserved by <a href="/">Odoo Hyderabad</a>
   </>
 }
 

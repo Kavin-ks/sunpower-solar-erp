@@ -1,0 +1,331 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1920 1080" width="100%" height="100%" style="background:#090d16; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
+  <defs>
+    <!-- Gradients -->
+    <linearGradient id="bgGlow" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0b1220"/>
+      <stop offset="100%" stop-color="#050811"/>
+    </linearGradient>
+
+    <!-- Drop Shadows -->
+    <filter id="cardShadow" x="-10%" y="-10%" width="120%" height="125%">
+      <feDropShadow dx="0" dy="8" stdDeviation="12" flood-color="#000000" flood-opacity="0.6"/>
+    </filter>
+    <filter id="glowLine" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="2" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over"/>
+    </filter>
+
+    <!-- Markers -->
+    <marker id="arrowBlue" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M 0 0 L 8 4 L 0 8 z" fill="#38bdf8"/>
+    </marker>
+    <marker id="arrowGreen" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M 0 0 L 8 4 L 0 8 z" fill="#34d399"/>
+    </marker>
+    <marker id="arrowAmber" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M 0 0 L 8 4 L 0 8 z" fill="#fbbf24"/>
+    </marker>
+    <marker id="arrowPurple" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M 0 0 L 8 4 L 0 8 z" fill="#c084fc"/>
+    </marker>
+    <marker id="arrowCyan" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M 0 0 L 8 4 L 0 8 z" fill="#22d3ee"/>
+    </marker>
+    <marker id="arrowRose" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M 0 0 L 8 4 L 0 8 z" fill="#fb7185"/>
+    </marker>
+  </defs>
+
+  <!-- Background Canvas -->
+  <rect width="1920" height="1080" fill="url(#bgGlow)"/>
+
+  <!-- Blueprint Grid Lines -->
+  <g stroke="#1e293b" stroke-width="1" stroke-opacity="0.4">
+    <path d="M 0,120 L 1920,120 M 0,240 L 1920,240 M 0,360 L 1920,360 M 0,480 L 1920,480 M 0,600 L 1920,600 M 0,720 L 1920,720 M 0,840 L 1920,840 M 0,960 L 1920,960"/>
+    <path d="M 240,0 L 240,1080 M 480,0 L 480,1080 M 720,0 L 720,1080 M 960,0 L 960,1080 M 1200,0 L 1200,1080 M 1440,0 L 1440,1080 M 1680,0 L 1680,1080"/>
+  </g>
+
+  <!-- Diagram Title Header -->
+  <g transform="translate(60, 50)">
+    <rect x="0" y="0" width="1800" height="60" rx="10" fill="#0f172a" stroke="#334155" stroke-width="1.5"/>
+    <text x="30" y="38" fill="#f8fafc" font-size="22" font-weight="700" letter-spacing="0.5">ODOO SOLAR ERP — RELATIONAL SCHEMA ARCHITECTURE &amp; FOREIGN KEY CONNECTOR MAP</text>
+    <text x="1450" y="37" fill="#94a3b8" font-size="14" font-weight="500">MySQL 8.0 • Spring Boot 3.4 • 3NF Normalized</text>
+  </g>
+
+  <!-- ========================================== -->
+  <!-- RELATIONAL CONNECTOR LINES (Drawn behind cards) -->
+  <!-- ========================================== -->
+
+  <!-- Customer PK (190, 240) -> Enquiries (190, 410) -->
+  <path d="M 190,320 L 190,410" fill="none" stroke="#38bdf8" stroke-width="2" stroke-dasharray="4,4" marker-end="url(#arrowBlue)" filter="url(#glowLine)"/>
+
+  <!-- Customer PK (300, 240) -> Quotations (520, 480) -->
+  <path d="M 320,240 L 430,240 L 430,500 L 500,500" fill="none" stroke="#38bdf8" stroke-width="2" marker-end="url(#arrowBlue)"/>
+
+  <!-- Customer PK (320, 200) -> Sales Orders (840, 500) -->
+  <path d="M 320,200 L 800,200 L 800,480 L 820,480" fill="none" stroke="#38bdf8" stroke-width="2" marker-end="url(#arrowBlue)"/>
+
+  <!-- Enquiries PK (320, 480) -> Site Surveys (320, 680) -->
+  <path d="M 190,570 L 190,660" fill="none" stroke="#38bdf8" stroke-width="2" marker-end="url(#arrowBlue)"/>
+
+  <!-- Site Surveys PK (320, 750) -> Quotations FK (500, 530) -->
+  <path d="M 320,740 L 440,740 L 440,540 L 500,540" fill="none" stroke="#38bdf8" stroke-width="2" marker-end="url(#arrowAmber)"/>
+
+  <!-- Packages PK (630, 280) -> Package BOM (630, 340) -->
+  <path d="M 630,260 L 630,320" fill="none" stroke="#34d399" stroke-width="2" marker-end="url(#arrowGreen)"/>
+
+  <!-- Packages PK (650, 260) -> Quotations (650, 440) -->
+  <path d="M 680,260 L 680,440" fill="none" stroke="#34d399" stroke-width="2" marker-end="url(#arrowGreen)"/>
+
+  <!-- Products PK (1060, 250) -> Package BOM (760, 360) -->
+  <path d="M 940,220 L 760,220 L 760,340" fill="none" stroke="#34d399" stroke-width="2" marker-end="url(#arrowGreen)"/>
+
+  <!-- Quotation PK (760, 520) -> Sales Order FK (820, 520) [1:1 CONVERSION] -->
+  <path d="M 760,520 L 820,520" fill="none" stroke="#fbbf24" stroke-width="3" marker-end="url(#arrowAmber)" filter="url(#glowLine)"/>
+
+  <!-- Sales Order PK (1080, 520) -> Dispatches FK (1160, 520) -->
+  <path d="M 1080,520 L 1150,520" fill="none" stroke="#c084fc" stroke-width="2.5" marker-end="url(#arrowPurple)"/>
+
+  <!-- Sales Order PK (950, 640) -> Installations FK (950, 740) -->
+  <path d="M 950,640 L 950,730" fill="none" stroke="#22d3ee" stroke-width="2.5" marker-end="url(#arrowCyan)"/>
+
+  <!-- Sales Order PK (900, 640) -> Payments FK (730, 750) -->
+  <path d="M 880,640 L 880,740 L 750,740" fill="none" stroke="#fbbf24" stroke-width="2" marker-end="url(#arrowAmber)"/>
+
+  <!-- Sales Order PK (1020, 640) -> Warranties FK (1160, 780) -->
+  <path d="M 1020,640 L 1020,780 L 1150,780" fill="none" stroke="#fb7185" stroke-width="2" marker-end="url(#arrowRose)"/>
+
+  <!-- Dispatches PK (1290, 620) -> Dispatch Items (1290, 670) -->
+  <path d="M 1290,620 L 1290,660" fill="none" stroke="#c084fc" stroke-width="2" marker-end="url(#arrowPurple)"/>
+
+  <!-- Serial Numbers PK (1570, 320) -> Dispatch Items FK (1420, 700) -->
+  <path d="M 1500,340 L 1420,340 L 1420,660" fill="none" stroke="#c084fc" stroke-width="2" marker-end="url(#arrowPurple)"/>
+
+  <!-- Serial Numbers PK (1600, 340) -> Warranties FK (1410, 800) -->
+  <path d="M 1600,340 L 1600,800 L 1410,800" fill="none" stroke="#fb7185" stroke-width="2" marker-end="url(#arrowRose)"/>
+
+  <!-- Technicians PK (1600, 520) -> Installations (1120, 790) -->
+  <path d="M 1520,550 L 1130,550 L 1130,730" fill="none" stroke="#22d3ee" stroke-width="2" marker-end="url(#arrowCyan)"/>
+
+  <!-- Warranties PK (1290, 870) -> Service Tickets FK (1290, 910) -->
+  <path d="M 1290,870 L 1290,920" fill="none" stroke="#fb7185" stroke-width="2.5" marker-end="url(#arrowRose)"/>
+
+  <!-- Service Tickets PK (1420, 970) -> Service Parts (1500, 970) -->
+  <path d="M 1420,970 L 1490,970" fill="none" stroke="#fb7185" stroke-width="2" marker-end="url(#arrowRose)"/>
+
+
+  <!-- ========================================== -->
+  <!-- TABLE CARDS                                -->
+  <!-- ========================================== -->
+
+  <!-- 1. CUSTOMERS TABLE -->
+  <g transform="translate(60, 150)" filter="url(#cardShadow)">
+    <rect width="260" height="170" rx="8" fill="#131c2e" stroke="#2563eb" stroke-width="2"/>
+    <rect width="260" height="34" rx="8" fill="#1d4ed8"/>
+    <text x="15" y="23" fill="#ffffff" font-size="14" font-weight="700">customers</text>
+    <rect x="200" y="8" width="45" height="18" rx="4" fill="#3b82f6"/>
+    <text x="210" y="21" fill="#ffffff" font-size="10" font-weight="700">MASTER</text>
+    <text x="15" y="58" fill="#facc15" font-size="12" font-weight="700">PK  id : BIGINT</text>
+    <text x="15" y="80" fill="#e2e8f0" font-size="12">    full_name : VARCHAR(120)</text>
+    <text x="15" y="100" fill="#e2e8f0" font-size="12">    phone : VARCHAR(20)</text>
+    <text x="15" y="120" fill="#e2e8f0" font-size="12">    email : VARCHAR(120)</text>
+    <text x="15" y="140" fill="#94a3b8" font-size="11">    address, city, pincode</text>
+  </g>
+
+  <!-- 2. ENQUIRIES TABLE -->
+  <g transform="translate(60, 410)" filter="url(#cardShadow)">
+    <rect width="260" height="160" rx="8" fill="#131c2e" stroke="#0284c7" stroke-width="1.5"/>
+    <rect width="260" height="32" rx="8" fill="#0369a1"/>
+    <text x="15" y="22" fill="#ffffff" font-size="14" font-weight="700">enquiries</text>
+    <text x="15" y="54" fill="#facc15" font-size="12" font-weight="700">PK  id : BIGINT</text>
+    <text x="15" y="74" fill="#38bdf8" font-size="12" font-weight="600">FK  customer_id -> customers</text>
+    <text x="15" y="94" fill="#38bdf8" font-size="12" font-weight="600">FK  assigned_to -> users</text>
+    <text x="15" y="114" fill="#e2e8f0" font-size="12">    requested_kw : DECIMAL</text>
+    <text x="15" y="134" fill="#e2e8f0" font-size="12">    status : ENQUIRY_STATUS</text>
+  </g>
+
+  <!-- 3. SITE SURVEYS TABLE -->
+  <g transform="translate(60, 660)" filter="url(#cardShadow)">
+    <rect width="260" height="180" rx="8" fill="#131c2e" stroke="#0284c7" stroke-width="1.5"/>
+    <rect width="260" height="32" rx="8" fill="#0369a1"/>
+    <text x="15" y="22" fill="#ffffff" font-size="14" font-weight="700">site_surveys</text>
+    <text x="15" y="54" fill="#facc15" font-size="12" font-weight="700">PK  id : BIGINT</text>
+    <text x="15" y="74" fill="#38bdf8" font-size="12" font-weight="600">FK  customer_id -> customers</text>
+    <text x="15" y="94" fill="#38bdf8" font-size="12" font-weight="600">FK  enquiry_id -> enquiries</text>
+    <text x="15" y="114" fill="#22d3ee" font-size="12" font-weight="600">FK  technician_id -> technicians</text>
+    <text x="15" y="134" fill="#e2e8f0" font-size="12">    roof_area_sqft, tilt, azimuth</text>
+    <text x="15" y="154" fill="#a7f3d0" font-size="12" font-weight="600">    status = 'APPROVED' [GATE]</text>
+  </g>
+
+  <!-- 4. SOLAR PACKAGES TABLE -->
+  <g transform="translate(500, 150)" filter="url(#cardShadow)">
+    <rect width="260" height="130" rx="8" fill="#131c2e" stroke="#059669" stroke-width="1.5"/>
+    <rect width="260" height="32" rx="8" fill="#047857"/>
+    <text x="15" y="22" fill="#ffffff" font-size="14" font-weight="700">solar_packages</text>
+    <text x="15" y="54" fill="#facc15" font-size="12" font-weight="700">PK  id : BIGINT</text>
+    <text x="15" y="74" fill="#e2e8f0" font-size="12">    name : (1kW to 5kW)</text>
+    <text x="15" y="94" fill="#e2e8f0" font-size="12">    base_price, install_fee</text>
+    <text x="15" y="114" fill="#e2e8f0" font-size="12">    subsidy_eligible_amount</text>
+  </g>
+
+  <!-- 5. PACKAGE BOM TABLE -->
+  <g transform="translate(500, 310)" filter="url(#cardShadow)">
+    <rect width="260" height="110" rx="8" fill="#131c2e" stroke="#059669" stroke-width="1.5"/>
+    <rect width="260" height="32" rx="8" fill="#047857"/>
+    <text x="15" y="22" fill="#ffffff" font-size="14" font-weight="700">package_boms</text>
+    <text x="15" y="54" fill="#facc15" font-size="12" font-weight="700">PK  id : BIGINT</text>
+    <text x="15" y="74" fill="#34d399" font-size="12" font-weight="600">FK  package_id -> solar_packages</text>
+    <text x="15" y="94" fill="#34d399" font-size="12" font-weight="600">FK  product_id -> products</text>
+  </g>
+
+  <!-- 6. PRODUCTS CATALOG TABLE -->
+  <g transform="translate(940, 150)" filter="url(#cardShadow)">
+    <rect width="260" height="160" rx="8" fill="#131c2e" stroke="#059669" stroke-width="2"/>
+    <rect width="260" height="34" rx="8" fill="#047857"/>
+    <text x="15" y="23" fill="#ffffff" font-size="14" font-weight="700">products (Hardware)</text>
+    <text x="15" y="58" fill="#facc15" font-size="12" font-weight="700">PK  id : BIGINT</text>
+    <text x="15" y="78" fill="#34d399" font-size="12" font-weight="600">FK  category_id -> categories</text>
+    <text x="15" y="98" fill="#e2e8f0" font-size="12">    sku : VARCHAR(50)</text>
+    <text x="15" y="118" fill="#fef08a" font-size="12">    unit_cost [LIVE BOM COST]</text>
+    <text x="15" y="138" fill="#e2e8f0" font-size="12">    requires_serial, warranty_yrs</text>
+  </g>
+
+  <!-- 7. QUOTATIONS TABLE -->
+  <g transform="translate(500, 440)" filter="url(#cardShadow)">
+    <rect width="260" height="180" rx="8" fill="#131c2e" stroke="#d97706" stroke-width="2"/>
+    <rect width="260" height="34" rx="8" fill="#b45309"/>
+    <text x="15" y="23" fill="#ffffff" font-size="14" font-weight="700">quotations</text>
+    <text x="15" y="58" fill="#facc15" font-size="12" font-weight="700">PK  id : BIGINT</text>
+    <text x="15" y="78" fill="#38bdf8" font-size="12" font-weight="600">FK  customer_id -> customers</text>
+    <text x="15" y="98" fill="#38bdf8" font-size="12" font-weight="600">FK  site_survey_id -> site_surveys</text>
+    <text x="15" y="118" fill="#34d399" font-size="12" font-weight="600">FK  solar_package_id -> packages</text>
+    <text x="15" y="138" fill="#e2e8f0" font-size="12">    subtotal, discount_percent</text>
+    <text x="15" y="158" fill="#fde047" font-size="12">    discount &gt; 10% [MD APPROVAL]</text>
+  </g>
+
+  <!-- 8. SALES ORDERS TABLE -->
+  <g transform="translate(820, 440)" filter="url(#cardShadow)">
+    <rect width="260" height="200" rx="8" fill="#131c2e" stroke="#d97706" stroke-width="2.5"/>
+    <rect width="260" height="36" rx="8" fill="#b45309"/>
+    <text x="15" y="24" fill="#ffffff" font-size="15" font-weight="800">sales_orders</text>
+    <rect x="180" y="9" width="65" height="18" rx="4" fill="#f59e0b"/>
+    <text x="188" y="22" fill="#000000" font-size="10" font-weight="800">ORDER LOCK</text>
+    <text x="15" y="60" fill="#facc15" font-size="12" font-weight="700">PK  id : BIGINT</text>
+    <text x="15" y="80" fill="#38bdf8" font-size="12" font-weight="600">FK  customer_id -> customers</text>
+    <text x="15" y="100" fill="#fbbf24" font-size="12" font-weight="600">FK  quotation_id -> quotations</text>
+    <text x="15" y="120" fill="#34d399" font-size="12" font-weight="600">FK  solar_package_id -> packages</text>
+    <text x="15" y="140" fill="#e2e8f0" font-size="12">    total_amount : DECIMAL</text>
+    <text x="15" y="160" fill="#4ade80" font-size="12" font-weight="700">    advance_paid &gt;= 30% [LOCK]</text>
+    <text x="15" y="180" fill="#e2e8f0" font-size="12">    order_status : ORDER_STATUS</text>
+  </g>
+
+  <!-- 9. DISPATCHES (Warehouse) -->
+  <g transform="translate(1160, 440)" filter="url(#cardShadow)">
+    <rect width="260" height="180" rx="8" fill="#131c2e" stroke="#9333ea" stroke-width="2"/>
+    <rect width="260" height="34" rx="8" fill="#7e22ce"/>
+    <text x="15" y="23" fill="#ffffff" font-size="14" font-weight="700">dispatches</text>
+    <text x="15" y="58" fill="#facc15" font-size="12" font-weight="700">PK  id : BIGINT</text>
+    <text x="15" y="78" fill="#c084fc" font-size="12" font-weight="600">FK  sales_order_id -> orders</text>
+    <text x="15" y="98" fill="#38bdf8" font-size="12" font-weight="600">FK  customer_id -> customers</text>
+    <text x="15" y="118" fill="#e2e8f0" font-size="12">    vehicle_number, driver_name</text>
+    <text x="15" y="138" fill="#f0abfc" font-size="12" font-weight="600">    status : STAGED / PACKED</text>
+    <text x="15" y="158" fill="#a855f7" font-size="11">    Requires 100% Barcode Scans</text>
+  </g>
+
+  <!-- 10. DISPATCH ITEMS -->
+  <g transform="translate(1160, 660)" filter="url(#cardShadow)">
+    <rect width="260" height="120" rx="8" fill="#131c2e" stroke="#9333ea" stroke-width="1.5"/>
+    <rect width="260" height="32" rx="8" fill="#7e22ce"/>
+    <text x="15" y="22" fill="#ffffff" font-size="14" font-weight="700">dispatch_items</text>
+    <text x="15" y="54" fill="#facc15" font-size="12" font-weight="700">PK  id : BIGINT</text>
+    <text x="15" y="74" fill="#c084fc" font-size="12" font-weight="600">FK  dispatch_id -> dispatches</text>
+    <text x="15" y="94" fill="#34d399" font-size="12" font-weight="600">FK  product_id -> products</text>
+    <text x="15" y="110" fill="#f0abfc" font-size="11" font-weight="600">FK  serial_number_id [BARCODE]</text>
+  </g>
+
+  <!-- 11. SERIAL NUMBERS -->
+  <g transform="translate(1500, 150)" filter="url(#cardShadow)">
+    <rect width="260" height="190" rx="8" fill="#131c2e" stroke="#9333ea" stroke-width="2"/>
+    <rect width="260" height="34" rx="8" fill="#7e22ce"/>
+    <text x="15" y="23" fill="#ffffff" font-size="14" font-weight="700">serial_numbers (Assets)</text>
+    <text x="15" y="58" fill="#facc15" font-size="12" font-weight="700">PK  id : BIGINT</text>
+    <text x="15" y="78" fill="#f0abfc" font-size="12">    serial_code, barcode_value</text>
+    <text x="15" y="98" fill="#34d399" font-size="12" font-weight="600">FK  product_id -> products</text>
+    <text x="15" y="118" fill="#fbbf24" font-size="12" font-weight="600">FK  sales_order_id -> orders</text>
+    <text x="15" y="138" fill="#38bdf8" font-size="12" font-weight="600">FK  customer_id -> customers</text>
+    <text x="15" y="158" fill="#e2e8f0" font-size="12">    warranty_start, warranty_end</text>
+  </g>
+
+  <!-- 12. TECHNICIANS (Crew) -->
+  <g transform="translate(1500, 440)" filter="url(#cardShadow)">
+    <rect width="260" height="150" rx="8" fill="#131c2e" stroke="#0891b2" stroke-width="1.5"/>
+    <rect width="260" height="32" rx="8" fill="#0e7490"/>
+    <text x="15" y="22" fill="#ffffff" font-size="14" font-weight="700">technicians</text>
+    <text x="15" y="54" fill="#facc15" font-size="12" font-weight="700">PK  id : BIGINT</text>
+    <text x="15" y="74" fill="#e2e8f0" font-size="12">    name, phone, skills</text>
+    <text x="15" y="94" fill="#e2e8f0" font-size="12">    hourly_rate : DECIMAL (350)</text>
+    <text x="15" y="114" fill="#67e8f9" font-size="12">    is_active : BOOLEAN</text>
+  </g>
+
+  <!-- 13. INSTALLATIONS (On-Site) -->
+  <g transform="translate(820, 730)" filter="url(#cardShadow)">
+    <rect width="260" height="200" rx="8" fill="#131c2e" stroke="#0891b2" stroke-width="2"/>
+    <rect width="260" height="34" rx="8" fill="#0e7490"/>
+    <text x="15" y="23" fill="#ffffff" font-size="14" font-weight="700">installations</text>
+    <text x="15" y="58" fill="#facc15" font-size="12" font-weight="700">PK  id : BIGINT</text>
+    <text x="15" y="78" fill="#fbbf24" font-size="12" font-weight="600">FK  sales_order_id -> orders (1:1)</text>
+    <text x="15" y="98" fill="#38bdf8" font-size="12" font-weight="600">FK  customer_id -> customers</text>
+    <text x="15" y="118" fill="#e2e8f0" font-size="12">    5-Point Safety Checklist (Done)</text>
+    <text x="15" y="138" fill="#67e8f9" font-size="12" font-weight="700">    customer_signature_url [E-SIGN]</text>
+    <text x="15" y="158" fill="#e2e8f0" font-size="12">    status = 'COMPLETED'</text>
+    <text x="15" y="178" fill="#4ade80" font-size="11">    Triggers Auto Warranty</text>
+  </g>
+
+  <!-- 14. PAYMENTS & PROFITABILITY -->
+  <g transform="translate(500, 730)" filter="url(#cardShadow)">
+    <rect width="260" height="150" rx="8" fill="#131c2e" stroke="#d97706" stroke-width="1.5"/>
+    <rect width="260" height="32" rx="8" fill="#b45309"/>
+    <text x="15" y="22" fill="#ffffff" font-size="14" font-weight="700">payments (Job Ledger)</text>
+    <text x="15" y="54" fill="#facc15" font-size="12" font-weight="700">PK  id : BIGINT</text>
+    <text x="15" y="74" fill="#fbbf24" font-size="12" font-weight="600">FK  order_id -> sales_orders</text>
+    <text x="15" y="94" fill="#38bdf8" font-size="12" font-weight="600">FK  customer_id -> customers</text>
+    <text x="15" y="114" fill="#e2e8f0" font-size="12">    amount, reference_number</text>
+    <text x="15" y="134" fill="#4ade80" font-size="12">    Margin Ledger = Rev - BOM - Lab</text>
+  </g>
+
+  <!-- 15. WARRANTIES TABLE -->
+  <g transform="translate(1160, 780)" filter="url(#cardShadow)">
+    <rect width="260" height="160" rx="8" fill="#131c2e" stroke="#e11d48" stroke-width="2"/>
+    <rect width="260" height="34" rx="8" fill="#be123c"/>
+    <text x="15" y="23" fill="#ffffff" font-size="14" font-weight="700">warranties (20-Yr &amp; 2-Yr)</text>
+    <text x="15" y="58" fill="#facc15" font-size="12" font-weight="700">PK  id : BIGINT</text>
+    <text x="15" y="78" fill="#f43f5e" font-size="12" font-weight="600">FK  serial_number_id -> serials</text>
+    <text x="15" y="98" fill="#fbbf24" font-size="12" font-weight="600">FK  sales_order_id -> orders</text>
+    <text x="15" y="118" fill="#38bdf8" font-size="12" font-weight="600">FK  customer_id -> customers</text>
+    <text x="15" y="138" fill="#fda4af" font-size="12">    warranty_start / warranty_end</text>
+  </g>
+
+  <!-- 16. SERVICE TICKETS (Breakdown Desk) -->
+  <g transform="translate(1160, 920)" filter="url(#cardShadow)">
+    <rect width="260" height="150" rx="8" fill="#131c2e" stroke="#e11d48" stroke-width="2"/>
+    <rect width="260" height="34" rx="8" fill="#be123c"/>
+    <text x="15" y="23" fill="#ffffff" font-size="14" font-weight="700">service_tickets</text>
+    <text x="15" y="58" fill="#facc15" font-size="12" font-weight="700">PK  id : BIGINT</text>
+    <text x="15" y="78" fill="#f43f5e" font-size="12" font-weight="600">FK  warranty_id -> warranties</text>
+    <text x="15" y="98" fill="#f0abfc" font-size="12" font-weight="600">FK  serial_number_id -> serials</text>
+    <text x="15" y="118" fill="#fda4af" font-size="12">    If Warranty: Parts Cost = ₹0.00</text>
+    <text x="15" y="138" fill="#e2e8f0" font-size="11">    Customer Sign-Off Required</text>
+  </g>
+
+  <!-- 17. SERVICE PARTS -->
+  <g transform="translate(1500, 920)" filter="url(#cardShadow)">
+    <rect width="260" height="130" rx="8" fill="#131c2e" stroke="#e11d48" stroke-width="1.5"/>
+    <rect width="260" height="32" rx="8" fill="#be123c"/>
+    <text x="15" y="22" fill="#ffffff" font-size="14" font-weight="700">service_parts</text>
+    <text x="15" y="54" fill="#facc15" font-size="12" font-weight="700">PK  id : BIGINT</text>
+    <text x="15" y="74" fill="#f43f5e" font-size="12" font-weight="600">FK  ticket_id -> service_tickets</text>
+    <text x="15" y="94" fill="#34d399" font-size="12" font-weight="600">FK  product_id -> products</text>
+    <text x="15" y="114" fill="#fda4af" font-size="12">    final_charge (₹0.00 under war)</text>
+  </g>
+
+</svg>

@@ -18,7 +18,7 @@
     -webkit-font-smoothing: antialiased;
   }
 
-  #root {
+  #app {
     width: 100%;
     max-width: 100%;
     margin: 0;

@@ -58,10 +58,17 @@ public class SecurityConfig {
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/api/auth/**").permitAll()
-                .requestMatchers("/api/enquiries/public").permitAll()
+                .requestMatchers("/api/public/**").permitAll()
+                .requestMatchers("/api/public/v1/**").permitAll()
+                .requestMatchers("/api/customer/auth/**").permitAll()
+                .requestMatchers("/api/enquiries/public/**").permitAll()
                 .requestMatchers("/uploads/**").permitAll()
                 .requestMatchers("/error").permitAll()
                 .anyRequest().authenticated()
+            )
+            .headers(headers -> headers
+                .frameOptions(frame -> frame.deny())
+                .contentTypeOptions(contentType -> {})
             );
 
         http.authenticationProvider(authenticationProvider());
