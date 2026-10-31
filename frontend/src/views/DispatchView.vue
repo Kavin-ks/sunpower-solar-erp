@@ -51,8 +51,16 @@ const selectedDeviceId = ref<string>('');
 const hasTorch = ref(false);
 const isTorchOn = ref(false);
 const fileInputRef = ref<HTMLInputElement | null>(null);
+const lastDetectedBarcode = ref<string | null>(null);
 let lastScanned = '';
 let scanningActive = false;
+
+const unallocatedItemsCount = computed(() => {
+  if (!selectedDispatch.value) return 0;
+  return selectedDispatch.value.items.filter(
+    (i) => i.product.serialized && !i.serialNumber
+  ).length;
+});
 
 const videoRef = ref<HTMLVideoElement | null>(null);
 let codeReader: BrowserMultiFormatReader | null = null;
@@ -125,6 +133,13 @@ const handleCreateDispatch = async () => {
 const handleBarcodeScan = async (code: string) => {
   if (!code || !selectedDispatch.value) return;
   const cleanCode = code.trim();
+  lastDetectedBarcode.value = cleanCode;
+  setTimeout(() => {
+    if (lastDetectedBarcode.value === cleanCode) {
+      lastDetectedBarcode.value = null;
+    }
+  }, 4000);
+
   if (cleanCode === lastScanned) return;
   lastScanned = cleanCode;
   setTimeout(() => {
@@ -345,6 +360,7 @@ const closeScanModal = () => {
   scannerInput.value = '';
   targetItemId.value = 'auto';
   lastScanned = '';
+  lastDetectedBarcode.value = null;
 };
 
 const handleDispatchShipment = async (dispatchId: number) => {
@@ -395,6 +411,16 @@ onBeforeUnmount(() => {
       </div>
 
       <div class="flex items-center gap-2">
+        <a
+          href="/test_barcodes.html"
+          target="_blank"
+          class="flex items-center space-x-1.5 px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-xl text-xs font-semibold border border-slate-200 transition cursor-pointer"
+          title="Open printable & on-screen scannable sample barcodes"
+        >
+          <Barcode class="w-3.5 h-3.5 text-emerald-600" />
+          <span>Test Barcodes Sheet ↗</span>
+        </a>
+
         <button
           v-if="isWarehouse"
           type="button"
@@ -449,10 +475,15 @@ onBeforeUnmount(() => {
                 <button
                   type="button"
                   @click="selectedDispatch = disp"
-                  class="px-2.5 py-1 text-slate-700 bg-slate-100 hover:bg-slate-200 rounded font-medium cursor-pointer inline-flex items-center space-x-1"
+                  :class="[
+                    'px-2.5 py-1 rounded font-semibold cursor-pointer inline-flex items-center space-x-1 text-xs transition',
+                    disp.status === 'PICKING'
+                      ? 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs'
+                      : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
+                  ]"
                 >
                   <Barcode class="w-3.5 h-3.5" />
-                  <span>Scan & Pick</span>
+                  <span>{{ disp.status === 'PICKING' ? '⚡ Scan & Pick' : 'View Serials' }}</span>
                 </button>
 
                 <button
@@ -578,6 +609,18 @@ onBeforeUnmount(() => {
             </p>
           </div>
           <button type="button" @click="closeScanModal" class="text-slate-400 hover:text-slate-600 text-lg cursor-pointer">✕</button>
+        </div>
+
+        <!-- Already allocated notice if all items are assigned -->
+        <div v-if="unallocatedItemsCount === 0" class="p-3 bg-blue-50 border border-blue-200 rounded-xl text-blue-900 text-xs mb-3 flex items-start gap-2.5">
+          <span class="text-base shrink-0">ℹ️</span>
+          <div class="flex-1">
+            <p class="font-bold">All serialized items in {{ selectedDispatch.dispatchNumber }} are already assigned & picked!</p>
+            <p class="text-[11px] text-blue-700 mt-0.5">
+              Current status: <b>{{ selectedDispatch.status }}</b>.
+              To pick and register new barcodes, close this modal and click <b>⚡ Scan & Pick</b> on a dispatch in <b>PICKING</b> status (such as <b>DSP-00005</b> or <b>DSP-00007</b>).
+            </p>
+          </div>
         </div>
 
         <!-- Target Product Selector -->
@@ -724,6 +767,15 @@ onBeforeUnmount(() => {
                 muted
                 class="w-full h-full object-cover"
               ></video>
+
+              <!-- Detected Barcode Notification Overlay -->
+              <div
+                v-if="lastDetectedBarcode"
+                class="absolute top-3 bg-emerald-950/95 border border-emerald-400 text-emerald-300 px-3.5 py-1.5 rounded-full text-xs font-mono font-bold flex items-center gap-2 shadow-xl z-30 animate-pulse pointer-events-none"
+              >
+                <span class="w-2.5 h-2.5 rounded-full bg-emerald-400"></span>
+                <span>Scanned: {{ lastDetectedBarcode }}</span>
+              </div>
 
               <!-- HUD Target Box & Animated Laser Line -->
               <div class="absolute inset-0 pointer-events-none flex items-center justify-center">
