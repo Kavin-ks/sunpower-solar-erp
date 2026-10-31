@@ -22,16 +22,23 @@ import {
   Sparkles,
   Phone,
   MapPin,
+  X,
 } from 'lucide-react';
 import { useLocation } from 'react-router-dom';
 import { BrowserMultiFormatReader } from '@zxing/browser';
 import { NotFoundException } from '@zxing/library';
+import { CameraPhotoUpload } from '../components/common/CameraPhotoUpload';
 
 export const InstallationsPage: React.FC = () => {
   const [installations, setInstallations] = useState<Installation[]>([]);
   const [eligibleOrders, setEligibleOrders] = useState<SalesOrder[]>([]);
   const [technicians, setTechnicians] = useState<Technician[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // Photo Evidence Capture & Viewing States
+  const [photoModalInstallation, setPhotoModalInstallation] = useState<Installation | null>(null);
+  const [installationPhotoStage, setInstallationPhotoStage] = useState('STRUCTURE_MOUNTING');
+  const [viewPhotosInstallation, setViewPhotosInstallation] = useState<Installation | null>(null);
 
   // Modals
   const [showScheduleModal, setShowScheduleModal] = useState(false);
@@ -379,6 +386,23 @@ export const InstallationsPage: React.FC = () => {
     }
   };
 
+  const handleUploadInstallationPhoto = async (photoUrl: string) => {
+    if (!photoModalInstallation) return;
+    try {
+      await api.post(`/installations/${photoModalInstallation.id}/photos`, {
+        photoUrl,
+        stage: installationPhotoStage,
+        caption: `Site Photo for ${installationPhotoStage.replace(/_/g, ' ')}`,
+      });
+      await fetchInitialData();
+      setPhotoModalInstallation(null);
+      alert('Installation photo uploaded and permanently attached to installation record!');
+    } catch (err: any) {
+      console.error('Failed to attach photo to installation', err);
+      alert('Failed to save photo: ' + (err.response?.data?.message || err.message));
+    }
+  };
+
   const toggleTech = (id: number) => {
     if (selectedTechIds.includes(id)) {
       setSelectedTechIds(selectedTechIds.filter((t) => t !== id));
@@ -403,12 +427,6 @@ export const InstallationsPage: React.FC = () => {
         </div>
 
         <div className="flex items-center gap-2">
-          {isAdmin && (
-            <span className="px-3 py-1.5 bg-amber-50 text-amber-800 border border-amber-200 rounded-xl text-xs font-semibold">
-              Director Audit Mode (Read-Only)
-            </span>
-          )}
-
           {isTech && (
             <button
               onClick={() => setShowScheduleModal(true)}
@@ -528,8 +546,25 @@ export const InstallationsPage: React.FC = () => {
                         </button>
                       )}
 
-                      {isAdmin && inst.status !== 'COMPLETED' && (
-                        <span className="text-xs text-slate-400 font-medium italic">View Only</span>
+                      {/* Photo Evidence Capture Button */}
+                      <button
+                        onClick={() => setPhotoModalInstallation(inst)}
+                        className="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded text-xs font-semibold cursor-pointer inline-flex items-center space-x-1"
+                        title="Capture or upload photo evidence"
+                      >
+                        <Camera className="w-3.5 h-3.5 text-emerald-600" />
+                        <span>Photo</span>
+                      </button>
+
+                      {/* View Uploaded Photos Button */}
+                      {inst.photos && inst.photos.length > 0 && (
+                        <button
+                          onClick={() => setViewPhotosInstallation(inst)}
+                          className="px-2 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 rounded text-xs font-semibold cursor-pointer inline-flex items-center space-x-1"
+                          title="View attached photo evidence"
+                        >
+                          <span>Photos ({inst.photos.length})</span>
+                        </button>
                       )}
 
                       {inst.status === 'COMPLETED' && (
@@ -1022,6 +1057,88 @@ export const InstallationsPage: React.FC = () => {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Upload Installation Photo Modal */}
+      {photoModalInstallation && (
+        <CameraPhotoUpload
+          title={`Attach Installation Photo — Order #${photoModalInstallation.salesOrder?.orderNumber}`}
+          subtitle="Snap photo with device camera or choose from local file picker"
+          captionPlaceholder="e.g. Structure mounted, panels clamped, or inverter wiring checked"
+          allowedStages={[
+            'STRUCTURE_MOUNTING',
+            'PANEL_ALIGNMENT',
+            'INVERTER_WIRING',
+            'EARTHING_PROTECTION',
+            'COMMISSIONING_METER',
+            'CUSTOMER_HANDOVER',
+          ]}
+          selectedStage={installationPhotoStage}
+          onStageChange={(s) => setInstallationPhotoStage(s)}
+          onPhotoUploaded={async (url, caption) => {
+            await api.post(`/installations/${photoModalInstallation.id}/photos`, {
+              photoUrl: url,
+              stage: installationPhotoStage,
+              caption: caption || `Installation evidence for ${installationPhotoStage.replace(/_/g, ' ')}`,
+            });
+            await fetchInitialData();
+            setPhotoModalInstallation(null);
+            alert('Installation photo uploaded and permanently attached!');
+          }}
+          onClose={() => setPhotoModalInstallation(null)}
+        />
+      )}
+
+      {/* View Installation Photos Modal */}
+      {viewPhotosInstallation && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-fadeIn">
+          <div className="bg-white rounded-2xl max-w-2xl w-full p-6 shadow-2xl border border-slate-100 max-h-[90vh] flex flex-col">
+            <div className="flex justify-between items-center pb-4 border-b border-slate-100">
+              <div>
+                <h3 className="text-lg font-bold text-slate-800">Installation Photographs</h3>
+                <p className="text-xs text-slate-500">Order #{viewPhotosInstallation.salesOrder?.orderNumber} &bull; {viewPhotosInstallation.salesOrder?.customer?.fullName}</p>
+              </div>
+              <button
+                onClick={() => setViewPhotosInstallation(null)}
+                className="text-slate-400 hover:text-slate-600 p-1 rounded-lg hover:bg-slate-100 cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto py-4">
+              {(!viewPhotosInstallation.photos || viewPhotosInstallation.photos.length === 0) ? (
+                <div className="text-center py-12 text-slate-400">
+                  <Camera className="w-12 h-12 mx-auto mb-2 opacity-40 text-slate-400" />
+                  <p className="font-medium text-slate-600">No photographs uploaded yet.</p>
+                  <p className="text-xs text-slate-400 mt-1">Technicians capture physical evidence during mounting, inverter wiring, and final commissioning.</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {viewPhotosInstallation.photos.map((p, idx) => (
+                    <div key={idx} className="border border-slate-200 rounded-xl overflow-hidden bg-slate-50 shadow-xs">
+                      <img src={p.photoUrl} alt={p.caption || 'Installation photo'} className="w-full h-48 object-cover bg-slate-100" />
+                      <div className="p-3">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 uppercase tracking-wider">{p.stage || 'GENERAL'}</span>
+                          <span className="text-[10px] text-slate-400">{p.uploadedAt ? new Date(p.uploadedAt).toLocaleString() : ''}</span>
+                        </div>
+                        {p.caption && <p className="text-xs text-slate-700 mt-1 font-medium">{p.caption}</p>}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+            <div className="pt-3 border-t border-slate-100 flex justify-end">
+              <button
+                onClick={() => setViewPhotosInstallation(null)}
+                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-medium text-xs cursor-pointer"
+              >
+                Close
+              </button>
+            </div>
           </div>
         </div>
       )}

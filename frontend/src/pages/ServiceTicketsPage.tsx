@@ -17,11 +17,13 @@ import {
   Calendar,
   Layers,
   Sparkles,
+  Camera,
 } from 'lucide-react';
 import api from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import { ServiceTicket, Customer, Technician, Product, TicketStatus } from '../types';
 import { Badge } from '../components/ui/Badge';
+import { CameraPhotoUpload } from '../components/common/CameraPhotoUpload';
 
 export const ServiceTicketsPage: React.FC = () => {
   const [tickets, setTickets] = useState<ServiceTicket[]>([]);
@@ -38,6 +40,7 @@ export const ServiceTicketsPage: React.FC = () => {
   const [isResolveModalOpen, setIsResolveModalOpen] = useState(false);
   const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
   const [selectedTicket, setSelectedTicket] = useState<ServiceTicket | null>(null);
+  const [showComplaintPhotoModal, setShowComplaintPhotoModal] = useState(false);
 
   // Forms
   const [createForm, setCreateForm] = useState({
@@ -217,12 +220,6 @@ export const ServiceTicketsPage: React.FC = () => {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          {isAdmin && (
-            <span className="px-3 py-1.5 bg-amber-50 text-amber-800 border border-amber-200 rounded-xl text-xs font-semibold">
-              Director Audit Mode (Read-Only)
-            </span>
-          )}
-
           {isSupport && (
             <button
               onClick={() => setIsCreateModalOpen(true)}
@@ -567,6 +564,38 @@ export const ServiceTicketsPage: React.FC = () => {
                   className="w-full border border-slate-200 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-emerald-500"
                 />
               </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 uppercase mb-1">
+                  Faulty Equipment / Error Code Photo Evidence (Optional)
+                </label>
+                <button
+                  type="button"
+                  onClick={() => setShowComplaintPhotoModal(true)}
+                  className="w-full py-2.5 px-3 border border-dashed border-slate-300 rounded-lg text-xs font-medium text-slate-600 hover:border-emerald-500 hover:text-emerald-700 hover:bg-emerald-50/50 flex items-center justify-center space-x-2 transition cursor-pointer"
+                >
+                  <Camera className="w-4 h-4 text-emerald-600" />
+                  <span>Snap Photo or Upload Image Evidence</span>
+                </button>
+              </div>
+
+              {showComplaintPhotoModal && (
+                <CameraPhotoUpload
+                  title="Capture Equipment Photo Evidence"
+                  subtitle="Take a photo of the damaged inverter, panel, or error display"
+                  captionPlaceholder="e.g. Inverter error code blinking on display panel"
+                  onPhotoUploaded={(url, caption) => {
+                    setCreateForm((prev) => ({
+                      ...prev,
+                      complaintDescription: prev.complaintDescription
+                        ? `${prev.complaintDescription}\n[Attached Photo]: ${url}${caption ? ` (${caption})` : ''}`
+                        : `[Attached Photo]: ${url}${caption ? ` (${caption})` : ''}`,
+                    }));
+                    setShowComplaintPhotoModal(false);
+                  }}
+                  onClose={() => setShowComplaintPhotoModal(false)}
+                />
+              )}
 
               <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
                 <button

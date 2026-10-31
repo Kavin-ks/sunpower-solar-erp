@@ -1704,86 +1704,112 @@ a.active {
 
 .form-box {
     position: relative;
+    width: 100%;
 }
 
 .form-box input {
     width: 100%;
     height: 50px;
-    padding-left: 30px;
+    padding-left: 20px;
+    padding-right: 48px;
     background: #ffffff;
-    border: 0;
+    border: 1px solid #e2e8f0;
     outline: 0;
-    border-radius: 3px;
-    color: #3e3e3f;
-    /* margin-bottom: 23px; */
+    border-radius: 6px;
+    color: #1e293b;
+    margin-bottom: 0;
+    box-sizing: border-box;
+    transition: border-color 0.2s ease;
+}
+
+.form-box input:focus, .form-box select:focus, .form-box textarea:focus {
+    border-color: #f59e0b;
 }
 
 .contact-form-1 .form_error{
     color: #fff;
-
+    font-size: 12px;
+    margin-top: 4px;
+    margin-bottom: 0;
 }
 .form_error{
-    color: red;
+    color: #ef4444;
+    font-size: 12px;
+    margin-top: 4px;
+    margin-bottom: 0;
 }
 
-
-.form_box input::placeholder {
-    color: #6d6d6d;
+.form_box input::placeholder, .form-box input::placeholder, .form-box textarea::placeholder {
+    color: #94a3b8;
 }
 
 .form-box select {
     width: 100%;
     height: 50px;
-    padding-left: 30px;
+    padding-left: 20px;
+    padding-right: 48px;
     background: #ffffff;
-    border-radius: 3px;
-    border: 0;
+    border-radius: 6px;
+    border: 1px solid #e2e8f0;
     outline: 0;
-    color: #3e3e3f;
-    margin-bottom: 23px;
+    color: #1e293b;
+    margin-bottom: 0;
+    box-sizing: border-box;
+    cursor: pointer;
 }
-
 
 .form-box textarea {
     width: 100%;
     height: 100px;
-    padding-left: 30px;
+    padding-left: 20px;
+    padding-right: 48px;
+    padding-top: 12px;
     background: #ffffff;
-    border-radius: 3px;
-    color: #3e3e3f;
-    border: 0;
+    border-radius: 6px;
+    color: #1e293b;
+    border: 1px solid #e2e8f0;
     outline: 0;
-    /* margin-bottom: 23px; */
+    margin-bottom: 0;
+    box-sizing: border-box;
+    resize: vertical;
 }
 
 .form-box textarea::placeholder {
-    padding: 8px 0px 0;
+    padding: 0;
 }
-
 
 .form-box i {
     position: absolute;
-    right: 30px;
-    top: 11px;
+    right: 18px;
+    top: 15px;
     color: #e63a27;
+    pointer-events: none;
+    font-size: 18px;
 }
 
 .form-box-button button {
-    width: 270px;
-    height: 60px;
-    border-radius: 3px;
+    width: 100%;
+    max-width: 100%;
+    height: 54px;
+    border-radius: 6px;
     background-color: #1c1632;
     border: 0;
     outline: 0;
-    font-size: 19px;
-    font-weight: 500;
+    font-size: 16px;
+    font-weight: 600;
     color: #fff;
     position: relative;
     z-index: 1;
-    transition: .5s;
+    transition: .3s;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
 }
 .form-box-button button:hover{
-    color:#e63a27 ;
+    background-color: #110e20;
+    color: #fbbf24;
 }
 
 .form-box-button button::before {

@@ -221,7 +221,12 @@ public class ServiceTicketService {
             servicePartRepository.saveAll(parts);
         }
 
-        ticket.setParts(parts);
+        if (ticket.getParts() != null) {
+            ticket.getParts().clear();
+            ticket.getParts().addAll(parts);
+        } else {
+            ticket.setParts(parts);
+        }
         ticket.setPartsCharges(underWarranty ? BigDecimal.ZERO : partsTotal);
         BigDecimal totalCharges = underWarranty ? BigDecimal.ZERO : laborCharges.add(partsTotal);
         ticket.setTotalCustomerCharges(totalCharges);
