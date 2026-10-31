@@ -33,10 +33,13 @@ public class SiteSurveyService {
     private SurveyPhotoRepository surveyPhotoRepository;
 
     @Autowired
+    private UserRepository userRepository;
+
+    @Autowired
     private EnquiryActivityRepository enquiryActivityRepository;
 
     public List<SiteSurvey> getAllSurveys() {
-        return siteSurveyRepository.findAll();
+        return siteSurveyRepository.findAll(org.springframework.data.domain.Sort.by(org.springframework.data.domain.Sort.Direction.DESC, "id"));
     }
 
     public SiteSurvey getSurveyById(Long id) {
@@ -92,6 +95,26 @@ public class SiteSurveyService {
         if (request.getEnquiryId() != null) {
             Enquiry enquiry = enquiryRepository.findById(request.getEnquiryId()).orElse(null);
             if (enquiry != null) {
+                // Enforce Lead Owner assignment before scheduling a survey
+                if (enquiry.getAssignedTo() == null) {
+                    if (scheduledBy != null) {
+                        User user = userRepository.findByUsername(scheduledBy).orElse(null);
+                        if (user != null) {
+                            enquiry.setAssignedTo(user);
+                            enquiryActivityRepository.save(new EnquiryActivity(
+                                    enquiry,
+                                    "ASSIGNED",
+                                    "Lead claimed by " + user.getFullName() + " upon scheduling site survey",
+                                    scheduledBy
+                            ));
+                        } else {
+                            throw new IllegalStateException("Enquiry must have an assigned Lead Owner before scheduling a site survey.");
+                        }
+                    } else {
+                        throw new IllegalStateException("Enquiry must have an assigned Lead Owner before scheduling a site survey.");
+                    }
+                }
+
                 survey.setEnquiry(enquiry);
                 enquiry.setStatus(EnquiryStatus.SURVEY_SCHEDULED);
                 enquiryRepository.save(enquiry);

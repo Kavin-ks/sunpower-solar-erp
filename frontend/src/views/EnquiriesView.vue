@@ -43,6 +43,7 @@ const scheduleForm = ref({
   enquiryNumber: '',
   customerId: 0,
   customerName: '',
+  assignedToName: '',
   technicianId: '',
   scheduledDate: new Date().toISOString().split('T')[0],
   surveyNotes: '',
@@ -330,11 +331,23 @@ const fetchTechnicians = async () => {
 };
 
 const openScheduleSurveyModal = async (enq: Enquiry) => {
+  if (!enq.assignedTo) {
+    const claim = confirm(`Enquiry ${enq.enquiryNumber || enq.id} has no assigned Lead Owner. Would you like to claim it as yours now to schedule the survey?`);
+    if (claim) {
+      await handleAssignToMe(enq);
+    } else {
+      return;
+    }
+  }
+
+  const assignedUser = enq.assignedTo?.fullName || enq.assignedTo?.username || authStore.user?.fullName || 'Assigned Sales Agent';
+
   scheduleForm.value = {
     enquiryId: enq.id,
     enquiryNumber: enq.enquiryNumber || `ENQ-${enq.id}`,
     customerId: enq.customer?.id || (enq as any).customerId,
     customerName: enq.customer?.fullName || (enq as any).customerName,
+    assignedToName: assignedUser,
     technicianId: '',
     scheduledDate: new Date().toISOString().split('T')[0],
     surveyNotes: `Site physical inspection for ${enq.requestedCapacityKw || 3} kW system (${enq.systemType === 'OFF_GRID' ? 'Off-Grid' : 'On-Grid'}).`,
@@ -347,6 +360,14 @@ const openScheduleSurveyModal = async (enq: Enquiry) => {
     scheduleForm.value.technicianId = String(availableTechnicians.value[0].id);
   }
   showScheduleModal.value = true;
+};
+
+const handleAssignAndSchedule = async (enq: Enquiry) => {
+  if (!enq.assignedTo) {
+    await handleAssignToMe(enq);
+  }
+  const updated = enquiries.value.find((e) => e.id === enq.id) || selectedEnquiry.value || enq;
+  await openScheduleSurveyModal(updated);
 };
 
 const handleScheduleSubmit = async () => {
@@ -569,15 +590,27 @@ onBeforeUnmount(() => {
                   View & Qualify
                 </button>
 
-                <button
-                  v-if="enq.status === 'QUALIFIED' && isSales"
-                  type="button"
-                  @click="goToScheduleSurvey(enq)"
-                  class="px-2.5 py-1 text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded text-xs font-semibold cursor-pointer inline-flex items-center space-x-1"
-                >
-                  <Calendar class="w-3 h-3" />
-                  <span>Schedule Survey</span>
-                </button>
+                <template v-if="enq.status === 'QUALIFIED' && isSales">
+                  <button
+                    v-if="!enq.assignedTo"
+                    type="button"
+                    @click.stop="handleAssignAndSchedule(enq)"
+                    class="px-2.5 py-1 text-amber-700 bg-amber-50 hover:bg-amber-100 border border-amber-200 rounded text-xs font-semibold cursor-pointer inline-flex items-center space-x-1"
+                    title="Claim lead first to schedule a survey"
+                  >
+                    <UserCheck class="w-3 h-3" />
+                    <span>Claim & Schedule</span>
+                  </button>
+                  <button
+                    v-else
+                    type="button"
+                    @click="goToScheduleSurvey(enq)"
+                    class="px-2.5 py-1 text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded text-xs font-semibold cursor-pointer inline-flex items-center space-x-1"
+                  >
+                    <Calendar class="w-3 h-3" />
+                    <span>Schedule Survey</span>
+                  </button>
+                </template>
 
                 <button
                   v-if="enq.status === 'SURVEY_APPROVED' && isSales"
@@ -614,6 +647,25 @@ onBeforeUnmount(() => {
         </div>
 
         <div class="space-y-4 text-xs">
+          <!-- Warning if Lead is unassigned -->
+          <div v-if="!selectedEnquiry.assignedTo && isSales" class="bg-amber-50 border border-amber-200 text-amber-800 p-3 rounded-xl flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <span class="text-base">⚠️</span>
+              <div>
+                <p class="font-semibold text-xs">Unassigned Lead</p>
+                <p class="text-[11px] text-amber-700">Claim ownership of this enquiry before scheduling a site survey or quotation.</p>
+              </div>
+            </div>
+            <button
+              type="button"
+              @click="handleAssignToMe(selectedEnquiry)"
+              class="px-3 py-1 bg-amber-600 hover:bg-amber-700 text-white font-semibold rounded-lg text-xs transition cursor-pointer flex items-center gap-1 shrink-0"
+            >
+              <UserCheck class="w-3 h-3" />
+              <span>Claim Lead</span>
+            </button>
+          </div>
+
           <!-- Current Lead Stage & Actions -->
           <div class="bg-slate-50 p-3 rounded-xl border border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
@@ -884,15 +936,26 @@ onBeforeUnmount(() => {
           <!-- Modal Footer Actions -->
           <div class="flex justify-between items-center pt-3 border-t border-slate-100">
             <div class="space-x-2">
-              <button
-                v-if="selectedEnquiry.status === 'QUALIFIED' && isSales"
-                type="button"
-                @click="goToScheduleSurvey(selectedEnquiry)"
-                class="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-semibold inline-flex items-center space-x-1 cursor-pointer"
-              >
-                <Calendar class="w-3.5 h-3.5" />
-                <span>Proceed to Schedule Survey</span>
-              </button>
+              <template v-if="selectedEnquiry.status === 'QUALIFIED' && isSales">
+                <button
+                  v-if="!selectedEnquiry.assignedTo"
+                  type="button"
+                  @click="handleAssignAndSchedule(selectedEnquiry)"
+                  class="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-xl font-semibold inline-flex items-center space-x-1 cursor-pointer"
+                >
+                  <UserCheck class="w-3.5 h-3.5" />
+                  <span>Claim Lead & Schedule Survey</span>
+                </button>
+                <button
+                  v-else
+                  type="button"
+                  @click="goToScheduleSurvey(selectedEnquiry)"
+                  class="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-semibold inline-flex items-center space-x-1 cursor-pointer"
+                >
+                  <Calendar class="w-3.5 h-3.5" />
+                  <span>Proceed to Schedule Survey</span>
+                </button>
+              </template>
 
               <button
                 v-if="selectedEnquiry.status === 'SURVEY_APPROVED' && isSales"
@@ -1136,7 +1199,12 @@ onBeforeUnmount(() => {
             <div>
               <span class="text-[10px] uppercase font-bold text-emerald-800 tracking-wider">Target Customer & Lead</span>
               <div class="text-xs font-bold text-slate-900 mt-0.5">{{ scheduleForm.customerName }}</div>
-              <div class="text-[11px] text-slate-500 font-mono mt-0.5">Enquiry ID: {{ scheduleForm.enquiryNumber }}</div>
+              <div class="text-[11px] text-slate-500 font-mono mt-0.5">
+                Enquiry ID: {{ scheduleForm.enquiryNumber }}
+                <span v-if="scheduleForm.assignedToName" class="text-emerald-700 font-sans ml-2">
+                  • Lead Owner: <strong>{{ scheduleForm.assignedToName }}</strong>
+                </span>
+              </div>
             </div>
             <span class="px-2.5 py-1 bg-white text-emerald-700 font-bold text-[11px] rounded-lg border border-emerald-200 shadow-2xs">
               ✓ Auto-Selected

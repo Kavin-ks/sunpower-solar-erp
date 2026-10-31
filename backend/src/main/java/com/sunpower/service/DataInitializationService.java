@@ -604,6 +604,9 @@ public class DataInitializationService implements CommandLineRunner {
                 surv = new SiteSurvey();
                 surv.setSurveyNumber("SRV-2026-0003");
                 surv.setCustomer(cust);
+                if (!technicianRepository.findAll().isEmpty()) {
+                    surv.setTechnician(technicianRepository.findAll().get(0));
+                }
                 surv.setScheduledDate(LocalDate.now());
                 surv.setStatus(SurveyStatus.APPROVED);
                 surv = siteSurveyRepository.save(surv);
@@ -737,6 +740,9 @@ public class DataInitializationService implements CommandLineRunner {
             SiteSurvey survA = new SiteSurvey();
             survA.setSurveyNumber("SRV-DEMO-18M");
             survA.setCustomer(custA);
+            if (!technicianRepository.findAll().isEmpty()) {
+                survA.setTechnician(technicianRepository.findAll().get(0));
+            }
             survA.setScheduledDate(LocalDate.now().minusMonths(18));
             survA.setRoofDirection("South");
             survA.setRoofTilt("15 deg");
@@ -928,6 +934,11 @@ public class DataInitializationService implements CommandLineRunner {
             SiteSurvey survB = new SiteSurvey();
             survB.setSurveyNumber("SRV-DEMO-LOSS");
             survB.setCustomer(custB);
+            if (technicianRepository.findAll().size() > 1) {
+                survB.setTechnician(technicianRepository.findAll().get(1));
+            } else if (!technicianRepository.findAll().isEmpty()) {
+                survB.setTechnician(technicianRepository.findAll().get(0));
+            }
             survB.setScheduledDate(LocalDate.now().minusDays(5));
             survB.setRoofDirection("South-East");
             survB.setRoofTilt("10 deg");
@@ -1066,6 +1077,11 @@ public class DataInitializationService implements CommandLineRunner {
             SiteSurvey survC = new SiteSurvey();
             survC.setSurveyNumber("SRV-DEMO-30M");
             survC.setCustomer(custC);
+            if (technicianRepository.findAll().size() > 2) {
+                survC.setTechnician(technicianRepository.findAll().get(2));
+            } else if (!technicianRepository.findAll().isEmpty()) {
+                survC.setTechnician(technicianRepository.findAll().get(0));
+            }
             survC.setScheduledDate(LocalDate.now().minusMonths(30));
             survC.setRoofDirection("South");
             survC.setRoofTilt("15 deg");

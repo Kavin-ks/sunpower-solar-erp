@@ -69,6 +69,33 @@ const router = useRouter();
 const route = useRoute();
 const authStore = useAuthStore();
 
+const statusFilter = ref<string>('ALL');
+
+const filteredSurveys = computed(() => {
+  let list = surveys.value || [];
+  if (statusFilter.value === 'SCHEDULED') {
+    list = list.filter((s) => s.status === 'SCHEDULED' || s.status === 'PENDING');
+  } else if (statusFilter.value === 'SUBMITTED') {
+    list = list.filter((s) => s.status === 'REPORT_SUBMITTED' || s.status === 'IN_PROGRESS' || s.status === 'REVISIT_REQUIRED');
+  } else if (statusFilter.value === 'APPROVED') {
+    list = list.filter((s) => s.status === 'APPROVED');
+  } else if (statusFilter.value === 'REJECTED') {
+    list = list.filter((s) => s.status === 'REJECTED');
+  }
+  return [...list].sort((a, b) => (Number(b.id) || 0) - (Number(a.id) || 0));
+});
+
+const surveyCounts = computed(() => {
+  const all = surveys.value || [];
+  return {
+    all: all.length,
+    scheduled: all.filter((s) => s.status === 'SCHEDULED' || s.status === 'PENDING').length,
+    submitted: all.filter((s) => s.status === 'REPORT_SUBMITTED' || s.status === 'IN_PROGRESS' || s.status === 'REVISIT_REQUIRED').length,
+    approved: all.filter((s) => s.status === 'APPROVED').length,
+    rejected: all.filter((s) => s.status === 'REJECTED').length,
+  };
+});
+
 const isAdmin = computed(() => {
   const roles = authStore.user?.roles || [];
   return roles.includes('ROLE_ADMIN') || roles.includes('ROLE_DIRECTOR');
@@ -76,12 +103,12 @@ const isAdmin = computed(() => {
 
 const isSales = computed(() => {
   const roles = authStore.user?.roles || [];
-  return roles.includes('ROLE_SALES') && !isAdmin.value;
+  return roles.includes('ROLE_SALES') || roles.includes('ROLE_ADMIN') || roles.includes('ROLE_DIRECTOR');
 });
 
 const isTech = computed(() => {
   const roles = authStore.user?.roles || [];
-  return roles.includes('ROLE_TECHNICIAN') && !isAdmin.value;
+  return roles.includes('ROLE_TECHNICIAN') || roles.includes('ROLE_ADMIN') || roles.includes('ROLE_DIRECTOR');
 });
 
 const fetchInitialData = async () => {
@@ -250,6 +277,59 @@ onMounted(() => {
     </div>
 
 
+    <!-- Status Filter Pills -->
+    <div class="flex items-center gap-2 overflow-x-auto pb-1 text-xs font-semibold">
+      <button
+        type="button"
+        @click="statusFilter = 'ALL'"
+        :class="statusFilter === 'ALL' ? 'bg-slate-900 text-white shadow-xs' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'"
+        class="px-3 py-1.5 rounded-lg transition cursor-pointer flex items-center gap-1.5"
+      >
+        <span>All Surveys</span>
+        <span class="px-1.5 py-0.2 rounded-full text-[10px]" :class="statusFilter === 'ALL' ? 'bg-slate-700 text-slate-200' : 'bg-slate-200 text-slate-700'">{{ surveyCounts.all }}</span>
+      </button>
+
+      <button
+        type="button"
+        @click="statusFilter = 'SCHEDULED'"
+        :class="statusFilter === 'SCHEDULED' ? 'bg-blue-600 text-white shadow-xs' : 'bg-blue-50 text-blue-700 hover:bg-blue-100'"
+        class="px-3 py-1.5 rounded-lg transition cursor-pointer flex items-center gap-1.5"
+      >
+        <span>Scheduled</span>
+        <span class="px-1.5 py-0.2 rounded-full text-[10px]" :class="statusFilter === 'SCHEDULED' ? 'bg-blue-800 text-blue-100' : 'bg-blue-100 text-blue-800'">{{ surveyCounts.scheduled }}</span>
+      </button>
+
+      <button
+        type="button"
+        @click="statusFilter = 'SUBMITTED'"
+        :class="statusFilter === 'SUBMITTED' ? 'bg-amber-600 text-white shadow-xs' : 'bg-amber-50 text-amber-700 hover:bg-amber-100'"
+        class="px-3 py-1.5 rounded-lg transition cursor-pointer flex items-center gap-1.5"
+      >
+        <span>Submitted / Review</span>
+        <span class="px-1.5 py-0.2 rounded-full text-[10px]" :class="statusFilter === 'SUBMITTED' ? 'bg-amber-800 text-amber-100' : 'bg-amber-100 text-amber-800'">{{ surveyCounts.submitted }}</span>
+      </button>
+
+      <button
+        type="button"
+        @click="statusFilter = 'APPROVED'"
+        :class="statusFilter === 'APPROVED' ? 'bg-emerald-600 text-white shadow-xs' : 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100'"
+        class="px-3 py-1.5 rounded-lg transition cursor-pointer flex items-center gap-1.5"
+      >
+        <span>Approved</span>
+        <span class="px-1.5 py-0.2 rounded-full text-[10px]" :class="statusFilter === 'APPROVED' ? 'bg-emerald-800 text-emerald-100' : 'bg-emerald-100 text-emerald-800'">{{ surveyCounts.approved }}</span>
+      </button>
+
+      <button
+        type="button"
+        @click="statusFilter = 'REJECTED'"
+        :class="statusFilter === 'REJECTED' ? 'bg-red-600 text-white shadow-xs' : 'bg-red-50 text-red-700 hover:bg-red-100'"
+        class="px-3 py-1.5 rounded-lg transition cursor-pointer flex items-center gap-1.5"
+      >
+        <span>Rejected</span>
+        <span class="px-1.5 py-0.2 rounded-full text-[10px]" :class="statusFilter === 'REJECTED' ? 'bg-red-800 text-red-100' : 'bg-red-100 text-red-800'">{{ surveyCounts.rejected }}</span>
+      </button>
+    </div>
+
     <!-- Surveys List Table -->
     <div class="bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden">
       <div class="overflow-x-auto">
@@ -267,20 +347,29 @@ onMounted(() => {
             </tr>
           </thead>
           <tbody class="divide-y divide-slate-100">
-            <tr v-if="surveys.length === 0">
+            <tr v-if="filteredSurveys.length === 0">
               <td colspan="8" class="py-8 text-center text-slate-400">
-                No site surveys scheduled yet.
+                No site surveys found in this category.
               </td>
             </tr>
-            <tr v-for="surv in surveys" :key="surv.id" class="hover:bg-slate-50 transition">
+            <tr v-for="surv in filteredSurveys" :key="surv.id" class="hover:bg-slate-50 transition">
               <td class="py-3 px-4 font-mono font-bold text-slate-900">{{ surv.surveyNumber }}</td>
               <td class="py-3 px-4 font-semibold text-slate-800">
-                <div>{{ surv.customer.fullName }}</div>
-                <div class="text-[11px] text-slate-400 font-normal">{{ surv.customer.city || surv.customer.phone }}</div>
+                <div>{{ surv.customer?.fullName || 'Customer' }}</div>
+                <div class="text-[11px] text-slate-400 font-normal">{{ surv.customer?.city || surv.customer?.phone || '' }}</div>
+                <div v-if="surv.enquiry" class="mt-1">
+                  <span class="font-mono text-[10px] text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded border border-blue-200 inline-flex items-center gap-1">
+                    <span>Enquiry: {{ surv.enquiry.enquiryNumber }}</span>
+                    <span v-if="surv.enquiry.assignedTo" class="text-blue-500 font-normal">({{ surv.enquiry.assignedTo.fullName || surv.enquiry.assignedTo.username }})</span>
+                  </span>
+                </div>
               </td>
               <td class="py-3 px-4">
-                <span class="font-medium text-slate-700">{{ surv.technician.name }}</span>
-                <span class="block text-[10px] text-slate-400">{{ surv.technician.phone }}</span>
+                <div v-if="surv.technician">
+                  <span class="font-medium text-slate-700">{{ surv.technician.name }}</span>
+                  <span v-if="surv.technician.phone" class="block text-[10px] text-slate-400">{{ surv.technician.phone }}</span>
+                </div>
+                <span v-else class="text-slate-400 italic">Unassigned Technician</span>
               </td>
               <td class="py-3 px-4 whitespace-nowrap">{{ surv.scheduledDate }}</td>
               <td class="py-3 px-4">
@@ -403,7 +492,7 @@ onMounted(() => {
             >
               <option value="">-- Direct Booking (No Prior Enquiry) --</option>
               <option v-for="e in enquiries" :key="e.id" :value="String(e.id)">
-                {{ e.enquiryNumber }} - {{ e.customer.fullName }} ({{ e.requestedCapacityKw }} kW)
+                {{ e.enquiryNumber }} - {{ e.customer?.fullName }} ({{ e.requestedCapacityKw }} kW)
               </option>
             </select>
           </div>
@@ -468,7 +557,7 @@ onMounted(() => {
         <div class="flex items-center justify-between pb-3 border-b border-slate-100 mb-4">
           <div>
             <h2 class="text-lg font-bold text-slate-900">Technician Physical Site Inspection Report</h2>
-            <p class="text-xs text-slate-500">Survey # {{ inspectionModalSurvey.surveyNumber }} • Customer: {{ inspectionModalSurvey.customer.fullName }}</p>
+            <p class="text-xs text-slate-500">Survey # {{ inspectionModalSurvey.surveyNumber }} • Customer: {{ inspectionModalSurvey.customer?.fullName }}</p>
           </div>
           <button type="button" @click="inspectionModalSurvey = null" class="text-slate-400 hover:text-slate-600 text-lg cursor-pointer">✕</button>
         </div>
@@ -610,7 +699,7 @@ onMounted(() => {
         <div class="flex items-center justify-between pb-3 border-b border-slate-100 mb-4">
           <div>
             <h2 class="text-lg font-bold text-slate-900">Site Survey Findings Report</h2>
-            <p class="text-xs text-slate-500">Ref: {{ viewReportSurvey.surveyNumber }} • Customer: {{ viewReportSurvey.customer.fullName }}</p>
+            <p class="text-xs text-slate-500">Ref: {{ viewReportSurvey.surveyNumber }} • Customer: {{ viewReportSurvey.customer?.fullName }}</p>
           </div>
           <button type="button" @click="viewReportSurvey = null" class="text-slate-400 hover:text-slate-600 text-lg cursor-pointer">✕</button>
         </div>
