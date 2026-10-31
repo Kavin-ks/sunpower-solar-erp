@@ -40,7 +40,7 @@ export const Navbar: React.FC = () => {
           {/* Quick Evaluator Role Switcher */}
           <div className="flex items-center bg-slate-50 border border-slate-200 rounded-lg px-3 py-1.5 text-xs text-slate-700 space-x-2">
             <ShieldCheck className="w-4 h-4 text-emerald-600" />
-            <span className="font-semibold text-slate-500">Demo Role:</span>
+            <span className="font-semibold text-slate-500">Active Role:</span>
             <select
               value={user?.username || 'admin'}
               onChange={(e) => switchRole(e.target.value)}

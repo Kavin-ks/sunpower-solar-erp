@@ -104,7 +104,7 @@ export const LoginPage: React.FC = () => {
         <div className="mt-6 pt-6 border-t border-slate-100 text-center">
           <div className="flex items-center justify-center space-x-1 text-xs text-slate-500 font-medium mb-3">
             <ShieldCheck className="w-4 h-4 text-emerald-600" />
-            <span>Select Demo Persona:</span>
+            <span>Department Account Quick Fill:</span>
           </div>
           <div className="grid grid-cols-3 gap-2">
             {[
@@ -129,7 +129,7 @@ export const LoginPage: React.FC = () => {
               </button>
             ))}
           </div>
-          <p className="text-[11px] text-slate-400 mt-3">Default demo password: <code className="text-slate-600 font-mono">password123</code></p>
+          <p className="text-[11px] text-slate-400 mt-3">Initial setup password: <code className="text-slate-600 font-mono">password123</code></p>
         </div>
       </div>
     </div>

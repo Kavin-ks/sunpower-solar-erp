@@ -173,11 +173,11 @@ export const DashboardPage: React.FC = () => {
             <div>
               <div className="inline-flex items-center space-x-2 bg-indigo-500/20 text-indigo-300 px-3 py-1 rounded-full text-xs font-semibold mb-2 border border-indigo-500/30">
                 <Eye className="w-3.5 h-3.5" />
-                <span>Executive Director Oversight Mode</span>
+                <span>Executive Overview</span>
               </div>
               <h1 className="text-2xl font-bold tracking-tight text-white">Central Operations & Financial Governance</h1>
               <p className="text-xs text-slate-300 mt-1 max-w-2xl leading-relaxed">
-                Centralized real-time visibility across all 6 departments. Admin monitors organizational health, audit trails, and financials in read-only mode without replacing departmental operators.
+                Centralized real-time visibility across all 6 departments. Monitor organizational health, audit trails, and project financials.
               </p>
             </div>
             <div className="flex items-center space-x-2">

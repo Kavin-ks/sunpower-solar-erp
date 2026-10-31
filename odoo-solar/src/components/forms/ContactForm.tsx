@@ -120,9 +120,9 @@ const ContactForm = () => {
       )}
 
       <form onSubmit={handleSubmit(onSubmit)} id="it-form">
-        <div className="row">
+        <div className="row g-3">
           {/* Full Name */}
-          <div className="col-lg-6 col-md-6">
+          <div className="col-12 col-md-6">
             <div className="form-box contact-inner">
               <input type="text" {...register('Fullname')} placeholder="Full Name *" />
               <i className="bi bi-person"></i>
@@ -131,7 +131,7 @@ const ContactForm = () => {
           </div>
 
           {/* Email Address */}
-          <div className="col-lg-6 col-md-6">
+          <div className="col-12 col-md-6">
             <div className="form-box contact-inner">
               <input type="text" {...register('email')} placeholder="Email Address *" />
               <i className="bi bi-envelope"></i>
@@ -140,7 +140,7 @@ const ContactForm = () => {
           </div>
 
           {/* Phone Number */}
-          <div className="col-lg-12">
+          <div className="col-12">
             <div className="form-box contact-inner">
               <input type="text" {...register('phone')} placeholder="Mobile Phone Number (10 digits) *" />
               <i className="bi bi-phone-flip"></i>
@@ -149,7 +149,7 @@ const ContactForm = () => {
           </div>
 
           {/* Installation Site Address */}
-          <div className="col-lg-12">
+          <div className="col-12">
             <div className="form-box contact-inner">
               <input type="text" {...register('address')} placeholder="Installation / Rooftop Site Address *" />
               <i className="bi bi-geo-alt"></i>
@@ -158,7 +158,7 @@ const ContactForm = () => {
           </div>
 
           {/* City */}
-          <div className="col-lg-4 col-md-4">
+          <div className="col-12 col-sm-4">
             <div className="form-box contact-inner">
               <input type="text" {...register('city')} placeholder="City *" />
               <i className="bi bi-building"></i>
@@ -167,7 +167,7 @@ const ContactForm = () => {
           </div>
 
           {/* State */}
-          <div className="col-lg-4 col-md-4">
+          <div className="col-12 col-sm-4">
             <div className="form-box contact-inner">
               <input type="text" {...register('state')} placeholder="State *" />
               <i className="bi bi-map"></i>
@@ -176,7 +176,7 @@ const ContactForm = () => {
           </div>
 
           {/* PIN Code */}
-          <div className="col-lg-4 col-md-4">
+          <div className="col-12 col-sm-4">
             <div className="form-box contact-inner">
               <input type="text" {...register('pincode')} placeholder="PIN Code (6 digits) *" />
               <i className="bi bi-pin-map"></i>
@@ -185,7 +185,7 @@ const ContactForm = () => {
           </div>
 
           {/* Capacity Dropdown: 1kW to 5kW */}
-          <div className="col-lg-6 col-md-6">
+          <div className="col-12 col-md-6">
             <div className="form-box contact-inner">
               <select {...register('solarSystem')} style={{ color: '#3e3e3f' }}>
                 <option value="1kW">1 kW Solar System</option>
@@ -200,7 +200,7 @@ const ContactForm = () => {
           </div>
 
           {/* On-Grid or Off-Grid systems */}
-          <div className="col-lg-6 col-md-6">
+          <div className="col-12 col-md-6">
             <div className="form-box contact-inner">
               <select {...register('systemType')} style={{ color: '#3e3e3f' }}>
                 <option value="On-Grid">On-Grid Solar System</option>
@@ -212,7 +212,7 @@ const ContactForm = () => {
           </div>
 
           {/* Subsidy Option */}
-          <div className="col-lg-12 mb-3">
+          <div className="col-12">
             <div className="form-check d-flex align-items-center gap-2 p-2 bg-light rounded-2 border">
               <input
                 type="checkbox"
