@@ -97,9 +97,13 @@ public class PaymentService {
         order.setTotalPaid(newTotalPaid);
         order.setRemainingBalance(order.getTotalAmount().subtract(newTotalPaid));
 
-        // Business rule: If advance requirement is satisfied, confirm order
+        // Business rule: If advance requirement is satisfied (allowing for half-up rounding tolerance of 0.05 INR), confirm order
         boolean newlyConfirmed = false;
-        if (order.getStatus() == OrderStatus.PENDING_PAYMENT && newTotalPaid.compareTo(order.getAdvanceRequired()) >= 0) {
+        boolean advanceSatisfied = order.getAdvanceRequired() != null &&
+                (newTotalPaid.compareTo(order.getAdvanceRequired()) >= 0 ||
+                 order.getAdvanceRequired().subtract(newTotalPaid).compareTo(new BigDecimal("0.05")) <= 0);
+
+        if (order.getStatus() == OrderStatus.PENDING_PAYMENT && advanceSatisfied) {
             order.setStatus(OrderStatus.CONFIRMED);
             newlyConfirmed = true;
         }
