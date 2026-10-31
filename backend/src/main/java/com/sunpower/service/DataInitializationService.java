@@ -111,6 +111,7 @@ public class DataInitializationService implements CommandLineRunner {
     public void run(String... args) throws Exception {
         if (roleRepository.count() > 0) {
             ensureAllSolarPackagesExist();
+            ensurePickingDispatchExists();
             return; // Already initialized roles/users
         }
 
@@ -910,5 +911,104 @@ public class DataInitializationService implements CommandLineRunner {
         if (packageRepository.findBySystemTypeAndCapacityKw(type, capacity).isEmpty()) {
             createPackageWithBOM(name, type, capacity, desc, basePrice, bomItems);
         }
+    }
+
+    private void ensurePickingDispatchExists() {
+        if (dispatchRepository.findAll().stream().anyMatch(d -> d.getStatus() == DispatchStatus.PICKING)) {
+            return;
+        }
+
+        Customer cust = customerRepository.findByPhone("9894123456").orElse(null);
+        if (cust == null && customerRepository.count() > 0) {
+            cust = customerRepository.findAll().get(0);
+        }
+        if (cust == null) return;
+
+        Optional<SolarPackage> pkgOpt = packageRepository.findBySystemTypeAndCapacityKw(SystemType.ON_GRID, new BigDecimal("3.00"));
+        if (pkgOpt.isEmpty()) return;
+        SolarPackage pkg = pkgOpt.get();
+
+        Product pInv = productRepository.findByProductCode("INV-OG-3KW-GROWATT").orElse(null);
+        Product pPanel = productRepository.findByProductCode("PANEL-MONO-540W").orElse(null);
+        if (pInv == null || pPanel == null) return;
+
+        String ordNum = "ORD-2026-0002";
+        SalesOrder order = salesOrderRepository.findByOrderNumber(ordNum).orElse(null);
+        if (order == null) {
+            SiteSurvey surv = siteSurveyRepository.findAll().isEmpty() ? null : siteSurveyRepository.findAll().get(0);
+            if (surv == null) {
+                surv = new SiteSurvey();
+                surv.setSurveyNumber("SRV-2026-0003");
+                surv.setCustomer(cust);
+                surv.setScheduledDate(LocalDate.now());
+                surv.setStatus(SurveyStatus.APPROVED);
+                surv = siteSurveyRepository.save(surv);
+            }
+
+            Quotation quote = new Quotation();
+            quote.setQuotationNumber("QT-2026-0002");
+            quote.setCustomer(cust);
+            quote.setSiteSurvey(surv);
+            quote.setSolarPackage(pkg);
+            quote.setSystemType(SystemType.ON_GRID);
+            quote.setCapacityKw(new BigDecimal("3.00"));
+            quote.setSubtotal(new BigDecimal("185000.00"));
+            quote.setTaxAmount(new BigDecimal("9250.00"));
+            quote.setInstallationFee(new BigDecimal("15000.00"));
+            quote.setTotalAmount(new BigDecimal("209250.00"));
+            quote.setQuotationDate(LocalDate.now());
+            quote.setValidityDate(LocalDate.now().plusDays(30));
+            quote.setStatus(QuotationStatus.ACCEPTED);
+            quote = quotationRepository.save(quote);
+
+            order = new SalesOrder();
+            order.setOrderNumber(ordNum);
+            order.setCustomer(cust);
+            order.setQuotation(quote);
+            order.setSolarPackage(pkg);
+            order.setSystemType(SystemType.ON_GRID);
+            order.setCapacityKw(new BigDecimal("3.00"));
+            order.setTotalAmount(new BigDecimal("209250.00"));
+            order.setAdvanceRequired(new BigDecimal("70000.00"));
+            order.setTotalPaid(new BigDecimal("70000.00"));
+            order.setRemainingBalance(new BigDecimal("139250.00"));
+            order.setOrderDate(LocalDate.now());
+            order.setStatus(OrderStatus.CONFIRMED);
+            order = salesOrderRepository.save(order);
+
+            OrderItem oi1 = new OrderItem(order, pInv, 1, pInv.getSellingPrice());
+            OrderItem oi2 = new OrderItem(order, pPanel, 6, pPanel.getSellingPrice());
+            orderItemRepository.saveAll(Arrays.asList(oi1, oi2));
+
+            // Advance payment
+            Payment pay = new Payment();
+            pay.setPaymentNumber("PAY-2026-0003");
+            pay.setSalesOrder(order);
+            pay.setCustomer(cust);
+            pay.setAmount(new BigDecimal("70000.00"));
+            pay.setPaymentDate(LocalDate.now());
+            pay.setMethod(PaymentMethod.BANK_TRANSFER);
+            pay.setType(PaymentType.ADVANCE);
+            pay.setReferenceNumber("NEFT-ADV-2026");
+            pay.setStatus(PaymentStatus.SUCCESS);
+            pay.setNotes("35% Advance payment verified for warehouse dispatch release");
+            paymentRepository.save(pay);
+        }
+
+        // Active picking dispatch
+        Dispatch disp = new Dispatch();
+        disp.setDispatchNumber("DSP-00002");
+        disp.setSalesOrder(order);
+        disp.setCustomer(cust);
+        disp.setStatus(DispatchStatus.PICKING);
+        disp.setVehicleNumber("TN-38-AX-5521");
+        disp.setDriverName("S. Muthu");
+        disp.setDriverPhone("9842100998");
+        disp.setDispatchNotes("Warehouse picking in progress. High-value inverter must be scanned before release.");
+        disp = dispatchRepository.save(disp);
+
+        DispatchItem di1 = new DispatchItem(disp, pInv, 1, null); // Needs Serial Number Scan!
+        DispatchItem di2 = new DispatchItem(disp, pPanel, 6, null); // Non-serialized panels
+        dispatchItemRepository.saveAll(Arrays.asList(di1, di2));
     }
 }

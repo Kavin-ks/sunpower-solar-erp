@@ -175,14 +175,6 @@ export const FinancePage: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      {/* Admin Read-Only Notice */}
-      {isAdmin && (
-        <div className="bg-amber-50 border-l-4 border-amber-500 p-4 rounded-r-xl text-amber-900 text-sm shadow-xs">
-          <span className="font-bold block mb-0.5">Admin Central Oversight Mode</span>
-          You have central read-only visibility into financial performance, project profitability, invoices, and subsidy tracking. Direct operational accounting actions (such as recording direct expenses and posting subsidy transactions) are reserved exclusively for the Finance Department.
-        </div>
-      )}
-
       {/* Top Banner */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>

@@ -205,14 +205,6 @@ export const ServiceTicketsPage: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      {/* Admin Read-Only Notice */}
-      {isAdmin && (
-        <div className="bg-amber-50 border-l-4 border-amber-500 p-4 rounded-r-xl text-amber-900 text-xs shadow-xs">
-          <span className="font-bold text-sm block mb-0.5">Admin Central Oversight Mode</span>
-          After-sales service complaints are registered, verified against warranty databases, and closed by the Customer Support Department, with repairs executed by Technicians. Admin has read-only oversight to monitor service SLA, fault trends, and warranty claims.
-        </div>
-      )}
-
       {/* Top Banner / Actions */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>

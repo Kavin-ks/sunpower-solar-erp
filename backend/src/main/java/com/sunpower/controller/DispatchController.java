@@ -3,6 +3,7 @@ package com.sunpower.controller;
 import com.sunpower.dto.DispatchDTOs.AssignSerialNumberRequest;
 import com.sunpower.dto.DispatchDTOs.ConfirmDeliveryRequest;
 import com.sunpower.dto.DispatchDTOs.DispatchCreateRequest;
+import com.sunpower.dto.DispatchDTOs.ScanBarcodeRequest;
 import com.sunpower.entity.Dispatch;
 import com.sunpower.service.DispatchService;
 import jakarta.validation.Valid;
@@ -51,6 +52,17 @@ public class DispatchController {
             Authentication authentication) {
         String actor = authentication != null ? authentication.getName() : "Warehouse Staff";
         Dispatch dispatch = dispatchService.assignSerialNumber(request, actor);
+        return ResponseEntity.ok(dispatch);
+    }
+
+    @PostMapping("/{id}/scan-barcode")
+    @PreAuthorize("hasAnyRole('WAREHOUSE', 'DIRECTOR')")
+    public ResponseEntity<Dispatch> scanBarcode(
+            @PathVariable Long id,
+            @Valid @RequestBody ScanBarcodeRequest request,
+            Authentication authentication) {
+        String actor = authentication != null ? authentication.getName() : "Warehouse Scanner";
+        Dispatch dispatch = dispatchService.scanBarcodeForDispatch(id, request.getBarcode(), request.getDispatchItemId(), actor);
         return ResponseEntity.ok(dispatch);
     }
 
