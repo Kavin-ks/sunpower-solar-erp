@@ -17,6 +17,7 @@ public interface TechnicianPaymentRepository extends JpaRepository<TechnicianPay
     List<TechnicianPayment> findByTechnicianIdOrderByPaymentDateDesc(Long technicianId);
     List<TechnicianPayment> findByStatus(TechnicianPayoutStatus status);
     boolean existsByReferenceNumber(String referenceNumber);
+    boolean existsByInstallationIdAndTechnicianId(Long installationId, Long technicianId);
 
     @Query("SELECT SUM(tp.amountPaid) FROM TechnicianPayment tp")
     BigDecimal sumTotalPayoutsDisbursed();

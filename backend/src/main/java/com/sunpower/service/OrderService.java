@@ -270,7 +270,7 @@ public class OrderService {
                     order.getItems() : orderItemRepository.findBySalesOrderId(order.getId());
             for (OrderItem orderItem : items) {
                 Product product = orderItem.getProduct();
-                if (product.isSerialized()) {
+                if (product.isSerialized() && (product.getProductCode() == null || !product.getProductCode().toUpperCase().contains("PANEL"))) {
                     for (int i = 0; i < orderItem.getQuantity(); i++) {
                         dispatchItems.add(new DispatchItem(dispatch, product, 1, null));
                     }
@@ -296,6 +296,28 @@ public class OrderService {
             if (installation.getInstallationNumber() == null) {
                 installation.setInstallationNumber("INS-" + String.format("%05d", installation.getId()));
                 installationRepository.save(installation);
+            }
+        }
+
+        // 3. Ensure SubsidyApplication exists if subsidy was opted
+        boolean subsidyOpted = (order.getQuotation() != null &&
+                order.getQuotation().getSiteSurvey() != null &&
+                order.getQuotation().getSiteSurvey().getEnquiry() != null &&
+                order.getQuotation().getSiteSurvey().getEnquiry().isSubsidyRequired());
+
+        if (subsidyOpted) {
+            java.util.Optional<SubsidyApplication> existingSubsidy = subsidyApplicationRepository.findBySalesOrderId(order.getId());
+            if (existingSubsidy.isEmpty()) {
+                SubsidyApplication subsidy = new SubsidyApplication();
+                subsidy.setCustomer(order.getCustomer());
+                subsidy.setSalesOrder(order);
+                subsidy.setSubsidyAmountClaimed(BigDecimal.valueOf(78000.00));
+                subsidy.setStatus(com.sunpower.entity.enums.Enums.SubsidyStatus.DOCUMENTS_PENDING);
+                subsidy = subsidyApplicationRepository.save(subsidy);
+                if (subsidy.getApplicationNumber() == null) {
+                    subsidy.setApplicationNumber("SUB-" + LocalDate.now().getYear() + "-" + String.format("%04d", subsidy.getId()));
+                    subsidyApplicationRepository.save(subsidy);
+                }
             }
         }
     }

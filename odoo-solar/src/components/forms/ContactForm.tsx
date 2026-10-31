@@ -1,10 +1,11 @@
-'use client';
+﻿'use client';
 
 import React, { useState } from 'react';
 import { toast } from 'react-toastify';
 import * as yup from 'yup';
 import { useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
+import EnquirySuccessModal from '../modals/EnquirySuccessModal';
 
 interface FormData {
   Fullname: string;
@@ -17,6 +18,7 @@ interface FormData {
   solarSystem: string;
   systemType: string;
   subsidyRequired: boolean;
+  monthlyElectricityBill?: number | null;
   message: string;
 }
 
@@ -32,6 +34,11 @@ const schema = yup
     solarSystem: yup.string().required('Please select solar system capacity').label('Solar System'),
     systemType: yup.string().required('Please select system type').label('System Type'),
     subsidyRequired: yup.boolean().default(true),
+    monthlyElectricityBill: yup
+      .number()
+      .typeError('Please enter valid monthly electricity bill')
+      .nullable()
+      .transform((v, o) => (o === '' ? null : v)),
     message: yup.string().default('').label('Requirements & Remarks'),
   })
   .required();
@@ -40,6 +47,8 @@ const ContactForm = () => {
   const [submitting, setSubmitting] = useState(false);
   const [submittedEnquiry, setSubmittedEnquiry] = useState<{ enquiryNumber: string; message: string } | null>(null);
   const [serverError, setServerError] = useState<string | null>(null);
+  const [showModal, setShowModal] = useState(false);
+  const [customerName, setCustomerName] = useState('');
 
   const {
     register,
@@ -55,6 +64,7 @@ const ContactForm = () => {
       subsidyRequired: true,
       systemType: 'On-Grid',
       solarSystem: '3kW',
+      monthlyElectricityBill: 3500,
     },
   });
 
@@ -75,10 +85,12 @@ const ContactForm = () => {
         throw new Error(resData?.message || 'Failed to submit enquiry. Please verify details.');
       }
 
+      setCustomerName(data.Fullname || '');
       setSubmittedEnquiry({
         enquiryNumber: resData.enquiryNumber,
         message: resData.message || 'Enquiry registered successfully!',
       });
+      setShowModal(true);
       toast.success(`Enquiry submitted! Reference: ${resData.enquiryNumber}`);
       reset();
     } catch (err: any) {
@@ -93,21 +105,39 @@ const ContactForm = () => {
 
   return (
     <>
+      {/* 24-Hour Callback & Thank You Popup Modal */}
+      <EnquirySuccessModal
+        isOpen={showModal}
+        onClose={() => setShowModal(false)}
+        enquiryNumber={submittedEnquiry?.enquiryNumber}
+        customerName={customerName}
+      />
+
       {submittedEnquiry && (
         <div
           className="alert alert-success p-3 rounded-3 mb-4 shadow-sm"
           style={{ background: '#ecfdf5', border: '1px solid #10b981', color: '#065f46' }}
         >
-          <div className="d-flex align-items-center mb-1">
-            <i className="bi bi-check-circle-fill me-2 fs-5 text-success"></i>
-            <h5 className="mb-0 fw-bold text-success">Enquiry Submitted Successfully!</h5>
+          <div className="d-flex align-items-center justify-content-between mb-1">
+            <div className="d-flex align-items-center">
+              <i className="bi bi-check-circle-fill me-2 fs-5 text-success"></i>
+              <h5 className="mb-0 fw-bold text-success">Enquiry Submitted Successfully!</h5>
+            </div>
+            <button
+              type="button"
+              onClick={() => setShowModal(true)}
+              className="btn btn-sm btn-outline-success fw-semibold"
+              style={{ fontSize: '12px', borderRadius: '20px' }}
+            >
+              View Callback Details
+            </button>
           </div>
           <p className="mb-1" style={{ fontSize: '13px' }}>
             Enquiry Reference ID: <strong>{submittedEnquiry.enquiryNumber}</strong>
           </p>
           <p className="mb-0 text-muted" style={{ fontSize: '12px' }}>
             Thank you! Your rooftop solar requirement has been registered in the central SunPower database. Our Sales
-            team will review your requirement and call you shortly to schedule your site evaluation.
+            team will review your requirement and call you within 24 hours to schedule your site evaluation.
           </p>
         </div>
       )}
@@ -208,6 +238,19 @@ const ContactForm = () => {
               </select>
               <i className="bi bi-plug"></i>
               <p className="form_error">{errors.systemType?.message}</p>
+            </div>
+          </div>
+
+          {/* Monthly Electricity Bill (₹) */}
+          <div className="col-12">
+            <div className="form-box contact-inner">
+              <input
+                type="number"
+                {...register('monthlyElectricityBill')}
+                placeholder="Current Monthly Electricity Bill (₹, e.g. 3500)"
+              />
+              <i className="bi bi-currency-rupee"></i>
+              <p className="form_error">{errors.monthlyElectricityBill?.message}</p>
             </div>
           </div>
 

@@ -11,6 +11,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.*;
 
 @Service
@@ -73,12 +74,29 @@ public class DataInitializationService implements CommandLineRunner {
     @Autowired
     private DispatchItemRepository dispatchItemRepository;
 
+    @Autowired
+    private InstallationRepository installationRepository;
+
+    @Autowired
+    private WarrantyRepository warrantyRepository;
+
+    @Autowired
+    private ExpenseRepository expenseRepository;
+
+    @Autowired
+    private SubsidyApplicationRepository subsidyApplicationRepository;
+
+    @Autowired
+    private InvoiceRepository invoiceRepository;
+
     @Override
     @Transactional
     public void run(String... args) throws Exception {
         if (roleRepository.count() > 0) {
             ensureAllSolarPackagesExist();
             ensurePickingDispatchExists();
+            ensurePanelSerializationAndStockSerials();
+            ensureDemoHistoricalDataExists();
             return; // Already initialized roles/users
         }
 
@@ -132,7 +150,7 @@ public class DataInitializationService implements CommandLineRunner {
         // 5. Products
         Product pPanel = createProduct("PANEL-MONO-540W", "Mono PERC Half-Cut 540W Solar Panel", catPanels,
                 "Tier-1 540W High Efficiency Monocrystalline Module", "pcs", new BigDecimal("10500.00"), new BigDecimal("13200.00"),
-                180, 20, false, 240);
+                180, 20, true, 240);
 
         Product pInv3k = createProduct("INV-OG-3KW-GROWATT", "Growatt 3 kW Single Phase On-Grid Inverter", catInverters,
                 "Dual MPPT, IP65 protection, Wi-Fi smart monitoring", "unit", new BigDecimal("26000.00"), new BigDecimal("34500.00"),
@@ -267,6 +285,11 @@ public class DataInitializationService implements CommandLineRunner {
         registerSerial("CC-MPPT-60A-4001", pController, "PO-2026-06", "Electronics Rack 1");
         registerSerial("CC-MPPT-60A-4002", pController, "PO-2026-06", "Electronics Rack 2");
 
+        // Execute all master ensuring blocks for full 10-package catalog, panel serialization, and demo history
+        ensureAllSolarPackagesExist();
+        ensurePickingDispatchExists();
+        ensurePanelSerializationAndStockSerials();
+        ensureDemoHistoricalDataExists();
     }
 
     private void createUser(String username, String fullName, String email, String phone, Role role) {
@@ -331,6 +354,10 @@ public class DataInitializationService implements CommandLineRunner {
     }
 
     private SerialNumber registerSerial(String code, Product product, String purchaseRef, String location) {
+        Optional<SerialNumber> existing = serialNumberRepository.findBySerialCode(code);
+        if (existing.isPresent()) {
+            return existing.get();
+        }
         SerialNumber sn = new SerialNumber(code, product, purchaseRef, location);
         sn = serialNumberRepository.save(sn);
 
@@ -356,7 +383,7 @@ public class DataInitializationService implements CommandLineRunner {
         ProductCategory catEarthing = categoryRepository.findByName("Safety Earthing").orElseGet(() -> categoryRepository.save(new ProductCategory("Safety Earthing", "Chemical earthing electrodes, lightning arrestor kits")));
         ProductCategory catServices = categoryRepository.findByName("Installation Services").orElseGet(() -> categoryRepository.save(new ProductCategory("Installation Services", "Professional on-site fitting, wiring, and testing")));
 
-        Product pPanel = getOrCreateProduct("PANEL-MONO-540W", "Mono PERC Half-Cut 540W Solar Panel", catPanels, "Tier-1 540W Monocrystalline Module", "pcs", new BigDecimal("10500.00"), new BigDecimal("13200.00"), 180, 20, false, 240);
+        Product pPanel = getOrCreateProduct("PANEL-MONO-540W", "Mono PERC Half-Cut 540W Solar Panel", catPanels, "Tier-1 540W Monocrystalline Module", "pcs", new BigDecimal("10500.00"), new BigDecimal("13200.00"), 180, 20, true, 240);
         Product pInv1kOn = getOrCreateProduct("INV-OG-1KW-GROWATT", "Growatt 1 kW Single Phase On-Grid Inverter", catInverters, "Single MPPT, IP65 protection, Wi-Fi smart monitoring", "unit", new BigDecimal("18000.00"), new BigDecimal("24000.00"), 20, 4, true, 24);
         Product pInv1kOff = getOrCreateProduct("INV-OFF-1KW-HYBRID", "1 kW Off-Grid Hybrid Solar Inverter", catInverters, "Pure sine wave hybrid inverter with built-in solar charger", "unit", new BigDecimal("22000.00"), new BigDecimal("29000.00"), 15, 3, true, 24);
         Product pInv2kOn = getOrCreateProduct("INV-OG-2KW-GROWATT", "Growatt 2 kW Single Phase On-Grid Inverter", catInverters, "Single MPPT, compact high-efficiency on-grid inverter", "unit", new BigDecimal("22000.00"), new BigDecimal("29500.00"), 20, 4, true, 24);
@@ -642,5 +669,531 @@ public class DataInitializationService implements CommandLineRunner {
         DispatchItem di1 = new DispatchItem(disp, pInv, 1, null); // Needs Serial Number Scan!
         DispatchItem di2 = new DispatchItem(disp, pPanel, 6, null); // Non-serialized panels
         dispatchItemRepository.saveAll(Arrays.asList(di1, di2));
+    }
+
+    @Transactional
+    public void ensurePanelSerializationAndStockSerials() {
+        Product pPanel = productRepository.findByProductCode("PANEL-MONO-540W").orElse(null);
+        if (pPanel != null) {
+            boolean updated = false;
+            if (!pPanel.isSerialized()) {
+                pPanel.setSerialized(true);
+                updated = true;
+            }
+            if (pPanel.getDefaultWarrantyMonths() == null || pPanel.getDefaultWarrantyMonths() != 240) {
+                pPanel.setDefaultWarrantyMonths(240);
+                updated = true;
+            }
+            if (updated) {
+                productRepository.save(pPanel);
+            }
+
+            // Seed 25 IN_STOCK panel serial numbers: PNL-2026-4401 to PNL-2026-4425
+            for (int i = 1; i <= 25; i++) {
+                String code = String.format("PNL-2026-44%02d", i);
+                registerSerial(code, pPanel, "PO-2026-PNL", "Panel Yard - Rack A");
+            }
+        }
+    }
+
+    @Transactional
+    public void ensureDemoHistoricalDataExists() {
+        Product pInv3k = productRepository.findByProductCode("INV-OG-3KW-GROWATT")
+                .orElseGet(() -> productRepository.findAll().stream().filter(p -> p.getProductCode().contains("INV")).findFirst().orElse(null));
+        Product pInvOff5k = productRepository.findByProductCode("INV-OG-5KW-GROWATT")
+                .orElseGet(() -> productRepository.findAll().stream().filter(p -> p.getProductCode().contains("INV")).findFirst().orElse(null));
+        Product pBattery = productRepository.findByProductCode("BAT-LITH-5K-LUMINOUS")
+                .orElseGet(() -> productRepository.findAll().stream().filter(p -> p.getProductCode().contains("BAT")).findFirst().orElse(null));
+        Product pPanel = productRepository.findByProductCode("PANEL-MONO-540W")
+                .orElseGet(() -> productRepository.findAll().stream().filter(p -> p.getProductCode().contains("PANEL")).findFirst().orElse(null));
+        Product pController = productRepository.findByProductCode("CC-MPPT-60A-SMART")
+                .orElseGet(() -> productRepository.findAll().stream().filter(p -> p.getProductCode().contains("CC") || p.getProductCode().contains("MPPT")).findFirst().orElse(null));
+
+        SolarPackage pkg3kOn = packageRepository.findBySystemTypeAndCapacityKw(SystemType.ON_GRID, new BigDecimal("3.00")).orElse(null);
+        SolarPackage pkg5kOff = packageRepository.findBySystemTypeAndCapacityKw(SystemType.OFF_GRID, new BigDecimal("5.00")).orElse(null);
+
+        // =========================================================================
+        // DEMO PROJECT A: Profitable System (18 Months Old) - In-Warranty Demo
+        // =========================================================================
+        if (salesOrderRepository.findByOrderNumber("SO-DEMO-18M").isEmpty()) {
+            Customer custA = customerRepository.findByPhone("9840112233").orElseGet(() -> {
+                Customer c = new Customer();
+                c.setFullName("Vikram Nair");
+                c.setPhone("9840112233");
+                c.setEmail("vikram.nair@example.com");
+                c.setAddress("42, Avinashi Road, Peelamedu");
+                c.setCity("Coimbatore");
+                c.setState("Tamil Nadu");
+                c.setPincode("641004");
+                c.setCustomerType(CustomerType.RESIDENTIAL);
+                return customerRepository.save(c);
+            });
+
+            SiteSurvey survA = new SiteSurvey();
+            survA.setSurveyNumber("SRV-DEMO-18M");
+            survA.setCustomer(custA);
+            survA.setScheduledDate(LocalDate.now().minusMonths(18));
+            survA.setRoofDirection("South");
+            survA.setRoofTilt("15 deg");
+            survA.setAvailableRoofAreaSqFt(new BigDecimal("650.00"));
+            survA.setCableDistanceMeters(new BigDecimal("12.00"));
+            survA.setShadingAssessment("Shadow Free");
+            survA.setStatus(SurveyStatus.APPROVED);
+            survA = siteSurveyRepository.save(survA);
+
+            Quotation quoA = new Quotation();
+            quoA.setQuotationNumber("QUO-DEMO-18M");
+            quoA.setCustomer(custA);
+            quoA.setSiteSurvey(survA);
+            quoA.setSolarPackage(pkg3kOn);
+            quoA.setSystemType(SystemType.ON_GRID);
+            quoA.setCapacityKw(new BigDecimal("3.00"));
+            quoA.setSubtotal(new BigDecimal("171353.25"));
+            quoA.setTaxAmount(new BigDecimal("23646.75"));
+            quoA.setInstallationFee(new BigDecimal("15000.00"));
+            quoA.setTotalAmount(new BigDecimal("195000.00"));
+            quoA.setQuotationDate(LocalDate.now().minusMonths(18));
+            quoA.setValidityDate(LocalDate.now().minusMonths(17));
+            quoA.setStatus(QuotationStatus.ACCEPTED);
+            quoA = quotationRepository.save(quoA);
+
+            SalesOrder orderA = new SalesOrder();
+            orderA.setOrderNumber("SO-DEMO-18M");
+            orderA.setCustomer(custA);
+            orderA.setQuotation(quoA);
+            orderA.setSolarPackage(pkg3kOn);
+            orderA.setSystemType(SystemType.ON_GRID);
+            orderA.setCapacityKw(new BigDecimal("3.00"));
+            orderA.setTotalAmount(new BigDecimal("195000.00"));
+            orderA.setAdvanceRequired(new BigDecimal("70000.00"));
+            orderA.setTotalPaid(new BigDecimal("195000.00"));
+            orderA.setRemainingBalance(BigDecimal.ZERO);
+            orderA.setOrderDate(LocalDate.now().minusMonths(18));
+            orderA.setStatus(OrderStatus.COMPLETED);
+            orderA = salesOrderRepository.save(orderA);
+
+            if (pInv3k != null && pPanel != null) {
+                OrderItem oi1 = new OrderItem(orderA, pInv3k, 1, pInv3k.getSellingPrice());
+                OrderItem oi2 = new OrderItem(orderA, pPanel, 6, pPanel.getSellingPrice());
+                orderItemRepository.saveAll(Arrays.asList(oi1, oi2));
+            }
+
+            Payment payA1 = new Payment();
+            payA1.setPaymentNumber("PAY-DEMO-18M-1");
+            payA1.setSalesOrder(orderA);
+            payA1.setCustomer(custA);
+            payA1.setAmount(new BigDecimal("70000.00"));
+            payA1.setPaymentDate(LocalDate.now().minusMonths(18));
+            payA1.setMethod(PaymentMethod.BANK_TRANSFER);
+            payA1.setType(PaymentType.ADVANCE);
+            payA1.setReferenceNumber("NEFT-DEMO-18M-ADV");
+            payA1.setStatus(PaymentStatus.SUCCESS);
+            payA1.setNotes("35% Advance payment received");
+            paymentRepository.save(payA1);
+
+            Payment payA2 = new Payment();
+            payA2.setPaymentNumber("PAY-DEMO-18M-2");
+            payA2.setSalesOrder(orderA);
+            payA2.setCustomer(custA);
+            payA2.setAmount(new BigDecimal("125000.00"));
+            payA2.setPaymentDate(LocalDate.now().minusMonths(18));
+            payA2.setMethod(PaymentMethod.BANK_TRANSFER);
+            payA2.setType(PaymentType.FULL);
+            payA2.setReferenceNumber("NEFT-DEMO-18M-BAL");
+            payA2.setStatus(PaymentStatus.SUCCESS);
+            payA2.setNotes("Final project balance cleared on handover");
+            paymentRepository.save(payA2);
+
+            Installation instA = new Installation();
+            instA.setInstallationNumber("INS-DEMO-18M");
+            instA.setSalesOrder(orderA);
+            instA.setCustomer(custA);
+            instA.setScheduledDate(LocalDate.now().minusMonths(18));
+            instA.setActualStartTime(LocalDateTime.now().minusMonths(18).withHour(9).withMinute(0));
+            instA.setActualFinishTime(LocalDateTime.now().minusMonths(18).withHour(17).withMinute(0));
+            instA.setInstalledCapacityKw(new BigDecimal("3.00"));
+            instA.setPanelMountingConfirmed(true);
+            instA.setWiringConfirmed(true);
+            instA.setEarthingConfirmed(true);
+            instA.setTestingPassed(true);
+            instA.setTestingNotes("Generating 3.1 kW peak at noon, grid synchronization verified");
+            instA.setCustomerSigneeName("Vikram Nair");
+            instA.setCustomerAcceptanceNote("Installation completed cleanly and power generation verified.");
+            instA.setCustomerSignatureUrl("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='150' height='50'><path d='M10 30 Q 30 10 60 25 T 120 20' stroke='black' fill='transparent'/></svg>");
+            instA.setCustomerSignedAt(LocalDateTime.now().minusMonths(18).withHour(17).withMinute(30));
+            instA.setStatus(InstallationStatus.COMPLETED);
+            installationRepository.save(instA);
+
+            // Job Expenses: Labor Payout + Transport
+            Expense expTechA = new Expense();
+            expTechA.setExpenseNumber("EXP-DEMO-18M-01");
+            expTechA.setCategory(ExpenseCategory.TECHNICIAN_PAYOUT);
+            expTechA.setSalesOrder(orderA);
+            expTechA.setAmount(new BigDecimal("4800.00"));
+            expTechA.setExpenseDate(LocalDate.now().minusMonths(18));
+            expTechA.setTitle("Technician Payout - Karthik Raja");
+            expTechA.setDescription("Commissioning payout for 3 kW On-Grid installation");
+            expTechA.setPaidTo("Karthik Raja");
+            expTechA.setPaymentMethod("Bank Transfer");
+            expenseRepository.save(expTechA);
+
+            Expense expTransA = new Expense();
+            expTransA.setExpenseNumber("EXP-DEMO-18M-02");
+            expTransA.setCategory(ExpenseCategory.TRANSPORT);
+            expTransA.setSalesOrder(orderA);
+            expTransA.setAmount(new BigDecimal("2500.00"));
+            expTransA.setExpenseDate(LocalDate.now().minusMonths(18));
+            expTransA.setTitle("Transport & Logistics Delivery");
+            expTransA.setDescription("Hardware delivery to Coimbatore site");
+            expTransA.setPaidTo("FastTrack Logistics");
+            expTransA.setPaymentMethod("Bank Transfer");
+            expenseRepository.save(expTransA);
+
+            // Warranties for Project A: Inverter (24m -> +6m active left), Panel (240m -> +222m active)
+            if (pInv3k != null) {
+                SerialNumber snInvA = registerSerial("INV-2025-1801", pInv3k, "PO-HIST-18M", "Site Installed - Peelamedu");
+                snInvA.setStatus(SerialNumberStatus.INSTALLED);
+                snInvA.setCustomer(custA);
+                snInvA.setSalesOrder(orderA);
+                snInvA.setWarrantyStartDate(LocalDate.now().minusMonths(18));
+                snInvA.setWarrantyExpiryDate(LocalDate.now().minusMonths(18).plusMonths(24));
+                serialNumberRepository.save(snInvA);
+
+                if (warrantyRepository.findBySerialNumberSerialCode("INV-2025-1801").isEmpty()) {
+                    Warranty warInvA = new Warranty();
+                    warInvA.setWarrantyNumber("WAR-DEMO-18M-INV");
+                    warInvA.setSerialNumber(snInvA);
+                    warInvA.setCustomer(custA);
+                    warInvA.setSalesOrder(orderA);
+                    warInvA.setProduct(pInv3k);
+                    warInvA.setDurationMonths(24);
+                    warInvA.setDeliveryDate(LocalDate.now().minusMonths(18));
+                    warInvA.setWarrantyStartDate(LocalDate.now().minusMonths(18));
+                    warInvA.setWarrantyEndDate(LocalDate.now().minusMonths(18).plusMonths(24));
+                    warInvA.setStatus(WarrantyStatus.ACTIVE);
+                    warInvA.setTermsAndConditions("2-Year Comprehensive OEM Inverter Warranty with on-site replacement");
+                    warrantyRepository.save(warInvA);
+                }
+            }
+
+            if (pPanel != null) {
+                SerialNumber snPnlA = registerSerial("PNL-2025-1801", pPanel, "PO-HIST-18M", "Site Installed - Peelamedu");
+                snPnlA.setStatus(SerialNumberStatus.INSTALLED);
+                snPnlA.setCustomer(custA);
+                snPnlA.setSalesOrder(orderA);
+                snPnlA.setWarrantyStartDate(LocalDate.now().minusMonths(18));
+                snPnlA.setWarrantyExpiryDate(LocalDate.now().minusMonths(18).plusMonths(240));
+                serialNumberRepository.save(snPnlA);
+
+                if (warrantyRepository.findBySerialNumberSerialCode("PNL-2025-1801").isEmpty()) {
+                    Warranty warPnlA = new Warranty();
+                    warPnlA.setWarrantyNumber("WAR-DEMO-18M-PNL");
+                    warPnlA.setSerialNumber(snPnlA);
+                    warPnlA.setCustomer(custA);
+                    warPnlA.setSalesOrder(orderA);
+                    warPnlA.setProduct(pPanel);
+                    warPnlA.setDurationMonths(240);
+                    warPnlA.setDeliveryDate(LocalDate.now().minusMonths(18));
+                    warPnlA.setWarrantyStartDate(LocalDate.now().minusMonths(18));
+                    warPnlA.setWarrantyEndDate(LocalDate.now().minusMonths(18).plusMonths(240));
+                    warPnlA.setStatus(WarrantyStatus.ACTIVE);
+                    warPnlA.setTermsAndConditions("20-Year Linear Power Output and Degradation Performance Warranty");
+                    warrantyRepository.save(warPnlA);
+                }
+            }
+        }
+
+        // =========================================================================
+        // DEMO PROJECT B: Flagged / Negative Margin Red Project (Recent - 3 Days Ago)
+        // =========================================================================
+        if (salesOrderRepository.findByOrderNumber("SO-DEMO-LOSS").isEmpty()) {
+            Customer custB = customerRepository.findByPhone("9894055667").orElseGet(() -> {
+                Customer c = new Customer();
+                c.setFullName("Apex Textiles Factory");
+                c.setPhone("9894055667");
+                c.setEmail("contact@apextextiles.in");
+                c.setAddress("188/2, Industrial Estate, Mangalam Road");
+                c.setCity("Tirupur");
+                c.setState("Tamil Nadu");
+                c.setPincode("641687");
+                c.setCustomerType(CustomerType.SMALL_FACTORY);
+                return customerRepository.save(c);
+            });
+
+            SiteSurvey survB = new SiteSurvey();
+            survB.setSurveyNumber("SRV-DEMO-LOSS");
+            survB.setCustomer(custB);
+            survB.setScheduledDate(LocalDate.now().minusDays(5));
+            survB.setRoofDirection("South-East");
+            survB.setRoofTilt("10 deg");
+            survB.setAvailableRoofAreaSqFt(new BigDecimal("1200.00"));
+            survB.setCableDistanceMeters(new BigDecimal("25.00"));
+            survB.setShadingAssessment("Partial Shade");
+            survB.setStatus(SurveyStatus.APPROVED);
+            survB = siteSurveyRepository.save(survB);
+
+            Quotation quoB = new Quotation();
+            quoB.setQuotationNumber("QUO-DEMO-LOSS");
+            quoB.setCustomer(custB);
+            quoB.setSiteSurvey(survB);
+            quoB.setSolarPackage(pkg5kOff);
+            quoB.setSystemType(SystemType.OFF_GRID);
+            quoB.setCapacityKw(new BigDecimal("5.00"));
+            quoB.setSubtotal(new BigDecimal("298812.00"));
+            quoB.setTaxAmount(new BigDecimal("41188.00"));
+            quoB.setInstallationFee(new BigDecimal("20000.00"));
+            quoB.setTotalAmount(new BigDecimal("340000.00"));
+            quoB.setQuotationDate(LocalDate.now().minusDays(4));
+            quoB.setValidityDate(LocalDate.now().plusDays(26));
+            quoB.setStatus(QuotationStatus.ACCEPTED);
+            quoB = quotationRepository.save(quoB);
+
+            SalesOrder orderB = new SalesOrder();
+            orderB.setOrderNumber("SO-DEMO-LOSS");
+            orderB.setCustomer(custB);
+            orderB.setQuotation(quoB);
+            orderB.setSolarPackage(pkg5kOff);
+            orderB.setSystemType(SystemType.OFF_GRID);
+            orderB.setCapacityKw(new BigDecimal("5.00"));
+            orderB.setTotalAmount(new BigDecimal("340000.00"));
+            orderB.setAdvanceRequired(new BigDecimal("120000.00"));
+            orderB.setTotalPaid(new BigDecimal("340000.00"));
+            orderB.setRemainingBalance(BigDecimal.ZERO);
+            orderB.setOrderDate(LocalDate.now().minusDays(3));
+            orderB.setStatus(OrderStatus.COMPLETED);
+            orderB = salesOrderRepository.save(orderB);
+
+            List<OrderItem> itemsB = new ArrayList<>();
+            if (pInvOff5k != null) itemsB.add(new OrderItem(orderB, pInvOff5k, 1, pInvOff5k.getSellingPrice()));
+            if (pBattery != null) itemsB.add(new OrderItem(orderB, pBattery, 2, pBattery.getSellingPrice()));
+            if (pPanel != null) itemsB.add(new OrderItem(orderB, pPanel, 10, pPanel.getSellingPrice()));
+            if (pController != null) itemsB.add(new OrderItem(orderB, pController, 1, pController.getSellingPrice()));
+            orderItemRepository.saveAll(itemsB);
+
+            Payment payB = new Payment();
+            payB.setPaymentNumber("PAY-DEMO-LOSS-1");
+            payB.setSalesOrder(orderB);
+            payB.setCustomer(custB);
+            payB.setAmount(new BigDecimal("340000.00"));
+            payB.setPaymentDate(LocalDate.now().minusDays(3));
+            payB.setMethod(PaymentMethod.BANK_TRANSFER);
+            payB.setType(PaymentType.FULL);
+            payB.setReferenceNumber("NEFT-DEMO-LOSS-FULL");
+            payB.setStatus(PaymentStatus.SUCCESS);
+            payB.setNotes("Contract price cleared in full");
+            paymentRepository.save(payB);
+
+            Installation instB = new Installation();
+            instB.setInstallationNumber("INS-DEMO-LOSS");
+            instB.setSalesOrder(orderB);
+            instB.setCustomer(custB);
+            instB.setScheduledDate(LocalDate.now().minusDays(3));
+            instB.setActualStartTime(LocalDateTime.now().minusDays(3).withHour(8).withMinute(0));
+            instB.setActualFinishTime(LocalDateTime.now().minusDays(2).withHour(20).withMinute(0));
+            instB.setInstalledCapacityKw(new BigDecimal("5.00"));
+            instB.setPanelMountingConfirmed(true);
+            instB.setWiringConfirmed(true);
+            instB.setEarthingConfirmed(true);
+            instB.setTestingPassed(true);
+            instB.setTestingNotes("Reinforced tin shed commissioned. 4.9 kW generation recorded.");
+            instB.setCustomerSigneeName("R. Sundaram (Factory Plant Head)");
+            instB.setCustomerAcceptanceNote("Plant commissioned after emergency roof reinforcement and underground cable trenching.");
+            instB.setCustomerSignatureUrl("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='150' height='50'><path d='M10 20 Q 50 40 90 10 T 140 30' stroke='black' fill='transparent'/></svg>");
+            instB.setCustomerSignedAt(LocalDateTime.now().minusDays(2).withHour(20).withMinute(30));
+            instB.setStatus(InstallationStatus.COMPLETED);
+            installationRepository.save(instB);
+
+            // Big Overtime Labor & Unexpected Project Expenses (Loss Maker)
+            Expense expTechB = new Expense();
+            expTechB.setExpenseNumber("EXP-DEMO-LOSS-01");
+            expTechB.setCategory(ExpenseCategory.TECHNICIAN_PAYOUT);
+            expTechB.setSalesOrder(orderB);
+            expTechB.setAmount(new BigDecimal("28800.00"));
+            expTechB.setExpenseDate(LocalDate.now().minusDays(2));
+            expTechB.setTitle("Technician Overtime Payout - 48 Crew Hours");
+            expTechB.setDescription("Overtime payouts for 3 technicians across 48 cumulative hours due to structural delays");
+            expTechB.setPaidTo("Overtime Installation Crew");
+            expTechB.setPaymentMethod("Bank Transfer");
+            expenseRepository.save(expTechB);
+
+            Expense expCraneB = new Expense();
+            expCraneB.setExpenseNumber("EXP-DEMO-LOSS-02");
+            expCraneB.setCategory(ExpenseCategory.OTHER);
+            expCraneB.setSalesOrder(orderB);
+            expCraneB.setAmount(new BigDecimal("68000.00"));
+            expCraneB.setExpenseDate(LocalDate.now().minusDays(2));
+            expCraneB.setTitle("Emergency Crane & Structural Roof Reinforcement");
+            expCraneB.setDescription("Crane rental and steel girder bracing for factory tin shed roof integrity");
+            expCraneB.setPaidTo("Heavy Lift Cranes Ltd");
+            expCraneB.setPaymentMethod("Bank Transfer");
+            expenseRepository.save(expCraneB);
+
+            Expense expCableB = new Expense();
+            expCableB.setExpenseNumber("EXP-DEMO-LOSS-03");
+            expCableB.setCategory(ExpenseCategory.OTHER);
+            expCableB.setSalesOrder(orderB);
+            expCableB.setAmount(new BigDecimal("35000.00"));
+            expCableB.setExpenseDate(LocalDate.now().minusDays(2));
+            expCableB.setTitle("High-voltage Cable Rerouting & Custom Junctions");
+            expCableB.setDescription("Underground trenching and custom distribution panels for safety compliance");
+            expCableB.setPaidTo("Apex Industrial Electricals");
+            expCableB.setPaymentMethod("Bank Transfer");
+            expenseRepository.save(expCableB);
+        }
+
+        // =========================================================================
+        // DEMO PROJECT C: Mixed Warranty System (30 Months Old) - Expired Inverter Demo
+        // =========================================================================
+        if (salesOrderRepository.findByOrderNumber("SO-DEMO-30M").isEmpty()) {
+            Customer custC = customerRepository.findByPhone("9789012345").orElseGet(() -> {
+                Customer c = new Customer();
+                c.setFullName("Meera Krishnan");
+                c.setPhone("9789012345");
+                c.setEmail("meera.k@example.com");
+                c.setAddress("74, Fairlands Main Road");
+                c.setCity("Salem");
+                c.setState("Tamil Nadu");
+                c.setPincode("636016");
+                c.setCustomerType(CustomerType.RESIDENTIAL);
+                return customerRepository.save(c);
+            });
+
+            SiteSurvey survC = new SiteSurvey();
+            survC.setSurveyNumber("SRV-DEMO-30M");
+            survC.setCustomer(custC);
+            survC.setScheduledDate(LocalDate.now().minusMonths(30));
+            survC.setRoofDirection("South");
+            survC.setRoofTilt("15 deg");
+            survC.setAvailableRoofAreaSqFt(new BigDecimal("500.00"));
+            survC.setCableDistanceMeters(new BigDecimal("10.00"));
+            survC.setShadingAssessment("Shadow Free");
+            survC.setStatus(SurveyStatus.APPROVED);
+            survC = siteSurveyRepository.save(survC);
+
+            Quotation quoC = new Quotation();
+            quoC.setQuotationNumber("QUO-DEMO-30M");
+            quoC.setCustomer(custC);
+            quoC.setSiteSurvey(survC);
+            quoC.setSolarPackage(pkg3kOn);
+            quoC.setSystemType(SystemType.ON_GRID);
+            quoC.setCapacityKw(new BigDecimal("3.00"));
+            quoC.setSubtotal(new BigDecimal("162565.90"));
+            quoC.setTaxAmount(new BigDecimal("22434.10"));
+            quoC.setInstallationFee(new BigDecimal("15000.00"));
+            quoC.setTotalAmount(new BigDecimal("185000.00"));
+            quoC.setQuotationDate(LocalDate.now().minusMonths(30));
+            quoC.setValidityDate(LocalDate.now().minusMonths(29));
+            quoC.setStatus(QuotationStatus.ACCEPTED);
+            quoC = quotationRepository.save(quoC);
+
+            SalesOrder orderC = new SalesOrder();
+            orderC.setOrderNumber("SO-DEMO-30M");
+            orderC.setCustomer(custC);
+            orderC.setQuotation(quoC);
+            orderC.setSolarPackage(pkg3kOn);
+            orderC.setSystemType(SystemType.ON_GRID);
+            orderC.setCapacityKw(new BigDecimal("3.00"));
+            orderC.setTotalAmount(new BigDecimal("185000.00"));
+            orderC.setAdvanceRequired(new BigDecimal("65000.00"));
+            orderC.setTotalPaid(new BigDecimal("185000.00"));
+            orderC.setRemainingBalance(BigDecimal.ZERO);
+            orderC.setOrderDate(LocalDate.now().minusMonths(30));
+            orderC.setStatus(OrderStatus.COMPLETED);
+            orderC = salesOrderRepository.save(orderC);
+
+            if (pInv3k != null && pPanel != null) {
+                OrderItem oi1 = new OrderItem(orderC, pInv3k, 1, pInv3k.getSellingPrice());
+                OrderItem oi2 = new OrderItem(orderC, pPanel, 6, pPanel.getSellingPrice());
+                orderItemRepository.saveAll(Arrays.asList(oi1, oi2));
+            }
+
+            Payment payC = new Payment();
+            payC.setPaymentNumber("PAY-DEMO-30M-1");
+            payC.setSalesOrder(orderC);
+            payC.setCustomer(custC);
+            payC.setAmount(new BigDecimal("185000.00"));
+            payC.setPaymentDate(LocalDate.now().minusMonths(30));
+            payC.setMethod(PaymentMethod.BANK_TRANSFER);
+            payC.setType(PaymentType.FULL);
+            payC.setReferenceNumber("NEFT-DEMO-30M");
+            payC.setStatus(PaymentStatus.SUCCESS);
+            payC.setNotes("Full payment received");
+            paymentRepository.save(payC);
+
+            Installation instC = new Installation();
+            instC.setInstallationNumber("INS-DEMO-30M");
+            instC.setSalesOrder(orderC);
+            instC.setCustomer(custC);
+            instC.setScheduledDate(LocalDate.now().minusMonths(30));
+            instC.setActualStartTime(LocalDateTime.now().minusMonths(30).withHour(9).withMinute(0));
+            instC.setActualFinishTime(LocalDateTime.now().minusMonths(30).withHour(16).withMinute(30));
+            instC.setInstalledCapacityKw(new BigDecimal("3.00"));
+            instC.setPanelMountingConfirmed(true);
+            instC.setWiringConfirmed(true);
+            instC.setEarthingConfirmed(true);
+            instC.setTestingPassed(true);
+            instC.setTestingNotes("Commissioning completed. Net metering synced with Salem DISCOM.");
+            instC.setCustomerSigneeName("Meera Krishnan");
+            instC.setCustomerAcceptanceNote("System commissioned on schedule.");
+            instC.setCustomerSignatureUrl("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='150' height='50'><path d='M10 25 Q 40 5 80 35 T 130 15' stroke='black' fill='transparent'/></svg>");
+            instC.setCustomerSignedAt(LocalDateTime.now().minusMonths(30).withHour(17).withMinute(0));
+            instC.setStatus(InstallationStatus.COMPLETED);
+            installationRepository.save(instC);
+
+            // DUAL WARRANTY TIME MACHINE:
+            // Inverter: 24-month warranty started 30m ago -> EXPIRED 6 months ago!
+            // Panels: 240-month warranty started 30m ago -> ACTIVE with 210 months remaining!
+            if (pInv3k != null) {
+                SerialNumber snInvC = registerSerial("INV-2023-9901", pInv3k, "PO-HIST-30M", "Site Installed - Salem");
+                snInvC.setStatus(SerialNumberStatus.INSTALLED);
+                snInvC.setCustomer(custC);
+                snInvC.setSalesOrder(orderC);
+                snInvC.setWarrantyStartDate(LocalDate.now().minusMonths(30));
+                snInvC.setWarrantyExpiryDate(LocalDate.now().minusMonths(30).plusMonths(24));
+                serialNumberRepository.save(snInvC);
+
+                if (warrantyRepository.findBySerialNumberSerialCode("INV-2023-9901").isEmpty()) {
+                    Warranty warInvC = new Warranty();
+                    warInvC.setWarrantyNumber("WAR-DEMO-30M-INV");
+                    warInvC.setSerialNumber(snInvC);
+                    warInvC.setCustomer(custC);
+                    warInvC.setSalesOrder(orderC);
+                    warInvC.setProduct(pInv3k);
+                    warInvC.setDurationMonths(24);
+                    warInvC.setDeliveryDate(LocalDate.now().minusMonths(30));
+                    warInvC.setWarrantyStartDate(LocalDate.now().minusMonths(30));
+                    warInvC.setWarrantyEndDate(LocalDate.now().minusMonths(30).plusMonths(24));
+                    warInvC.setStatus(WarrantyStatus.EXPIRED);
+                    warInvC.setTermsAndConditions("2-Year Comprehensive Inverter Warranty (EXPIRED)");
+                    warrantyRepository.save(warInvC);
+                }
+            }
+
+            if (pPanel != null) {
+                SerialNumber snPnlC = registerSerial("PNL-2023-9901", pPanel, "PO-HIST-30M", "Site Installed - Salem");
+                snPnlC.setStatus(SerialNumberStatus.INSTALLED);
+                snPnlC.setCustomer(custC);
+                snPnlC.setSalesOrder(orderC);
+                snPnlC.setWarrantyStartDate(LocalDate.now().minusMonths(30));
+                snPnlC.setWarrantyExpiryDate(LocalDate.now().minusMonths(30).plusMonths(240));
+                serialNumberRepository.save(snPnlC);
+
+                if (warrantyRepository.findBySerialNumberSerialCode("PNL-2023-9901").isEmpty()) {
+                    Warranty warPnlC = new Warranty();
+                    warPnlC.setWarrantyNumber("WAR-DEMO-30M-PNL");
+                    warPnlC.setSerialNumber(snPnlC);
+                    warPnlC.setCustomer(custC);
+                    warPnlC.setSalesOrder(orderC);
+                    warPnlC.setProduct(pPanel);
+                    warPnlC.setDurationMonths(240);
+                    warPnlC.setDeliveryDate(LocalDate.now().minusMonths(30));
+                    warPnlC.setWarrantyStartDate(LocalDate.now().minusMonths(30));
+                    warPnlC.setWarrantyEndDate(LocalDate.now().minusMonths(30).plusMonths(240));
+                    warPnlC.setStatus(WarrantyStatus.ACTIVE);
+                    warPnlC.setTermsAndConditions("20-Year Linear Power Output Performance Warranty (STILL ACTIVE)");
+                    warrantyRepository.save(warPnlC);
+                }
+            }
+        }
     }
 }

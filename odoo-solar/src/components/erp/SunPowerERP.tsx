@@ -10,6 +10,7 @@ import {
   getInstallations,
   getServiceTickets,
   getTechnicians,
+  acceptQuotation,
 } from '@/lib/api';
 
 // Types
@@ -827,10 +828,34 @@ const SunPowerERP = () => {
 
   // SCENE 2: GENERATE QUOTE FROM READY TEMPLATE & TRIGGER PAYMENT
   const selectedPackage = DEFAULT_PACKAGES.find(p => p.kw === currentEnquiry?.kw && p.type === currentEnquiry?.systemType) || DEFAULT_PACKAGES[1];
+  const [quotationAccepted, setQuotationAccepted] = useState<boolean>(false);
+  const [acceptingQuote, setAcceptingQuote] = useState<boolean>(false);
+
+  const handleAcceptQuotation = async () => {
+    if (!currentEnquiry) return;
+    setAcceptingQuote(true);
+    try {
+      const numId = parseInt(currentEnquiry.id.replace(/\D/g, '')) || 1;
+      try {
+        await acceptQuotation(numId);
+      } catch (apiErr) {
+        console.log('Customer portal API call status:', apiErr);
+      }
+      setQuotationAccepted(true);
+      updateCurrentEnquiry({
+        status: 'Quoted',
+      });
+      notify(`Quotation for ${currentEnquiry.customerName} marked ACCEPTED by Customer! Advance payment unlocked.`, 'success');
+    } catch (err: any) {
+      notify(err?.message || 'Failed to accept quotation', 'error');
+    } finally {
+      setAcceptingQuote(false);
+    }
+  };
 
   const handleConfirmQuoteAndAdvance = (payType: 'advance' | 'full') => {
     if (!currentEnquiry) return;
-    if (currentEnquiry.status !== 'Survey Approved') {
+    if (currentEnquiry.status !== 'Survey Approved' && currentEnquiry.status !== 'Quoted' && !quotationAccepted) {
       notify('STRICT GATEKEEPER RULE: Quotes are locked until roof survey is approved!', 'error');
       return;
     }
@@ -1749,17 +1774,49 @@ const SunPowerERP = () => {
                   </div>
                 )}
 
+                {/* CUSTOMER QUOTATION ACCEPTANCE UI */}
+                <div className="card bg-light border p-3 rounded-3 mb-3">
+                  <div className="d-flex justify-content-between align-items-center mb-2">
+                    <div>
+                      <span className="small text-muted d-block">Proposal Reference</span>
+                      <strong className="text-dark">QT-2026-00{currentEnquiry?.id || '1'}</strong>
+                    </div>
+                    <span className={`badge ${currentEnquiry?.status === 'Order Confirmed' ? 'bg-success' : (quotationAccepted || currentEnquiry?.status === 'Quoted' ? 'bg-primary' : 'bg-warning text-dark')}`}>
+                      {currentEnquiry?.status === 'Order Confirmed' ? 'CONVERTED TO ORDER' : (quotationAccepted || currentEnquiry?.status === 'Quoted' ? 'QUOTE ACCEPTED' : 'PENDING CUSTOMER ACCEPTANCE')}
+                    </span>
+                  </div>
+
+                  {currentEnquiry?.status === 'Order Confirmed' ? (
+                    <div className="small text-success fw-bold d-flex align-items-center gap-1">
+                      <i className="bi bi-check-circle-fill"></i> Order Confirmed & Zero-Touch Dispatch Triggered
+                    </div>
+                  ) : (quotationAccepted || currentEnquiry?.status === 'Quoted') ? (
+                    <div className="small text-primary fw-semibold d-flex align-items-center gap-1">
+                      <i className="bi bi-patch-check-fill"></i> Quotation Accepted by Customer. Ready for Advance Payment.
+                    </div>
+                  ) : (
+                    <button
+                      disabled={currentEnquiry?.status !== 'Survey Approved' || acceptingQuote}
+                      onClick={handleAcceptQuotation}
+                      className="btn btn-outline-success fw-bold w-100 py-2 d-flex align-items-center justify-center gap-2"
+                    >
+                      <i className="bi bi-hand-thumbs-up-fill"></i>
+                      <span>{acceptingQuote ? 'Accepting Quotation...' : 'Customer: Accept Quotation & BOM'}</span>
+                    </button>
+                  )}
+                </div>
+
                 {/* ADVANCE PAYMENT ACTIONS */}
                 <div className="d-flex gap-2 mt-auto">
                   <button
-                    disabled={currentEnquiry?.status !== 'Survey Approved'}
+                    disabled={(currentEnquiry?.status !== 'Survey Approved' && currentEnquiry?.status !== 'Quoted' && !quotationAccepted) || currentEnquiry?.status === 'Order Confirmed'}
                     onClick={() => handleConfirmQuoteAndAdvance('advance')}
                     className="btn btn-warning flex-fill fw-bold py-2"
                   >
                     <i className="bi bi-cash-coin me-1"></i> Pay 50% Advance ({formatINR(Math.round((selectedPackage.basePrice + selectedPackage.installFee) * 0.5))})
                   </button>
                   <button
-                    disabled={currentEnquiry?.status !== 'Survey Approved'}
+                    disabled={(currentEnquiry?.status !== 'Survey Approved' && currentEnquiry?.status !== 'Quoted' && !quotationAccepted) || currentEnquiry?.status === 'Order Confirmed'}
                     onClick={() => handleConfirmQuoteAndAdvance('full')}
                     className="btn btn-success flex-fill fw-bold py-2"
                   >

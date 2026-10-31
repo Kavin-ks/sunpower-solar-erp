@@ -154,12 +154,24 @@ public class Enums {
     }
 
     public enum ExpenseCategory {
-        PRODUCT_PURCHASE,
-        INSTALLATION,
-        TECHNICIAN_PAYOUT,
-        SERVICE_REPAIR,
+        SALARY,
         TRANSPORT,
+        ELECTRICITY,
+        MAINTENANCE,
+        OFFICE,
+        EQUIPMENT,
+        INSTALLATION,
+        SERVICE_REPAIR,
+        TECHNICIAN_PAYOUT,
+        PRODUCT_PURCHASE,
         OTHER
+    }
+
+    public enum ExpenseStatus {
+        PENDING,
+        APPROVED,
+        REJECTED,
+        PAID
     }
 
     public enum TechnicianPayoutStatus {

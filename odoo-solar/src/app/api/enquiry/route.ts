@@ -32,6 +32,7 @@ export async function POST(request: Request) {
     const systemType = rawType.includes('OFF') ? 'OFF_GRID' : 'ON_GRID';
 
     const subsidyRequired = body.subsidyRequired !== undefined ? Boolean(body.subsidyRequired) : true;
+    const monthlyElectricityBill = body.monthlyElectricityBill ? Number(body.monthlyElectricityBill) : null;
     const notes = (body.notes || body.message || '').trim();
 
     const backendPayload = {
@@ -45,6 +46,7 @@ export async function POST(request: Request) {
       requestedCapacityKw: capacity,
       systemType,
       subsidyRequired,
+      monthlyElectricityBill,
       notes,
       source: 'CUSTOMER_PORTAL',
     };

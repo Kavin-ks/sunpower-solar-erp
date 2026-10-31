@@ -1,5 +1,6 @@
 package com.sunpower.controller;
 
+import com.sunpower.dto.PaymentDTOs.PaymentReceiptDTO;
 import com.sunpower.dto.PaymentDTOs.PaymentRecordRequest;
 import com.sunpower.dto.PaymentDTOs.PaymentReversalRequest;
 import com.sunpower.entity.Payment;
@@ -36,19 +37,26 @@ public class PaymentController {
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'FINANCE', 'SALES')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'FINANCE', 'SALES', 'DIRECTOR')")
     public ResponseEntity<Payment> getPaymentById(@PathVariable Long id) {
         return ResponseEntity.ok(paymentService.getPaymentById(id));
     }
 
+    @GetMapping("/{id}/receipt")
+    @PreAuthorize("hasAnyRole('ADMIN', 'FINANCE', 'SALES', 'DIRECTOR')")
+    public ResponseEntity<PaymentReceiptDTO> getPaymentReceipt(@PathVariable Long id) {
+        return ResponseEntity.ok(paymentService.getPaymentReceipt(id));
+    }
+
     @PostMapping
-    @PreAuthorize("hasAnyRole('FINANCE', 'ADMIN')")
+    @PreAuthorize("hasAnyRole('FINANCE', 'DIRECTOR', 'SALES', 'ADMIN')")
     public ResponseEntity<Payment> recordPayment(@Valid @RequestBody PaymentRecordRequest request) {
         Payment payment = paymentService.recordPayment(request);
         return ResponseEntity.status(HttpStatus.CREATED).body(payment);
     }
 
     @PostMapping("/{id}/reverse")
+    @PreAuthorize("hasAnyRole('FINANCE', 'DIRECTOR')")
     public ResponseEntity<Payment> reversePayment(
             @PathVariable Long id,
             @Valid @RequestBody PaymentReversalRequest request,

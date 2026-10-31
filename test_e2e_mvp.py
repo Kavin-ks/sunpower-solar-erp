@@ -212,7 +212,7 @@ print("\n--- Testing MVP 4: Finance Payments & Invoicing ---")
 if current_order:
     order_id = current_order["id"]
     order_total = float(current_order.get("totalAmount") or 300000)
-    advance_amount = round(order_total * 0.30, 2)
+    advance_amount = float(current_order.get("advanceRequired") or round(order_total * 0.30, 2))
     utr_ref = f"UTR-TEST-{order_id}-{int(time.time())}"
     
     pay_payload = {
@@ -333,11 +333,12 @@ status_w, warranties = req(f"{BASE_URL}/warranties", "GET", token=tokens["suppor
 print(f"[+] Total Active Warranties: {len(warranties)}")
 if warranties:
     sample_w = warranties[0]
-    scode = sample_w.get("serialNumber", {}).get("serialCode") if sample_w.get("serialNumber") else "Solar-Panel-Batch"
-    dur_years = (sample_w.get('durationMonths') or 24) // 12
-    valid_until = sample_w.get('warrantyEndDate')
-    print(f"[+] Verified Warranty: Serial={scode}, Duration={dur_years} years, Valid Until={valid_until}")
-    results.append(("MVP 7: Warranty Verification", "PASS", f"Active warranty for {scode} ({dur_years} years, valid until {valid_until})."))
+    sn_obj = sample_w.get("serialNumber") or {}
+    scode = sn_obj.get("serialCode", "SN-PANEL-BATCH")
+    duration = sample_w.get('durationMonths', 24)
+    end_d = sample_w.get('warrantyEndDate') or sample_w.get('endDate')
+    print(f"[+] Verified Warranty: Serial={scode}, Duration={duration} months, Valid Until={end_d}")
+    results.append(("MVP 7: Warranty Verification", "PASS", f"Active warranty for {scode} ({duration} months, valid until {end_d})."))
 else:
     results.append(("MVP 7: Warranty Verification", "PASS", "Warranties table verified in MySQL."))
 

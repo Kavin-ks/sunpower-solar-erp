@@ -51,8 +51,12 @@ public class ServiceTicketDTOs {
 
         private BigDecimal laborCharges = BigDecimal.ZERO;
         private List<ServicePartRequest> replacedParts;
+        private String replacementSerialCode;
 
         public TicketResolveRequest() {}
+
+        public String getReplacementSerialCode() { return replacementSerialCode; }
+        public void setReplacementSerialCode(String replacementSerialCode) { this.replacementSerialCode = replacementSerialCode; }
 
         public String getDiagnosisNotes() { return diagnosisNotes; }
         public void setDiagnosisNotes(String diagnosisNotes) { this.diagnosisNotes = diagnosisNotes; }

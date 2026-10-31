@@ -745,6 +745,42 @@ Real-time project gross margins, GST invoices, customer collections, technician 
               </button>
             </div>
           </div>
+
+          {/* Accounts Receivable Aging Analysis */}
+          <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-xs">
+            <h4 className="font-bold text-slate-800 text-sm mb-1">Accounts Receivable Aging Analysis</h4>
+            <p className="text-xs text-slate-500 mb-4">Outstanding customer collection balances past order confirmation date</p>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+              <div className="p-3 bg-emerald-50/60 border border-emerald-100 rounded-lg">
+                <span className="text-[11px] font-semibold text-emerald-800 uppercase block">Current (0–30 Days)</span>
+                <span className="text-base font-bold font-mono text-emerald-900 mt-1 block">
+                  ₹{(dashboardData?.aging0To30Days || 0).toLocaleString('en-IN')}
+                </span>
+                <span className="text-[10px] text-emerald-700">Active collection cycle</span>
+              </div>
+              <div className="p-3 bg-blue-50/60 border border-blue-100 rounded-lg">
+                <span className="text-[11px] font-semibold text-blue-800 uppercase block">31–60 Days</span>
+                <span className="text-base font-bold font-mono text-blue-900 mt-1 block">
+                  ₹{(dashboardData?.aging31To60Days || 0).toLocaleString('en-IN')}
+                </span>
+                <span className="text-[10px] text-blue-700">First reminder phase</span>
+              </div>
+              <div className="p-3 bg-amber-50/60 border border-amber-100 rounded-lg">
+                <span className="text-[11px] font-semibold text-amber-800 uppercase block">61–90 Days</span>
+                <span className="text-base font-bold font-mono text-amber-900 mt-1 block">
+                  ₹{(dashboardData?.aging61To90Days || 0).toLocaleString('en-IN')}
+                </span>
+                <span className="text-[10px] text-amber-700">Escalation phase</span>
+              </div>
+              <div className="p-3 bg-rose-50/60 border border-rose-100 rounded-lg">
+                <span className="text-[11px] font-semibold text-rose-800 uppercase block">&gt; 90 Days Critical</span>
+                <span className="text-base font-bold font-mono text-rose-900 mt-1 block">
+                  ₹{(dashboardData?.agingOver90Days || 0).toLocaleString('en-IN')}
+                </span>
+                <span className="text-[10px] text-rose-700">Credit hold notice</span>
+              </div>
+            </div>
+          </div>
         </div>
       )}
 

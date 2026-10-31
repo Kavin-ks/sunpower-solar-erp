@@ -6,6 +6,7 @@ import NavMenu from './Menu/NavMenu';
 import UseSticky from '@/hooks/UseSticky';
 import MobileMeneu from './Menu/MobileMeneu';
 import SearchPopup from '@/components/common/SearchPopup';
+import UserProfileDropdown from '@/components/common/UserProfileDropdown';
 
 const HeaderOne = ({ style }: any) => {
   const { sticky } = UseSticky();
@@ -29,7 +30,7 @@ const HeaderOne = ({ style }: any) => {
             
             {/* BRAND: Odoo Solar Power Logo Image */}
             <div className="d-flex align-items-center flex-shrink-0 py-1" style={{ maxWidth: '340px' }}>
-              <Link href="/" className="d-flex align-items-center text-decoration-none">
+              <Link href="/home" className="d-flex align-items-center text-decoration-none">
                 <img
                   src="/odoo_logo.png"
                   alt="Odoo Solar System ERP"
@@ -50,7 +51,7 @@ const HeaderOne = ({ style }: any) => {
               </nav>
             </div>
 
-            {/* RIGHT BUTTONS: Search & ERP Launcher */}
+            {/* RIGHT BUTTONS: Search, Profile & Get A Quote */}
             <div className="d-flex align-items-center gap-3 flex-shrink-0">
               <button
                 type="button"
@@ -61,6 +62,9 @@ const HeaderOne = ({ style }: any) => {
               >
                 <i className="bi bi-search" style={{ fontSize: '15px' }}></i>
               </button>
+
+              {/* User Profile Dropdown with Entered Details & Logout Button */}
+              <UserProfileDropdown />
 
               <Link
                 href="/contact"
@@ -131,7 +135,8 @@ const HeaderOne = ({ style }: any) => {
             min-width: 240px !important;
             box-shadow: 0 10px 25px rgba(0,0,0,0.12) !important;
             border-radius: 8px !important;
-            border-top: 3px solid #e63a27 !important;
+            border: none !important;
+            border-top: none !important;
             visibility: hidden !important;
             opacity: 0 !important;
             transition: all 0.25s ease !important;
@@ -155,8 +160,8 @@ const HeaderOne = ({ style }: any) => {
             display: block !important;
           }
           .minimal-solar-nav .sub-menu ul li a:hover {
-            background: #fff5f3 !important;
-            color: #e63a27 !important;
+            background: #f1f5f9 !important;
+            color: #0f172a !important;
           }
         `}</style>
       </header>

@@ -51,7 +51,7 @@ const fetchInventory = async () => {
   try {
     const [stockRes, movRes] = await Promise.all([
       api.get('/inventory'),
-      api.get('/inventory/movements'),
+      api.get('/inventory/movements').catch(() => ({ data: [] })),
     ]);
     stocks.value = stockRes.data;
     movements.value = movRes.data;

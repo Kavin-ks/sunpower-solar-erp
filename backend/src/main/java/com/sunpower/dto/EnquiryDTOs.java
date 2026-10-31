@@ -130,6 +130,8 @@ public class EnquiryDTOs {
 
         private boolean subsidyRequired = true;
         private BigDecimal monthlyElectricityBill;
+        private BigDecimal shadowFreeAreaSqFt;
+        private Boolean gridSuitable;
         private String notes;
         private EnquirySource source = EnquirySource.CUSTOMER_PORTAL;
 
@@ -159,6 +161,10 @@ public class EnquiryDTOs {
         public void setSubsidyRequired(boolean subsidyRequired) { this.subsidyRequired = subsidyRequired; }
         public BigDecimal getMonthlyElectricityBill() { return monthlyElectricityBill; }
         public void setMonthlyElectricityBill(BigDecimal monthlyElectricityBill) { this.monthlyElectricityBill = monthlyElectricityBill; }
+        public BigDecimal getShadowFreeAreaSqFt() { return shadowFreeAreaSqFt; }
+        public void setShadowFreeAreaSqFt(BigDecimal shadowFreeAreaSqFt) { this.shadowFreeAreaSqFt = shadowFreeAreaSqFt; }
+        public Boolean getGridSuitable() { return gridSuitable; }
+        public void setGridSuitable(Boolean gridSuitable) { this.gridSuitable = gridSuitable; }
         public String getNotes() { return notes; }
         public void setNotes(String notes) { this.notes = notes; }
         public EnquirySource getSource() { return source; }

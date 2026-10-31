@@ -271,9 +271,13 @@ public class EnquiryService {
         enquiry.setSource(request.getSource() != null ? request.getSource() : com.sunpower.entity.enums.Enums.EnquirySource.CUSTOMER_PORTAL);
         enquiry.setStatus(EnquiryStatus.NEW);
         enquiry.setNotes(request.getNotes() != null ? request.getNotes().trim() : null);
-        // Do NOT populate technical survey fields here (strictly technician responsibility during site survey)
-        enquiry.setShadowFreeAreaSqFt(null);
-        enquiry.setGridSuitable(null);
+        // Tele-qualification & basic rooftop feasibility fields
+        if (request.getShadowFreeAreaSqFt() != null) {
+            enquiry.setShadowFreeAreaSqFt(request.getShadowFreeAreaSqFt());
+        }
+        if (request.getGridSuitable() != null) {
+            enquiry.setGridSuitable(request.getGridSuitable());
+        }
 
         enquiry = enquiryRepository.save(enquiry);
         if (enquiry.getEnquiryNumber() == null) {

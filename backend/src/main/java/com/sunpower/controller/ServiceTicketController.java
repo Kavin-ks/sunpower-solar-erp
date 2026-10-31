@@ -53,7 +53,7 @@ public class ServiceTicketController {
     }
 
     @PostMapping
-    @PreAuthorize("hasAnyRole('SUPPORT', 'ADMIN')")
+    @PreAuthorize("hasAnyRole('SUPPORT', 'ADMIN', 'DIRECTOR')")
     public ResponseEntity<ServiceTicket> createTicket(
             @Valid @RequestBody TicketCreateRequest request,
             Authentication authentication) {
@@ -63,7 +63,7 @@ public class ServiceTicketController {
     }
 
     @PatchMapping("/{id}/assign/{technicianId}")
-    @PreAuthorize("hasAnyRole('SUPPORT', 'ADMIN')")
+    @PreAuthorize("hasAnyRole('SUPPORT', 'ADMIN', 'DIRECTOR')")
     public ResponseEntity<ServiceTicket> assignTechnician(
             @PathVariable Long id,
             @PathVariable Long technicianId,
@@ -106,7 +106,7 @@ public class ServiceTicketController {
     }
 
     @RequestMapping(value = {"/{id}/confirm-and-close", "/{id}/confirm-customer"}, method = RequestMethod.POST)
-    @PreAuthorize("hasAnyRole('SUPPORT', 'ADMIN')")
+    @PreAuthorize("hasAnyRole('SUPPORT', 'ADMIN', 'DIRECTOR')")
     public ResponseEntity<ServiceTicket> confirmAndClose(
             @PathVariable Long id,
             @Valid @RequestBody CustomerConfirmationRequest request,

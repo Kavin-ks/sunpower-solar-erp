@@ -43,7 +43,7 @@ public class EnquiryController {
     }
 
     @PostMapping
-    @PreAuthorize("hasAnyRole('SALES', 'DIRECTOR')")
+    @PreAuthorize("hasAnyRole('SALES', 'DIRECTOR', 'ADMIN')")
     public ResponseEntity<Enquiry> createEnquiry(@Valid @RequestBody EnquiryCreateRequest request, Authentication authentication) {
         String actor = authentication != null ? authentication.getName() : "Sales Team";
         Enquiry enquiry = enquiryService.createEnquiry(request, actor);
@@ -51,7 +51,7 @@ public class EnquiryController {
     }
 
     @PatchMapping("/{id}/status")
-    @PreAuthorize("hasAnyRole('SALES', 'DIRECTOR')")
+    @PreAuthorize("hasAnyRole('SALES', 'DIRECTOR', 'ADMIN')")
     public ResponseEntity<Enquiry> updateStatus(
             @PathVariable Long id,
             @Valid @RequestBody EnquiryStatusUpdateRequest request,
@@ -62,7 +62,7 @@ public class EnquiryController {
     }
 
     @PatchMapping("/{id}/assign/{userId}")
-    @PreAuthorize("hasAnyRole('SALES', 'DIRECTOR')")
+    @PreAuthorize("hasAnyRole('SALES', 'DIRECTOR', 'ADMIN')")
     public ResponseEntity<Enquiry> assignToSales(
             @PathVariable Long id,
             @PathVariable Long userId,

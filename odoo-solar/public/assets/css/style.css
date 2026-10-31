@@ -264,7 +264,7 @@ a.handbag:before {
     -webkit-box-shadow: 0px 1px 3px rgb(0 0 0 / 30%);
     transition: .5s;
     visibility: hidden;
-    border-top: 2px solid #e63a27;
+    border: none; border-top: none;
     opacity: 0;
     z-index: 11;
   }
