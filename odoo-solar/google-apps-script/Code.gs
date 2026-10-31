@@ -98,7 +98,7 @@ function doPost(e) {
       + "      </tr>"
       + "      <tr style='background: #f8fafc;'>"
       + "        <td style='padding: 12px 15px; font-weight: bold; color: #475569; border: 1px solid #e2e8f0;'>Submitted At</td>"
-      + "        <td style='padding: 12px 15px; color: #64748b; font-size: 13px; border: 1px solid #e2e8f0;'>" + Utilities.formatDate(new Date(), "Asia/Kolkata", "yyyy-MM-dd HH:mm:ss (IST)") + "</td>"
+      + "        <td style='padding: 12px 15px; color: #64748b; font-size: 13px; border: 1px solid #e2e8f0;'>" + Utilities.formatDate(new Date(), "Asia/Kolkata", "yyyy-MM-dd HH:mm:ss") + " IST</td>"
       + "      </tr>"
       + "    </table>"
       + "    <div style='margin-top: 25px; padding: 15px; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; color: #166534; font-size: 13px;'>"

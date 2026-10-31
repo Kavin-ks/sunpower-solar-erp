@@ -30,6 +30,7 @@ export async function POST(request: Request) {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload),
+          redirect: 'follow',
         });
         const resData = await response.text();
         console.log('[Enquiry API] Apps Script response:', resData);
