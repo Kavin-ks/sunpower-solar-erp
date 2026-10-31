@@ -6,6 +6,8 @@
 
 # Backend Build & Logs
 backend/target/
+target/
+**/target/
 *.class
 *.log
 backend/uploads/*
@@ -21,6 +23,7 @@ frontend/*.local
 
 # Docker & Temp
 *.pid
-.env.local
+.env
+.env.*
+!.env.example
 backend/data/
-

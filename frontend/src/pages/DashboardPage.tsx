@@ -207,18 +207,25 @@ export const DashboardPage: React.FC = () => {
             <span className="text-xs text-slate-400 font-medium">Monthly Performance</span>
           </div>
           <div className="h-64">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={metrics?.revenueTrends || []}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                <XAxis dataKey="month" tick={{ fontSize: 11 }} />
-                <YAxis tick={{ fontSize: 11 }} tickFormatter={(val) => `₹${val / 1000}k`} />
-                <Tooltip formatter={(value: any) => formatCurrency(Number(value))} />
-                <Legend wrapperStyle={{ fontSize: '12px' }} />
-                <Bar dataKey="revenue" name="Revenue Received" fill="#10b981" radius={[4, 4, 0, 0]} />
-                <Bar dataKey="cost" name="Project Costs" fill="#94a3b8" radius={[4, 4, 0, 0]} />
-                <Bar dataKey="profit" name="Net Profit" fill="#f59e0b" radius={[4, 4, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
+            {metrics?.revenueTrends && metrics.revenueTrends.some(t => t.revenue > 0 || t.cost > 0 || t.profit !== 0) ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={metrics.revenueTrends}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                  <XAxis dataKey="month" tick={{ fontSize: 11 }} />
+                  <YAxis tick={{ fontSize: 11 }} tickFormatter={(val) => `₹${val / 1000}k`} />
+                  <Tooltip formatter={(value: any) => formatCurrency(Number(value))} />
+                  <Legend wrapperStyle={{ fontSize: '12px' }} />
+                  <Bar dataKey="revenue" name="Revenue Received" fill="#10b981" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="cost" name="Project Costs" fill="#94a3b8" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="profit" name="Net Profit" fill="#f59e0b" radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="h-full flex flex-col items-center justify-center text-slate-400 text-sm gap-2">
+                <TrendingUp className="w-8 h-8 text-slate-300" />
+                <p>No transaction revenue or costs recorded yet</p>
+              </div>
+            )}
           </div>
         </div>
 
@@ -231,33 +238,42 @@ export const DashboardPage: React.FC = () => {
             <span className="text-xs text-slate-400 font-medium">kW System Distribution</span>
           </div>
           <div className="h-64 flex flex-col justify-between">
-            <ResponsiveContainer width="100%" height="80%">
-              <PieChart>
-                <Pie
-                  data={metrics?.capacityDistribution || []}
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={50}
-                  outerRadius={75}
-                  paddingAngle={4}
-                  dataKey="count"
-                  nameKey="capacity"
-                >
-                  {(metrics?.capacityDistribution || []).map((_, index) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+            {metrics?.capacityDistribution && metrics.capacityDistribution.length > 0 ? (
+              <>
+                <ResponsiveContainer width="100%" height="80%">
+                  <PieChart>
+                    <Pie
+                      data={metrics.capacityDistribution}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={50}
+                      outerRadius={75}
+                      paddingAngle={4}
+                      dataKey="count"
+                      nameKey="capacity"
+                    >
+                      {metrics.capacityDistribution.map((_, index) => (
+                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                      ))}
+                    </Pie>
+                    <Tooltip />
+                  </PieChart>
+                </ResponsiveContainer>
+                <div className="grid grid-cols-2 gap-x-2 gap-y-1 text-[11px] text-slate-600 pt-2 border-t border-slate-100">
+                  {metrics.capacityDistribution.map((item, index) => (
+                    <div key={item.capacity} className="flex items-center space-x-1.5 truncate">
+                      <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: COLORS[index % COLORS.length] }}></span>
+                      <span className="truncate">{item.capacity}: <strong>{item.count}</strong></span>
+                    </div>
                   ))}
-                </Pie>
-                <Tooltip />
-              </PieChart>
-            </ResponsiveContainer>
-            <div className="grid grid-cols-2 gap-x-2 gap-y-1 text-[11px] text-slate-600 pt-2 border-t border-slate-100">
-              {(metrics?.capacityDistribution || []).map((item, index) => (
-                <div key={item.capacity} className="flex items-center space-x-1.5 truncate">
-                  <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: COLORS[index % COLORS.length] }}></span>
-                  <span className="truncate">{item.capacity}: <strong>{item.count}</strong></span>
                 </div>
-              ))}
-            </div>
+              </>
+            ) : (
+              <div className="h-full flex flex-col items-center justify-center text-slate-400 text-sm gap-2">
+                <Layers className="w-8 h-8 text-slate-300" />
+                <p>No confirmed solar system capacities recorded yet</p>
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -340,7 +356,14 @@ export const DashboardPage: React.FC = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {(metrics?.recentJobProfitability || []).map((job) => (
+              {(!metrics?.recentJobProfitability || metrics.recentJobProfitability.length === 0) ? (
+                <tr>
+                  <td colSpan={10} className="py-8 text-center text-slate-400">
+                    No completed projects available for profitability analysis.
+                  </td>
+                </tr>
+              ) : (
+                metrics.recentJobProfitability.map((job) => (
                 <tr key={job.orderId} className="hover:bg-slate-50 transition">
                   <td className="py-3 px-4 font-mono font-medium text-slate-900">{job.orderNumber}</td>
                   <td className="py-3 px-4 font-medium text-slate-800">{job.customerName}</td>
@@ -375,7 +398,8 @@ export const DashboardPage: React.FC = () => {
                     </span>
                   </td>
                 </tr>
-              ))}
+              )))
+              }
             </tbody>
           </table>
         </div>

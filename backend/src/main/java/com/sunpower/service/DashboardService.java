@@ -121,13 +121,7 @@ public class DashboardService {
         List<CapacityDistribution> dist = capMap.entrySet().stream()
                 .map(e -> new CapacityDistribution(e.getKey(), e.getValue()))
                 .collect(Collectors.toList());
-        if (dist.isEmpty()) {
-            dist.add(new CapacityDistribution("3 kW On-Grid", 8));
-            dist.add(new CapacityDistribution("5 kW On-Grid", 5));
-            dist.add(new CapacityDistribution("3 kW Off-Grid", 3));
-            dist.add(new CapacityDistribution("2 kW On-Grid", 4));
-        }
-        summary.setCapacityDistribution(dist);
+summary.setCapacityDistribution(dist);
 
         // Monthly trends
         List<MonthlyRevenueTrend> trends = generateMonthlyTrends();
@@ -145,30 +139,33 @@ public class DashboardService {
         LocalDate now = LocalDate.now();
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("MMM yyyy");
 
-        // Last 6 months
+        // Last 6 months in chronological order
         for (int i = 5; i >= 0; i--) {
             LocalDate monthDate = now.minusMonths(i);
             String label = monthDate.format(formatter);
 
-            // Compute actual payments in this month if available or realistic baseline
+            // Compute actual SUCCESS payments in this month
             BigDecimal monthRev = BigDecimal.ZERO;
             for (Payment p : paymentRepository.findAll()) {
-                if (p.getPaymentDate() != null &&
+                if (p.getStatus() == PaymentStatus.SUCCESS &&
+                    p.getPaymentDate() != null &&
                     p.getPaymentDate().getYear() == monthDate.getYear() &&
                     p.getPaymentDate().getMonth() == monthDate.getMonth()) {
                     monthRev = monthRev.add(p.getAmount());
                 }
             }
 
-            if (monthRev.compareTo(BigDecimal.ZERO) == 0) {
-                // If sparse in mock data, calculate based on month index
-                long factor = (6 - i);
-                monthRev = BigDecimal.valueOf(320000 + factor * 85000);
+            // Compute actual expenses in this month
+            BigDecimal monthCost = BigDecimal.ZERO;
+            for (com.sunpower.entity.Expense e : expenseRepository.findAll()) {
+                if (e.getExpenseDate() != null &&
+                    e.getExpenseDate().getYear() == monthDate.getYear() &&
+                    e.getExpenseDate().getMonth() == monthDate.getMonth()) {
+                    monthCost = monthCost.add(e.getAmount());
+                }
             }
 
-            BigDecimal monthCost = monthRev.multiply(BigDecimal.valueOf(0.68));
             BigDecimal monthProfit = monthRev.subtract(monthCost);
-
             list.add(new MonthlyRevenueTrend(label, monthRev, monthCost, monthProfit));
         }
         return list;

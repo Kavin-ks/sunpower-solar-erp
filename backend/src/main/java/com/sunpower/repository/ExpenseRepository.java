@@ -7,12 +7,16 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.List;
 
 @Repository
 public interface ExpenseRepository extends JpaRepository<Expense, Long> {
     List<Expense> findBySalesOrderId(Long salesOrderId);
     List<Expense> findByCategory(ExpenseCategory category);
+    List<Expense> findAllByOrderByExpenseDateDesc();
+
+    boolean existsByTitleAndAmountAndExpenseDate(String title, BigDecimal amount, LocalDate expenseDate);
 
     @Query("SELECT SUM(e.amount) FROM Expense e WHERE e.salesOrder.id = :orderId")
     BigDecimal sumExpensesByOrderId(Long orderId);

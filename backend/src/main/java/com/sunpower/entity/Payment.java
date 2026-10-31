@@ -1,6 +1,7 @@
 package com.sunpower.entity;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.sunpower.entity.enums.Enums.PaymentMethod;
 import com.sunpower.entity.enums.Enums.PaymentStatus;
 import com.sunpower.entity.enums.Enums.PaymentType;
@@ -12,6 +13,7 @@ import java.time.LocalDateTime;
 @Entity
 @Table(name = "payments")
 public class Payment {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -51,6 +53,15 @@ public class Payment {
     @Column(columnDefinition = "TEXT")
     private String notes;
 
+    @Column(columnDefinition = "TEXT")
+    private String reversalReason;
+
+    private LocalDateTime reversedAt;
+
+    @Column(length = 100)
+    private String reversedBy;
+
+    @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
 
     @PrePersist
@@ -59,12 +70,21 @@ public class Payment {
         if (paymentDate == null) {
             paymentDate = LocalDate.now();
         }
-        if (paymentNumber == null && id != null) {
-            paymentNumber = "PAY-" + String.format("%05d", id);
-        }
     }
 
     public Payment() {}
+
+    @Transient
+    @JsonProperty("orderNumber")
+    public String getOrderNumber() {
+        return salesOrder != null ? salesOrder.getOrderNumber() : null;
+    }
+
+    @Transient
+    @JsonProperty("salesOrderId")
+    public Long getSalesOrderId() {
+        return salesOrder != null ? salesOrder.getId() : null;
+    }
 
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
@@ -88,6 +108,12 @@ public class Payment {
     public void setReferenceNumber(String referenceNumber) { this.referenceNumber = referenceNumber; }
     public String getNotes() { return notes; }
     public void setNotes(String notes) { this.notes = notes; }
+    public String getReversalReason() { return reversalReason; }
+    public void setReversalReason(String reversalReason) { this.reversalReason = reversalReason; }
+    public LocalDateTime getReversedAt() { return reversedAt; }
+    public void setReversedAt(LocalDateTime reversedAt) { this.reversedAt = reversedAt; }
+    public String getReversedBy() { return reversedBy; }
+    public void setReversedBy(String reversedBy) { this.reversedBy = reversedBy; }
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
 }

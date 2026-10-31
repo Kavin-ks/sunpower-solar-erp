@@ -53,22 +53,13 @@ public class DataInitializationService implements CommandLineRunner {
     private CustomerRepository customerRepository;
 
     @Autowired
-    private EnquiryRepository enquiryRepository;
-
-    @Autowired
-    private EnquiryActivityRepository enquiryActivityRepository;
+    private SalesOrderRepository salesOrderRepository;
 
     @Autowired
     private SiteSurveyRepository siteSurveyRepository;
 
     @Autowired
     private QuotationRepository quotationRepository;
-
-    @Autowired
-    private QuotationItemRepository quotationItemRepository;
-
-    @Autowired
-    private SalesOrderRepository salesOrderRepository;
 
     @Autowired
     private OrderItemRepository orderItemRepository;
@@ -81,30 +72,6 @@ public class DataInitializationService implements CommandLineRunner {
 
     @Autowired
     private DispatchItemRepository dispatchItemRepository;
-
-    @Autowired
-    private WarrantyRepository warrantyRepository;
-
-    @Autowired
-    private InstallationRepository installationRepository;
-
-    @Autowired
-    private InstallationTechnicianRepository installationTechnicianRepository;
-
-    @Autowired
-    private ServiceTicketRepository serviceTicketRepository;
-
-    @Autowired
-    private ServiceActivityRepository serviceActivityRepository;
-
-    @Autowired
-    private ExpenseRepository expenseRepository;
-
-    @Autowired
-    private InvoiceRepository invoiceRepository;
-
-    @Autowired
-    private SubsidyApplicationRepository subsidyApplicationRepository;
 
     @Override
     @Transactional
@@ -148,9 +115,8 @@ public class DataInitializationService implements CommandLineRunner {
                 {"Ravi Chandran", "9840112246", "ravi.tech@sunpower.com", "Lightning Arrestor & Grounding"},
                 {"Vigneshwar M", "9840112247", "vignesh.tech@sunpower.com", "Preventive Maintenance & Panel Cleaning"}
         };
-        List<Technician> technicians = new ArrayList<>();
         for (String[] t : techData) {
-            technicians.add(technicianRepository.save(new Technician(t[0], t[1], t[2], t[3])));
+            technicianRepository.save(new Technician(t[0], t[1], t[2], t[3]));
         }
 
         // 4. Product Categories
@@ -166,31 +132,31 @@ public class DataInitializationService implements CommandLineRunner {
         // 5. Products
         Product pPanel = createProduct("PANEL-MONO-540W", "Mono PERC Half-Cut 540W Solar Panel", catPanels,
                 "Tier-1 540W High Efficiency Monocrystalline Module", "pcs", new BigDecimal("10500.00"), new BigDecimal("13200.00"),
-                180, 20, false, 240); // 20 years warranty (240 months)
+                180, 20, false, 240);
 
         Product pInv3k = createProduct("INV-OG-3KW-GROWATT", "Growatt 3 kW Single Phase On-Grid Inverter", catInverters,
                 "Dual MPPT, IP65 protection, Wi-Fi smart monitoring", "unit", new BigDecimal("26000.00"), new BigDecimal("34500.00"),
-                25, 4, true, 24); // 2 years warranty (24 months), serialized
+                25, 4, true, 24);
 
         Product pInv5k = createProduct("INV-OG-5KW-GROWATT", "Growatt 5 kW Three Phase On-Grid Inverter", catInverters,
                 "Dual MPPT 3-Phase, integrated DC disconnect switch", "unit", new BigDecimal("38000.00"), new BigDecimal("49500.00"),
-                20, 3, true, 24); // 2 years warranty, serialized
+                20, 3, true, 24);
 
         Product pInv3kOff = createProduct("INV-OFF-3KW-HYBRID", "3 kW Off-Grid Hybrid Solar Inverter", catInverters,
                 "Pure sine wave hybrid inverter with built-in solar charger", "unit", new BigDecimal("32000.00"), new BigDecimal("42000.00"),
-                15, 3, true, 24); // 2 years, serialized
+                15, 3, true, 24);
 
         Product pInv5kOff = createProduct("INV-OFF-5KW-HYBRID", "5 kW Off-Grid Hybrid Solar Inverter", catInverters,
                 "High surge capacity hybrid inverter for independent power", "unit", new BigDecimal("46000.00"), new BigDecimal("59000.00"),
-                12, 2, true, 24); // 2 years, serialized
+                12, 2, true, 24);
 
         Product pBattery = createProduct("BAT-LITH-5KWH", "Solar Lithium LiFePO4 Battery 5 kWh 48V", catBatteries,
                 "6000+ cycle life, smart BMS integrated storage bank", "unit", new BigDecimal("75000.00"), new BigDecimal("98000.00"),
-                18, 2, true, 24); // 2 years warranty, serialized
+                18, 2, true, 24);
 
         Product pController = createProduct("CC-MPPT-60A", "Smart MPPT Charge Controller 60A", catControllers,
                 "Advanced tracking efficiency 99.5%, LCD display", "unit", new BigDecimal("8500.00"), new BigDecimal("12000.00"),
-                30, 5, true, 24); // 2 years, serialized
+                30, 5, true, 24);
 
         Product pWiringBox = createProduct("BOS-ACDC-BOX", "Solar AC/DC Distribution Box with SPD & MCB", catWiring,
                 "Type-II Surge Protection Device and DC fuses integrated", "set", new BigDecimal("3500.00"), new BigDecimal("5200.00"),
@@ -217,7 +183,6 @@ public class DataInitializationService implements CommandLineRunner {
                 999, 10, false, 12);
 
         // 6. Predefined Solar Packages from 1 kW to 5 kW for On-Grid and Off-Grid
-        // On-Grid 1kW to 5kW
         createPackageWithBOM("1 kW On-Grid Solar System", SystemType.ON_GRID, new BigDecimal("1.00"),
                 "Ideal for compact homes with monthly bill ₹1,000 - ₹2,000", new BigDecimal("65000.00"),
                 Arrays.asList(
@@ -232,7 +197,7 @@ public class DataInitializationService implements CommandLineRunner {
                         new BOMItemDef(pInstallService, 1, "Installation & Testing Service")
                 ));
 
-        SolarPackage pkg3kOn = createPackageWithBOM("3 kW On-Grid Solar System", SystemType.ON_GRID, new BigDecimal("3.00"),
+        createPackageWithBOM("3 kW On-Grid Solar System", SystemType.ON_GRID, new BigDecimal("3.00"),
                 "Most popular package for 3-4 BHK homes. Offsets 350-400 units monthly electricity bill", new BigDecimal("185000.00"),
                 Arrays.asList(
                         new BOMItemDef(pPanel, 6, "Solar Panel Set (Hardware)"),
@@ -246,7 +211,7 @@ public class DataInitializationService implements CommandLineRunner {
                         new BOMItemDef(pInstallService, 1, "Fitting, Testing and Commissioning")
                 ));
 
-        SolarPackage pkg5kOn = createPackageWithBOM("5 kW On-Grid Solar System", SystemType.ON_GRID, new BigDecimal("5.00"),
+        createPackageWithBOM("5 kW On-Grid Solar System", SystemType.ON_GRID, new BigDecimal("5.00"),
                 "High power rooftop system for large residences, villas and small factories", new BigDecimal("295000.00"),
                 Arrays.asList(
                         new BOMItemDef(pPanel, 10, "Solar Panel Set (Hardware)"),
@@ -260,8 +225,7 @@ public class DataInitializationService implements CommandLineRunner {
                         new BOMItemDef(pInstallService, 1, "Fitting and Commissioning")
                 ));
 
-        // Off-Grid 3kW and 5kW with Battery Storage
-        SolarPackage pkg3kOff = createPackageWithBOM("3 kW Off-Grid Solar System", SystemType.OFF_GRID, new BigDecimal("3.00"),
+        createPackageWithBOM("3 kW Off-Grid Solar System", SystemType.OFF_GRID, new BigDecimal("3.00"),
                 "Complete energy independence with 5 kWh Lithium storage backup for zero blackout areas", new BigDecimal("298000.00"),
                 Arrays.asList(
                         new BOMItemDef(pPanel, 6, "Solar Panel Set"),
@@ -291,7 +255,7 @@ public class DataInitializationService implements CommandLineRunner {
                         new BOMItemDef(pInstallService, 1, "Installation & Testing")
                 ));
 
-        // 7. Initial Serial Numbers in Stock
+        // 7. Initial Serial Numbers in Stock (available for real dispatches)
         registerSerial("INV-GW-3K-1001", pInv3k, "PO-2026-01", "Bay A - Shelf 1");
         registerSerial("INV-GW-3K-1002", pInv3k, "PO-2026-01", "Bay A - Shelf 1");
         registerSerial("INV-GW-3K-1003", pInv3k, "PO-2026-02", "Bay A - Shelf 2");
@@ -303,338 +267,6 @@ public class DataInitializationService implements CommandLineRunner {
         registerSerial("CC-MPPT-60A-4001", pController, "PO-2026-06", "Electronics Rack 1");
         registerSerial("CC-MPPT-60A-4002", pController, "PO-2026-06", "Electronics Rack 2");
 
-        // 8. Demo Customers & Complete Workflow Samples
-        // Sample Customer A: Rajesh Kumar (Residential) - Ready for Quotation
-        Customer custA = new Customer();
-        custA.setFullName("Rajesh Kumar");
-        custA.setPhone("9841234567");
-        custA.setEmail("rajesh.kumar@gmail.com");
-        custA.setAddress("42, Avinashi Road, Peelamedu");
-        custA.setCity("Coimbatore");
-        custA.setPincode("641004");
-        custA.setCustomerType(CustomerType.RESIDENTIAL);
-        custA = customerRepository.save(custA);
-
-        Enquiry enqA = new Enquiry();
-        enqA.setCustomer(custA);
-        enqA.setEnquiryNumber("ENQ-00001");
-        enqA.setRequestedCapacityKw(new BigDecimal("3.00"));
-        enqA.setSystemType(SystemType.ON_GRID);
-        enqA.setSubsidyRequired(true);
-        enqA.setMonthlyElectricityBill(new BigDecimal("4200.00"));
-        enqA.setSource(EnquirySource.WEBSITE);
-        enqA.setStatus(EnquiryStatus.SURVEY_APPROVED);
-        enqA.setAssignedTo(userRepository.findByUsername("sales").orElse(null));
-        enqA.setNotes("Customer interested in PM Surya Ghar subsidy scheme. Flat concrete rooftop.");
-        enqA = enquiryRepository.save(enqA);
-
-        SiteSurvey survA = new SiteSurvey();
-        survA.setSurveyNumber("SRV-00001");
-        survA.setCustomer(custA);
-        survA.setEnquiry(enqA);
-        survA.setTechnician(technicians.get(0));
-        survA.setScheduledDate(LocalDate.now().minusDays(2));
-        survA.setRoofDirection("South");
-        survA.setRoofTilt("15 degrees");
-        survA.setAvailableRoofAreaSqFt(new BigDecimal("380.00"));
-        survA.setCableDistanceMeters(new BigDecimal("22.50"));
-        survA.setShadingAssessment("100% Shadow-free throughout daylight hours");
-        survA.setGridSuitability("Single Phase 230V Suitable, Grid transformer is within 80m");
-        survA.setSurveyNotes("Rooftop structure is solid RCC slab. Ideal orientation towards South.");
-        survA.setStatus(SurveyStatus.APPROVED);
-        survA.setApprovedBy("Karthik Raja");
-        survA.setApprovalDate(LocalDate.now().minusDays(1).atStartOfDay());
-        survA.setApprovalNotes("Approved for 3 kW On-Grid installation. Recommended dual MPPT inverter.");
-        siteSurveyRepository.save(survA);
-
-        // Sample Customer B: Apex Garments Manufacturing (Small Factory) - Order Confirmed & Dispatched & Installed
-        Customer custB = new Customer();
-        custB.setFullName("Apex Garments Manufacturing Ltd");
-        custB.setPhone("9894123456");
-        custB.setEmail("procurement@apexgarments.com");
-        custB.setAddress("Plot 18, SIDCO Industrial Estate");
-        custB.setCity("Tiruppur");
-        custB.setPincode("641603");
-        custB.setCustomerType(CustomerType.SMALL_FACTORY);
-        custB = customerRepository.save(custB);
-
-        SiteSurvey survB = new SiteSurvey();
-        survB.setSurveyNumber("SRV-00002");
-        survB.setCustomer(custB);
-        survB.setTechnician(technicians.get(1));
-        survB.setScheduledDate(LocalDate.now().minusDays(15));
-        survB.setRoofDirection("South-East");
-        survB.setRoofTilt("20 degrees");
-        survB.setAvailableRoofAreaSqFt(new BigDecimal("750.00"));
-        survB.setCableDistanceMeters(new BigDecimal("45.00"));
-        survB.setShadingAssessment("Clear industrial roof shed with high daylight exposure");
-        survB.setGridSuitability("3-Phase 415V Industrial connection verified");
-        survB.setStatus(SurveyStatus.APPROVED);
-        survB.setApprovedBy("Ganesh Moorthy");
-        survB.setApprovalDate(LocalDate.now().minusDays(14).atStartOfDay());
-        survB.setApprovalNotes("Approved for 5 kW industrial On-Grid system");
-        survB = siteSurveyRepository.save(survB);
-
-        Quotation quoteB = new Quotation();
-        quoteB.setQuotationNumber("QT-00001");
-        quoteB.setCustomer(custB);
-        quoteB.setSiteSurvey(survB);
-        quoteB.setSolarPackage(pkg5kOn);
-        quoteB.setSystemType(SystemType.ON_GRID);
-        quoteB.setCapacityKw(new BigDecimal("5.00"));
-        quoteB.setSubtotal(new BigDecimal("260000.00"));
-        quoteB.setTaxAmount(new BigDecimal("13000.00"));
-        quoteB.setInstallationFee(new BigDecimal("22000.00"));
-        quoteB.setTotalAmount(new BigDecimal("295000.00"));
-        quoteB.setQuotationDate(LocalDate.now().minusDays(13));
-        quoteB.setValidityDate(LocalDate.now().plusDays(17));
-        quoteB.setStatus(QuotationStatus.ACCEPTED);
-        quoteB.setNotes("Industrial package with 5 kW Three Phase Inverter");
-        quoteB = quotationRepository.save(quoteB);
-
-        // Add quotation items
-        QuotationItem qi1 = new QuotationItem(quoteB, pPanel, 10, pPanel.getSellingPrice());
-        QuotationItem qi2 = new QuotationItem(quoteB, pInv5k, 1, pInv5k.getSellingPrice());
-        QuotationItem qi3 = new QuotationItem(quoteB, pController, 1, pController.getSellingPrice());
-        QuotationItem qi4 = new QuotationItem(quoteB, pWiringBox, 2, pWiringBox.getSellingPrice());
-        QuotationItem qi5 = new QuotationItem(quoteB, pCable, 100, pCable.getSellingPrice());
-        QuotationItem qi6 = new QuotationItem(quoteB, pStands, 5, pStands.getSellingPrice());
-        QuotationItem qi7 = new QuotationItem(quoteB, pEarthing, 2, pEarthing.getSellingPrice());
-        quotationItemRepository.saveAll(Arrays.asList(qi1, qi2, qi3, qi4, qi5, qi6, qi7));
-
-        SalesOrder orderB = new SalesOrder();
-        orderB.setOrderNumber("ORD-00001");
-        orderB.setCustomer(custB);
-        orderB.setQuotation(quoteB);
-        orderB.setSolarPackage(pkg5kOn);
-        orderB.setSystemType(SystemType.ON_GRID);
-        orderB.setCapacityKw(new BigDecimal("5.00"));
-        orderB.setTotalAmount(new BigDecimal("295000.00"));
-        orderB.setAdvanceRequired(new BigDecimal("59000.00"));
-        orderB.setTotalPaid(new BigDecimal("295000.00")); // Paid in full
-        orderB.setRemainingBalance(BigDecimal.ZERO);
-        orderB.setOrderDate(LocalDate.now().minusDays(10));
-        orderB.setStatus(OrderStatus.COMPLETED);
-        orderB = salesOrderRepository.save(orderB);
-
-        OrderItem oi1 = new OrderItem(orderB, pPanel, 10, pPanel.getSellingPrice());
-        OrderItem oi2 = new OrderItem(orderB, pInv5k, 1, pInv5k.getSellingPrice());
-        OrderItem oi3 = new OrderItem(orderB, pController, 1, pController.getSellingPrice());
-        orderItemRepository.saveAll(Arrays.asList(oi1, oi2, oi3));
-
-        // Advance payment + balance payment
-        Payment payB1 = new Payment();
-        payB1.setPaymentNumber("PAY-00001");
-        payB1.setSalesOrder(orderB);
-        payB1.setCustomer(custB);
-        payB1.setAmount(new BigDecimal("100000.00"));
-        payB1.setPaymentDate(LocalDate.now().minusDays(10));
-        payB1.setMethod(PaymentMethod.BANK_TRANSFER);
-        payB1.setType(PaymentType.ADVANCE);
-        payB1.setReferenceNumber("NEFT-SBIN2026-90412");
-        payB1.setStatus(PaymentStatus.SUCCESS);
-        payB1.setNotes("Advance 34% transfer received");
-        paymentRepository.save(payB1);
-
-        Payment payB2 = new Payment();
-        payB2.setPaymentNumber("PAY-00002");
-        payB2.setSalesOrder(orderB);
-        payB2.setCustomer(custB);
-        payB2.setAmount(new BigDecimal("195000.00"));
-        payB2.setPaymentDate(LocalDate.now().minusDays(5));
-        payB2.setMethod(PaymentMethod.BANK_TRANSFER);
-        payB2.setType(PaymentType.FULL);
-        payB2.setReferenceNumber("RTGS-HDFC2026-44129");
-        payB2.setStatus(PaymentStatus.SUCCESS);
-        payB2.setNotes("Final balance settlement before handover");
-        paymentRepository.save(payB2);
-
-        // Serial number assignment & dispatch for orderB
-        SerialNumber snInv5k = registerSerial("INV-GW-5K-INSTALLED-9901", pInv5k, "PO-2026-03", "Factory Site");
-        snInv5k.setStatus(SerialNumberStatus.INSTALLED);
-        snInv5k.setSalesOrder(orderB);
-        snInv5k.setCustomer(custB);
-        snInv5k.setDispatchDate(LocalDate.now().minusDays(6));
-        snInv5k.setDeliveryDate(LocalDate.now().minusDays(5));
-        serialNumberRepository.save(snInv5k);
-
-        SerialNumber snCC = registerSerial("CC-MPPT-60A-INSTALLED-8801", pController, "PO-2026-06", "Factory Site");
-        snCC.setStatus(SerialNumberStatus.INSTALLED);
-        snCC.setSalesOrder(orderB);
-        snCC.setCustomer(custB);
-        snCC.setDispatchDate(LocalDate.now().minusDays(6));
-        snCC.setDeliveryDate(LocalDate.now().minusDays(5));
-        serialNumberRepository.save(snCC);
-
-        Dispatch dispB = new Dispatch();
-        dispB.setDispatchNumber("DSP-00001");
-        dispB.setSalesOrder(orderB);
-        dispB.setCustomer(custB);
-        dispB.setStatus(DispatchStatus.DELIVERED);
-        dispB.setDispatchDate(LocalDate.now().minusDays(6));
-        dispB.setDeliveryDate(LocalDate.now().minusDays(5));
-        dispB.setVehicleNumber("TN-38-BZ-4109");
-        dispB.setDriverName("V. Murugan");
-        dispB.setDriverPhone("9842199881");
-        dispB = dispatchRepository.save(dispB);
-
-        DispatchItem di1 = new DispatchItem(dispB, pInv5k, 1, snInv5k);
-        DispatchItem di2 = new DispatchItem(dispB, pController, 1, snCC);
-        DispatchItem di3 = new DispatchItem(dispB, pPanel, 10, null);
-        dispatchItemRepository.saveAll(Arrays.asList(di1, di2, di3));
-
-        // Warranties activated for orderB
-        Warranty w1 = new Warranty();
-        w1.setWarrantyNumber("WR-00001");
-        w1.setSerialNumber(snInv5k);
-        w1.setCustomer(custB);
-        w1.setSalesOrder(orderB);
-        w1.setProduct(pInv5k);
-        w1.setDeliveryDate(LocalDate.now().minusDays(5));
-        w1.setWarrantyStartDate(LocalDate.now().minusDays(5));
-        w1.setWarrantyEndDate(LocalDate.now().minusDays(5).plusYears(2)); // 2 years
-        w1.setDurationMonths(24);
-        w1.setStatus(WarrantyStatus.ACTIVE);
-        w1.setTermsAndConditions("2-year comprehensive manufacturer inverter warranty");
-        warrantyRepository.save(w1);
-
-        Warranty w2 = new Warranty();
-        w2.setWarrantyNumber("WR-00002");
-        w2.setCustomer(custB);
-        w2.setSalesOrder(orderB);
-        w2.setProduct(pPanel);
-        w2.setDeliveryDate(LocalDate.now().minusDays(5));
-        w2.setWarrantyStartDate(LocalDate.now().minusDays(5));
-        w2.setWarrantyEndDate(LocalDate.now().minusDays(5).plusYears(20)); // 20 years
-        w2.setDurationMonths(240);
-        w2.setStatus(WarrantyStatus.ACTIVE);
-        w2.setTermsAndConditions("20-year linear power output performance warranty");
-        warrantyRepository.save(w2);
-
-        // Installation record for orderB
-        Installation instB = new Installation();
-        instB.setInstallationNumber("INS-00001");
-        instB.setSalesOrder(orderB);
-        instB.setCustomer(custB);
-        instB.setScheduledDate(LocalDate.now().minusDays(4));
-        instB.setActualStartTime(LocalDate.now().minusDays(4).atTime(9, 0));
-        instB.setActualFinishTime(LocalDate.now().minusDays(4).atTime(17, 30));
-        instB.setInstalledCapacityKw(new BigDecimal("5.00"));
-        instB.setPanelMountingConfirmed(true);
-        instB.setWiringConfirmed(true);
-        instB.setEarthingConfirmed(true);
-        instB.setTestingPassed(true);
-        instB.setTestingNotes("Peak noon generation measured 4.92 kW. Three-phase grid balance confirmed within 1.5% tolerance.");
-        instB.setCustomerSigneeName("S. Natarajan (Plant Manager)");
-        instB.setCustomerAcceptanceNote("Installation completed cleanly, generation confirmed on inverter digital display.");
-        instB.setCustomerSignedAt(LocalDate.now().minusDays(4).atTime(17, 45));
-        instB.setStatus(InstallationStatus.COMPLETED);
-        instB = installationRepository.save(instB);
-
-        InstallationTechnician it1 = new InstallationTechnician(instB, technicians.get(0), "Lead Electrician");
-        it1.setHoursWorked(new BigDecimal("8.50"));
-        it1.setPayoutAmount(new BigDecimal("2500.00"));
-        InstallationTechnician it2 = new InstallationTechnician(instB, technicians.get(2), "Mounting Specialist");
-        it2.setHoursWorked(new BigDecimal("8.50"));
-        it2.setPayoutAmount(new BigDecimal("2100.00"));
-        installationTechnicianRepository.saveAll(Arrays.asList(it1, it2));
-
-        // Invoice for orderB
-        Invoice invB = new Invoice();
-        invB.setInvoiceNumber("INV-00001");
-        invB.setSalesOrder(orderB);
-        invB.setCustomer(custB);
-        invB.setInvoiceDate(LocalDate.now().minusDays(10));
-        invB.setDueDate(LocalDate.now().plusDays(5));
-        invB.setSubtotal(new BigDecimal("282000.00")); // Hardware 260k + Installation 22k
-        invB.setTaxAmount(new BigDecimal("13000.00"));
-        invB.setTotalAmount(new BigDecimal("295000.00")); // Reconciled: 282k + 13k = 295k
-        invB.setPaidAmount(new BigDecimal("295000.00"));
-        invB.setBalanceAmount(BigDecimal.ZERO);
-        invB.setStatus("PAID");
-        invoiceRepository.save(invB);
-
-        // Job Expenses for orderB
-        Expense expB1 = new Expense();
-        expB1.setExpenseNumber("EXP-00001");
-        expB1.setCategory(ExpenseCategory.TECHNICIAN_PAYOUT);
-        expB1.setSalesOrder(orderB);
-        expB1.setAmount(new BigDecimal("4600.00"));
-        expB1.setExpenseDate(LocalDate.now().minusDays(4));
-        expB1.setTitle("Installation Crew Labour Payout");
-        expB1.setDescription("Payout to Karthik and Selvakumar for job INS-00001");
-        expB1.setPaidTo("Crew Lead");
-        expB1.setPaymentMethod("Bank Transfer");
-        expenseRepository.save(expB1);
-
-        Expense expB2 = new Expense();
-        expB2.setExpenseNumber("EXP-00002");
-        expB2.setCategory(ExpenseCategory.TRANSPORT);
-        expB2.setSalesOrder(orderB);
-        expB2.setAmount(new BigDecimal("3500.00"));
-        expB2.setExpenseDate(LocalDate.now().minusDays(6));
-        expB2.setTitle("Logistics & Truck Freight to Tiruppur");
-        expB2.setDescription("Transport of 10 panels and 5kW inverter to site");
-        expB2.setPaidTo("FastFreight Logistics");
-        expB2.setPaymentMethod("UPI");
-        expenseRepository.save(expB2);
-
-        // Sample Customer C: Breakdown / After-Sales Service Scenario (Meenakshi Sundaram)
-        // Fault Code E04, Inverter Error, Covered by Valid Warranty!
-        Customer custC = new Customer();
-        custC.setFullName("Meenakshi Sundaram");
-        custC.setPhone("9842556677");
-        custC.setEmail("meenakshi.s@gmail.com");
-        custC.setAddress("12, West Masi Street");
-        custC.setCity("Madurai");
-        custC.setPincode("625001");
-        custC.setCustomerType(CustomerType.RESIDENTIAL);
-        custC = customerRepository.save(custC);
-
-        SerialNumber snBreakdown = registerSerial("INV-GW-3K-FAULTY-007", pInv3k, "PO-2025-08", "Customer Rooftop");
-        snBreakdown.setStatus(SerialNumberStatus.INSTALLED);
-        snBreakdown.setCustomer(custC);
-        snBreakdown.setDispatchDate(LocalDate.now().minusMonths(6));
-        snBreakdown.setDeliveryDate(LocalDate.now().minusMonths(6));
-        serialNumberRepository.save(snBreakdown);
-
-        Warranty wBreakdown = new Warranty();
-        wBreakdown.setWarrantyNumber("WR-00003");
-        wBreakdown.setSerialNumber(snBreakdown);
-        wBreakdown.setCustomer(custC);
-        wBreakdown.setSalesOrder(orderB); // Linked reference
-        wBreakdown.setProduct(pInv3k);
-        wBreakdown.setDeliveryDate(LocalDate.now().minusMonths(6));
-        wBreakdown.setWarrantyStartDate(LocalDate.now().minusMonths(6));
-        wBreakdown.setWarrantyEndDate(LocalDate.now().plusMonths(18)); // Valid for 18 more months!
-        wBreakdown.setDurationMonths(24);
-        wBreakdown.setStatus(WarrantyStatus.ACTIVE);
-        wBreakdown.setTermsAndConditions("2-year manufacturer comprehensive warranty");
-        wBreakdown = warrantyRepository.save(wBreakdown);
-
-        ServiceTicket ticketBreakdown = new ServiceTicket();
-        ticketBreakdown.setTicketNumber("TCK-00001");
-        ticketBreakdown.setCustomer(custC);
-        ticketBreakdown.setSerialNumber(snBreakdown);
-        ticketBreakdown.setWarranty(wBreakdown);
-        ticketBreakdown.setComplaintDescription("Customer reports inverter LCD display showing Error Code E04 and zero power generation since morning.");
-        ticketBreakdown.setFaultCode("ERR-E04");
-        ticketBreakdown.setReportedDate(LocalDate.now());
-        ticketBreakdown.setAssignedTechnician(technicians.get(9)); // Muthukumar (Troubleshooting expert)
-        ticketBreakdown.setStatus(TicketStatus.OPEN);
-        ticketBreakdown.setUnderWarranty(true);
-        ticketBreakdown.setLaborCharges(BigDecimal.ZERO);
-        ticketBreakdown.setPartsCharges(BigDecimal.ZERO);
-        ticketBreakdown.setTotalCustomerCharges(BigDecimal.ZERO);
-        ticketBreakdown = serviceTicketRepository.save(ticketBreakdown);
-
-        ServiceActivity sAct = new ServiceActivity(
-                ticketBreakdown,
-                "TICKET_OPENED",
-                "Service ticket opened for Inverter E04 fault code. Verified active 2-year warranty (Expires " + wBreakdown.getWarrantyEndDate() + "). Covered 100% free of charge.",
-                "Priya Nair (Support)"
-        );
-        serviceActivityRepository.save(sAct);
     }
 
     private void createUser(String username, String fullName, String email, String phone, Role role) {
