@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { api } from '../api/client';
-import { Installation, SalesOrder, Technician } from '../types';
+import { Installation, SalesOrder, Technician, SerialNumber } from '../types';
 import { StatusBadge } from '../components/ui/Badge';
 import { useAuth } from '../context/AuthContext';
 import {
@@ -14,6 +14,14 @@ import {
   UserCheck,
   ShieldCheck,
   FileCheck2,
+  ScanLine,
+  Check,
+  AlertTriangle,
+  Play,
+  RotateCcw,
+  Sparkles,
+  Phone,
+  MapPin,
 } from 'lucide-react';
 import { useLocation } from 'react-router-dom';
 
@@ -23,9 +31,22 @@ export const InstallationsPage: React.FC = () => {
   const [technicians, setTechnicians] = useState<Technician[]>([]);
   const [loading, setLoading] = useState(true);
 
+  // Modals
   const [showScheduleModal, setShowScheduleModal] = useState(false);
   const [showCompleteModal, setShowCompleteModal] = useState(false);
   const [selectedInstallation, setSelectedInstallation] = useState<Installation | null>(null);
+
+  // Site Product Verification Scanner Modal
+  const [showVerifyModal, setShowVerifyModal] = useState(false);
+  const [orderSerials, setOrderSerials] = useState<SerialNumber[]>([]);
+  const [scannedBarcode, setScannedBarcode] = useState('');
+  const [verifying, setVerifying] = useState(false);
+  const [scanFeedback, setScanFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+
+  // Camera Barcode Scanning State
+  const [cameraActive, setCameraActive] = useState(false);
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
 
   // Schedule Form State
   const [selectedOrderId, setSelectedOrderId] = useState('');
@@ -33,7 +54,7 @@ export const InstallationsPage: React.FC = () => {
   const [selectedTechIds, setSelectedTechIds] = useState<number[]>([]);
   const [workNotes, setWorkNotes] = useState('');
 
-  // Complete Form State (Phone & Tablet Friendly Field Form)
+  // Complete Form State
   const [installedCapacityKw, setInstalledCapacityKw] = useState('');
   const [panelMounting, setPanelMounting] = useState(true);
   const [wiringConfirmed, setWiringConfirmed] = useState(true);
@@ -48,6 +69,9 @@ export const InstallationsPage: React.FC = () => {
 
   useEffect(() => {
     fetchInitialData();
+    return () => {
+      stopCamera();
+    };
   }, []);
 
   useEffect(() => {
@@ -81,6 +105,101 @@ export const InstallationsPage: React.FC = () => {
       console.error(err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const playBeep = () => {
+    try {
+      const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.frequency.setValueAtTime(880, ctx.currentTime);
+      gain.gain.setValueAtTime(0.15, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.15);
+      osc.start(ctx.currentTime);
+      osc.stop(ctx.currentTime + 0.15);
+    } catch (e) {
+      // AudioContext not available or blocked
+    }
+  };
+
+  const startCamera = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: 'environment' },
+      });
+      streamRef.current = stream;
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        videoRef.current.play();
+      }
+      setCameraActive(true);
+    } catch (err) {
+      console.warn('Camera access error:', err);
+      alert('Could not access live camera. Please use USB Barcode scanner input or manual entry below.');
+    }
+  };
+
+  const stopCamera = () => {
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((track) => track.stop());
+      streamRef.current = null;
+    }
+    setCameraActive(false);
+  };
+
+  const openVerifyModal = async (inst: Installation) => {
+    setSelectedInstallation(inst);
+    setScanFeedback(null);
+    setScannedBarcode('');
+    setShowVerifyModal(true);
+    try {
+      const res = await api.get(`/serial-numbers/order/${inst.salesOrder.id}`);
+      setOrderSerials(res.data);
+    } catch (err) {
+      console.error('Failed to load order serials:', err);
+    }
+  };
+
+  const handleBarcodeVerify = async (barcodeToScan?: string) => {
+    const code = barcodeToScan || scannedBarcode.trim();
+    if (!code || !selectedInstallation) return;
+    setVerifying(true);
+    setScanFeedback(null);
+    try {
+      const res = await api.post(`/installations/${selectedInstallation.id}/verify-product`, {
+        barcode: code,
+      });
+      playBeep();
+      setScanFeedback({
+        type: 'success',
+        message: `✓ Verified: Serial ${code} for product "${res.data.product?.name}" marked SITE_RECEIVED!`,
+      });
+      setScannedBarcode('');
+
+      // Refresh serials for this order
+      const serialRes = await api.get(`/serial-numbers/order/${selectedInstallation.salesOrder.id}`);
+      setOrderSerials(serialRes.data);
+      fetchInitialData();
+    } catch (err: any) {
+      setScanFeedback({
+        type: 'error',
+        message: err.response?.data?.message || `Barcode ${code} rejected: not part of order dispatch or invalid.`,
+      });
+    } finally {
+      setVerifying(false);
+    }
+  };
+
+  const handleStartInstallation = async (inst: Installation) => {
+    try {
+      await api.post(`/installations/${inst.id}/start`, {});
+      fetchInitialData();
+      alert(`Installation for Job #${inst.installationNumber} officially started. Status set to IN_PROGRESS.`);
+    } catch (err: any) {
+      alert(err.response?.data?.message || 'Failed to start installation');
     }
   };
 
@@ -129,7 +248,7 @@ export const InstallationsPage: React.FC = () => {
       });
       setShowCompleteModal(false);
       fetchInitialData();
-      alert('Installation successfully marked completed! Customer digital sign-off and technician disbursements recorded.');
+      alert('Installation successfully marked completed! Product serials updated to INSTALLED, and manufacturer warranties activated from actual completion date.');
     } catch (err: any) {
       alert(err.response?.data?.message || 'Failed to complete installation');
     }
@@ -154,7 +273,7 @@ export const InstallationsPage: React.FC = () => {
         <div>
           <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Installation Field Operations</h1>
           <p className="text-sm text-slate-500">
-            Crew dispatching (15 technicians), mounting, earthing, generation testing, and customer digital sign-off
+            Technician barcode site verification, physical mounting, start tracking, testing, and completion sign-off
           </p>
         </div>
 
@@ -169,6 +288,20 @@ export const InstallationsPage: React.FC = () => {
         )}
       </div>
 
+      {/* Lifecycle Flow Banner */}
+      <div className="bg-slate-50 border border-slate-200 p-3.5 rounded-xl text-xs text-slate-700 flex items-center justify-between">
+        <div className="flex items-center space-x-3">
+          <ShieldCheck className="w-5 h-5 text-emerald-600 shrink-0" />
+          <p>
+            <strong>Serialized Product Lifecycle:</strong>{' '}
+            <code className="text-slate-800 font-mono font-semibold bg-white px-1.5 py-0.5 rounded border border-slate-200">
+              IN_STOCK → RESERVED → PICKED → DISPATCHED → SITE_RECEIVED → INSTALLED
+            </code>{' '}
+            • Warranties start strictly on actual physical installation completion date.
+          </p>
+        </div>
+      </div>
+
       {/* Installations Table */}
       <div className="bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden">
         <div className="overflow-x-auto">
@@ -177,19 +310,18 @@ export const InstallationsPage: React.FC = () => {
               <tr>
                 <th className="py-3 px-4">Job #</th>
                 <th className="py-3 px-4">Order Ref</th>
-                <th className="py-3 px-4">Customer</th>
-                <th className="py-3 px-4">Assigned Field Crew</th>
+                <th className="py-3 px-4">Customer & Address</th>
+                <th className="py-3 px-4">Field Crew</th>
                 <th className="py-3 px-4">Scheduled Date</th>
-                <th className="py-3 px-4">Capacity</th>
-                <th className="py-3 px-4">Testing Result</th>
+                <th className="py-3 px-4">Start Time</th>
                 <th className="py-3 px-4">Status</th>
-                <th className="py-3 px-4 text-right">Actions</th>
+                <th className="py-3 px-4 text-right">Technician Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
               {installations.length === 0 ? (
                 <tr>
-                  <td colSpan={9} className="py-8 text-center text-slate-400">
+                  <td colSpan={8} className="py-8 text-center text-slate-400">
                     No installation jobs currently scheduled.
                   </td>
                 </tr>
@@ -200,7 +332,7 @@ export const InstallationsPage: React.FC = () => {
                     <td className="py-3 px-4 font-mono text-slate-600">{inst.salesOrder.orderNumber}</td>
                     <td className="py-3 px-4 font-semibold text-slate-800">
                       <div>{inst.customer.fullName}</div>
-                      <div className="text-[11px] text-slate-400 font-normal">{inst.customer.city}</div>
+                      <div className="text-[11px] text-slate-400 font-normal">{inst.customer.phone} • {inst.customer.address}</div>
                     </td>
                     <td className="py-3 px-4">
                       <div className="space-y-0.5">
@@ -213,24 +345,42 @@ export const InstallationsPage: React.FC = () => {
                       </div>
                     </td>
                     <td className="py-3 px-4 whitespace-nowrap">{inst.scheduledDate}</td>
-                    <td className="py-3 px-4 font-semibold text-slate-800">
-                      {inst.installedCapacityKw || inst.salesOrder.capacityKw} kW
-                    </td>
-                    <td className="py-3 px-4">
-                      {inst.testingPassed ? (
-                        <span className="inline-flex items-center space-x-1 text-emerald-700 font-medium">
-                          <CheckCircle2 className="w-3.5 h-3.5" />
-                          <span>PASSED</span>
+                    <td className="py-3 px-4 whitespace-nowrap">
+                      {inst.actualStartTime ? (
+                        <span className="text-emerald-700 font-medium">
+                          {new Date(inst.actualStartTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                         </span>
                       ) : (
-                        <span className="text-slate-400 italic">Pending Commissioning</span>
+                        <span className="text-slate-400 italic">Not started</span>
                       )}
                     </td>
                     <td className="py-3 px-4">
                       <StatusBadge status={inst.status} />
                     </td>
-                    <td className="py-3 px-4 text-right space-x-2 whitespace-nowrap">
-                      {!isAdmin && isTech && inst.status !== 'COMPLETED' && (
+                    <td className="py-3 px-4 text-right space-x-1.5 whitespace-nowrap">
+                      {/* 1. Barcode Site Verification Button */}
+                      <button
+                        onClick={() => openVerifyModal(inst)}
+                        className="px-2.5 py-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-800 border border-indigo-200 rounded text-xs font-semibold cursor-pointer inline-flex items-center space-x-1"
+                        title="Scan dispatched products on-site before installation"
+                      >
+                        <ScanLine className="w-3.5 h-3.5" />
+                        <span>Verify Products</span>
+                      </button>
+
+                      {/* 2. Start Installation Button */}
+                      {isTech && inst.status === 'SCHEDULED' && (
+                        <button
+                          onClick={() => handleStartInstallation(inst)}
+                          className="px-2.5 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded text-xs font-semibold shadow-xs cursor-pointer inline-flex items-center space-x-1"
+                        >
+                          <Play className="w-3.5 h-3.5 fill-current" />
+                          <span>Start Job</span>
+                        </button>
+                      )}
+
+                      {/* 3. Field Sign-Off / Complete Installation Button */}
+                      {isTech && inst.status !== 'COMPLETED' && (
                         <button
                           onClick={() => {
                             setSelectedInstallation(inst);
@@ -238,19 +388,18 @@ export const InstallationsPage: React.FC = () => {
                             setCustomerSigneeName(inst.customer.fullName);
                             setShowCompleteModal(true);
                           }}
-                          className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded font-semibold text-xs shadow-xs cursor-pointer inline-flex items-center space-x-1"
+                          className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded text-xs font-semibold shadow-xs cursor-pointer inline-flex items-center space-x-1"
                         >
                           <FileCheck2 className="w-3.5 h-3.5" />
-                          <span>Field Sign-Off</span>
+                          <span>Complete & Sign</span>
                         </button>
                       )}
 
-                      {isAdmin && (
-                        <span className="text-xs text-slate-400 font-medium italic">View Only</span>
-                      )}
-
-                      {!isAdmin && inst.status === 'COMPLETED' && (
-                        <span className="text-xs text-slate-400 font-medium italic">Commissioned</span>
+                      {inst.status === 'COMPLETED' && (
+                        <span className="text-xs text-emerald-700 font-medium inline-flex items-center space-x-1">
+                          <Check className="w-3.5 h-3.5" />
+                          <span>Commissioned</span>
+                        </span>
                       )}
                     </td>
                   </tr>
@@ -260,6 +409,195 @@ export const InstallationsPage: React.FC = () => {
           </table>
         </div>
       </div>
+
+      {/* Modal: Site Product Verification & Barcode Scanner */}
+      {showVerifyModal && selectedInstallation && (
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl max-w-2xl w-full p-6 shadow-2xl max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100 mb-4">
+              <div>
+                <div className="flex items-center space-x-2">
+                  <h2 className="text-lg font-bold text-slate-900">On-Site Product Barcode Verification</h2>
+                  <span className="px-2 py-0.5 bg-indigo-50 text-indigo-700 text-xs font-semibold rounded-full border border-indigo-200">
+                    Job {selectedInstallation.installationNumber}
+                  </span>
+                </div>
+                <p className="text-xs text-slate-500">
+                  Technician physical barcode scan for Order {selectedInstallation.salesOrder.orderNumber} ({selectedInstallation.customer.fullName})
+                </p>
+              </div>
+              <button
+                onClick={() => {
+                  stopCamera();
+                  setShowVerifyModal(false);
+                }}
+                className="text-slate-400 hover:text-slate-600 text-lg"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="space-y-4 text-xs">
+              {/* Camera Scanner Stream Box */}
+              <div className="bg-slate-900 rounded-xl p-3 text-white">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center space-x-2">
+                    <Camera className="w-4 h-4 text-emerald-400" />
+                    <span className="font-semibold text-xs">Live Mobile / Tablet Camera Scanner</span>
+                  </div>
+                  {cameraActive ? (
+                    <button
+                      type="button"
+                      onClick={stopCamera}
+                      className="px-2.5 py-1 bg-rose-600 hover:bg-rose-700 rounded text-[11px] font-semibold cursor-pointer"
+                    >
+                      Stop Camera
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={startCamera}
+                      className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 rounded text-[11px] font-semibold cursor-pointer"
+                    >
+                      Start Camera
+                    </button>
+                  )}
+                </div>
+
+                {cameraActive ? (
+                  <div className="relative w-full h-44 bg-black rounded-lg overflow-hidden flex items-center justify-center border border-slate-700">
+                    <video ref={videoRef} playsInline autoPlay muted className="w-full h-full object-cover" />
+                    <div className="absolute inset-x-8 inset-y-6 border-2 border-dashed border-emerald-400 rounded pointer-events-none flex items-center justify-center">
+                      <div className="w-full h-0.5 bg-rose-500 shadow-xs shadow-rose-500 animate-pulse" />
+                    </div>
+                  </div>
+                ) : (
+                  <p className="text-[11px] text-slate-400 py-1">
+                    Camera is off. Click "Start Camera" or type/scan with USB handheld scanner below.
+                  </p>
+                )}
+              </div>
+
+              {/* USB / Manual Barcode Input Form */}
+              <div className="bg-slate-50 p-3 rounded-xl border border-slate-200 space-y-2">
+                <label className="block font-semibold text-slate-700">Scan Barcode / Enter Serial Code:</label>
+                <div className="flex gap-2">
+                  <div className="relative flex-1">
+                    <ScanLine className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+                    <input
+                      type="text"
+                      value={scannedBarcode}
+                      onChange={(e) => setScannedBarcode(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          handleBarcodeVerify();
+                        }
+                      }}
+                      placeholder="Scan product barcode (e.g. INV-OG-3KW-GROWATT-98213)..."
+                      className="w-full pl-9 pr-3 py-2 bg-white border border-slate-300 rounded-xl text-xs font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    disabled={verifying || !scannedBarcode.trim()}
+                    onClick={() => handleBarcodeVerify()}
+                    className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white rounded-xl font-semibold cursor-pointer shadow-xs"
+                  >
+                    {verifying ? 'Verifying...' : 'Verify'}
+                  </button>
+                </div>
+
+                {/* Scan Feedback Alert */}
+                {scanFeedback && (
+                  <div
+                    className={`p-2.5 rounded-lg border text-xs font-medium flex items-center space-x-2 ${
+                      scanFeedback.type === 'success'
+                        ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                        : 'bg-rose-50 text-rose-800 border-rose-200'
+                    }`}
+                  >
+                    {scanFeedback.type === 'success' ? (
+                      <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                    ) : (
+                      <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0" />
+                    )}
+                    <span>{scanFeedback.message}</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Order's Dispatched Products & Serial Numbers List */}
+              <div>
+                <h3 className="font-bold text-slate-800 mb-2">Dispatched Order Products ({orderSerials.length})</h3>
+                <div className="border border-slate-200 rounded-xl overflow-hidden">
+                  <table className="w-full text-left text-xs">
+                    <thead className="bg-slate-50 border-b border-slate-200 text-slate-700 uppercase text-[10px] font-semibold">
+                      <tr>
+                        <th className="py-2.5 px-3">Serial Code</th>
+                        <th className="py-2.5 px-3">Product Name</th>
+                        <th className="py-2.5 px-3">Status</th>
+                        <th className="py-2.5 px-3">Site Receipt</th>
+                        <th className="py-2.5 px-3 text-right">Quick Scan</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {orderSerials.length === 0 ? (
+                        <tr>
+                          <td colSpan={5} className="py-6 text-center text-slate-400 italic">
+                            No serialized products assigned to this order yet.
+                          </td>
+                        </tr>
+                      ) : (
+                        orderSerials.map((s) => (
+                          <tr key={s.id} className="hover:bg-slate-50">
+                            <td className="py-2.5 px-3 font-mono font-bold text-slate-900">{s.serialCode}</td>
+                            <td className="py-2.5 px-3 text-slate-700">{s.product?.name}</td>
+                            <td className="py-2.5 px-3">
+                              <StatusBadge status={s.status} />
+                            </td>
+                            <td className="py-2.5 px-3 text-[11px] text-slate-500">
+                              {s.siteReceivedAt ? (
+                                <span className="text-emerald-700 font-medium">
+                                  ✓ {new Date(s.siteReceivedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                </span>
+                              ) : (
+                                <span className="text-slate-400 italic">Pending scan</span>
+                              )}
+                            </td>
+                            <td className="py-2.5 px-3 text-right">
+                              <button
+                                type="button"
+                                onClick={() => handleBarcodeVerify(s.serialCode)}
+                                className="px-2 py-0.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded text-[11px] font-semibold border border-slate-200 cursor-pointer"
+                              >
+                                Scan Code
+                              </button>
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              <div className="flex justify-end pt-3 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => {
+                    stopCamera();
+                    setShowVerifyModal(false);
+                  }}
+                  className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-semibold cursor-pointer"
+                >
+                  Done
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Modal: Assign Crew & Schedule */}
       {showScheduleModal && (
@@ -301,48 +639,39 @@ export const InstallationsPage: React.FC = () => {
                 />
               </div>
 
-              {/* Multi-Select Field Technicians (Crew of 15) */}
               <div>
-                <label className="block font-semibold text-slate-700 mb-1">
-                  Assign Technicians from Crew (Select 1 to 3) *
-                </label>
-                <div className="grid grid-cols-2 gap-2 max-h-48 overflow-y-auto border border-slate-200 rounded-lg p-2 bg-slate-50">
-                  {technicians.map((t) => {
-                    const isSelected = selectedTechIds.includes(t.id);
-                    return (
-                      <div
-                        key={t.id}
-                        onClick={() => toggleTech(t.id)}
-                        className={`p-2 rounded-lg border transition cursor-pointer ${
-                          isSelected
-                            ? 'bg-emerald-50 border-emerald-500 text-emerald-900 font-semibold'
-                            : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-100'
-                        }`}
-                      >
-                        <div className="flex items-center space-x-1.5">
-                          <input
-                            type="checkbox"
-                            checked={isSelected}
-                            readOnly
-                            className="rounded text-emerald-600 pointer-events-none"
-                          />
-                          <span className="truncate">{t.name}</span>
-                        </div>
-                        <p className="text-[10px] text-slate-400 truncate mt-0.5">{t.skills}</p>
+                <label className="block font-semibold text-slate-700 mb-1">Select Field Technicians (Crew) *</label>
+                <div className="grid grid-cols-2 gap-2 max-h-40 overflow-y-auto border border-slate-200 p-2 rounded-lg">
+                  {technicians.map((tech) => (
+                    <label
+                      key={tech.id}
+                      className={`flex items-center space-x-2 p-2 rounded cursor-pointer border ${
+                        selectedTechIds.includes(tech.id) ? 'bg-emerald-50 border-emerald-300' : 'hover:bg-slate-50 border-transparent'
+                      }`}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={selectedTechIds.includes(tech.id)}
+                        onChange={() => toggleTech(tech.id)}
+                        className="rounded text-emerald-600 focus:ring-emerald-500 h-4 w-4"
+                      />
+                      <div>
+                        <div className="font-semibold text-slate-800">{tech.name}</div>
+                        <div className="text-[10px] text-slate-400">{tech.skills?.split(',')[0]}</div>
                       </div>
-                    );
-                  })}
+                    </label>
+                  ))}
                 </div>
               </div>
 
               <div>
-                <label className="block font-semibold text-slate-700 mb-1">Work Instructions / Roof Safety Notes</label>
+                <label className="block font-semibold text-slate-700 mb-1">Crew Field Notes</label>
                 <textarea
                   rows={2}
                   value={workNotes}
                   onChange={(e) => setWorkNotes(e.target.value)}
+                  placeholder="e.g. Bring safety harnesses, crane lift needed for inverter mount..."
                   className="w-full px-3 py-2 border border-slate-200 rounded-lg text-xs focus:ring-2 focus:ring-emerald-500 focus:outline-none"
-                  placeholder="e.g. Roof safety harnesses required. Elevated structure mounting bolts."
                 />
               </div>
 
@@ -350,16 +679,15 @@ export const InstallationsPage: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setShowScheduleModal(false)}
-                  className="px-4 py-2 border border-slate-200 text-slate-600 rounded-xl hover:bg-slate-50 font-medium"
+                  className="px-4 py-2 border border-slate-200 text-slate-600 rounded-xl hover:bg-slate-50 font-medium cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  disabled={eligibleOrders.length === 0}
-                  className="px-4 py-2 bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 font-semibold shadow-xs disabled:opacity-50"
+                  className="px-4 py-2 bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 font-semibold shadow-xs cursor-pointer"
                 >
-                  Confirm Crew Schedule
+                  Confirm Crew Deployment
                 </button>
               </div>
             </form>
@@ -367,15 +695,15 @@ export const InstallationsPage: React.FC = () => {
         </div>
       )}
 
-      {/* Field Technician Tablet/Phone Completion Form */}
+      {/* Modal: Complete Installation & Field Sign-Off */}
       {showCompleteModal && selectedInstallation && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl max-h-[92vh] overflow-y-auto">
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between pb-3 border-b border-slate-100 mb-4">
               <div>
-                <h2 className="text-lg font-bold text-slate-900">Field Commissioning & Sign-Off</h2>
+                <h2 className="text-lg font-bold text-slate-900">Rooftop Commissioning & Sign-Off</h2>
                 <p className="text-xs text-slate-500">
-                  Job: {selectedInstallation.installationNumber} | {selectedInstallation.customer.fullName}
+                  Job {selectedInstallation.installationNumber} • Order {selectedInstallation.salesOrder.orderNumber}
                 </p>
               </div>
               <button onClick={() => setShowCompleteModal(false)} className="text-slate-400 hover:text-slate-600 text-lg">
@@ -384,72 +712,85 @@ export const InstallationsPage: React.FC = () => {
             </div>
 
             <form onSubmit={handleCompleteSubmit} className="space-y-4 text-xs">
-              <div>
-                <label className="block font-semibold text-slate-700 mb-1">Installed Capacity (kW) *</label>
-                <input
-                  type="number"
-                  step="0.01"
-                  required
-                  value={installedCapacityKw}
-                  onChange={(e) => setInstalledCapacityKw(e.target.value)}
-                  className="w-full px-3 py-2 border border-slate-200 rounded-lg text-xs font-bold text-slate-900 focus:ring-2 focus:ring-emerald-500 focus:outline-none"
-                />
+              <div className="p-3 bg-emerald-50/70 border border-emerald-200 rounded-xl text-emerald-900 text-xs">
+                <strong>Warranty Guarantee Trigger:</strong> Marking this job completed sets actual installation completion timestamp and starts official 24-month manufacturer warranties for inverters/batteries and 240 months for solar modules.
               </div>
 
-              {/* Technical Milestone Checklists */}
-              <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 space-y-2">
-                <span className="block font-bold text-slate-800 text-xs">Technical Checklist & Verification:</span>
-
-                <label className="flex items-center space-x-2 cursor-pointer">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-semibold text-slate-700 mb-1">Installed Capacity (kW) *</label>
                   <input
-                    type="checkbox"
-                    checked={panelMounting}
-                    onChange={(e) => setPanelMounting(e.target.checked)}
-                    className="h-4 w-4 text-emerald-600 rounded"
+                    type="number"
+                    step="0.01"
+                    required
+                    value={installedCapacityKw}
+                    onChange={(e) => setInstalledCapacityKw(e.target.value)}
+                    className="w-full px-3 py-2 border border-slate-200 rounded-lg text-xs focus:ring-2 focus:ring-emerald-500 focus:outline-none"
                   />
-                  <span className="font-medium text-slate-700">1. Solar Panel Mounting & Structure Torque Confirmed</span>
-                </label>
-
-                <label className="flex items-center space-x-2 cursor-pointer">
+                </div>
+                <div>
+                  <label className="block font-semibold text-slate-700 mb-1">Crew Hours Worked (per Tech) *</label>
                   <input
-                    type="checkbox"
-                    checked={wiringConfirmed}
-                    onChange={(e) => setWiringConfirmed(e.target.checked)}
-                    className="h-4 w-4 text-emerald-600 rounded"
+                    type="number"
+                    step="0.5"
+                    required
+                    value={hoursWorked}
+                    onChange={(e) => setHoursWorked(e.target.value)}
+                    className="w-full px-3 py-2 border border-slate-200 rounded-lg text-xs focus:ring-2 focus:ring-emerald-500 focus:outline-none"
                   />
-                  <span className="font-medium text-slate-700">2. DC / AC Cabling, Conduit & MC4 Connections Verified</span>
-                </label>
+                </div>
+              </div>
 
-                <label className="flex items-center space-x-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={earthingConfirmed}
-                    onChange={(e) => setEarthingConfirmed(e.target.checked)}
-                    className="h-4 w-4 text-emerald-600 rounded"
-                  />
-                  <span className="font-medium text-slate-700">3. Chemical Safety Earthing & SPD Lightning Arrestor Grounded</span>
-                </label>
-
-                <label className="flex items-center space-x-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={testingPassed}
-                    onChange={(e) => setTestingPassed(e.target.checked)}
-                    className="h-4 w-4 text-emerald-600 rounded"
-                  />
-                  <span className="font-medium text-slate-700">4. Live Generation Testing & Grid Sync Commissioned</span>
-                </label>
+              {/* Technical Checklists */}
+              <div className="space-y-2 p-3 bg-slate-50 border border-slate-200 rounded-xl">
+                <span className="font-semibold text-slate-700">Safety & Compliance Checklists</span>
+                <div className="grid grid-cols-2 gap-2 pt-1">
+                  <label className="flex items-center space-x-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={panelMounting}
+                      onChange={(e) => setPanelMounting(e.target.checked)}
+                      className="rounded text-emerald-600"
+                    />
+                    <span>Structure & Panel Mounting</span>
+                  </label>
+                  <label className="flex items-center space-x-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={wiringConfirmed}
+                      onChange={(e) => setWiringConfirmed(e.target.checked)}
+                      className="rounded text-emerald-600"
+                    />
+                    <span>DC/AC Wiring & SPD Box</span>
+                  </label>
+                  <label className="flex items-center space-x-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={earthingConfirmed}
+                      onChange={(e) => setEarthingConfirmed(e.target.checked)}
+                      className="rounded text-emerald-600"
+                    />
+                    <span>Chemical Earthing Pit Test</span>
+                  </label>
+                  <label className="flex items-center space-x-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={testingPassed}
+                      onChange={(e) => setTestingPassed(e.target.checked)}
+                      className="rounded text-emerald-600"
+                    />
+                    <span>Live Generation Sync Test</span>
+                  </label>
+                </div>
               </div>
 
               <div>
-                <label className="block font-semibold text-slate-700 mb-1">Testing & Generation Measurement Notes</label>
-                <input
-                  type="text"
-                  required
+                <label className="block font-semibold text-slate-700 mb-1">Peak Generation / Sync Verification Notes</label>
+                <textarea
+                  rows={2}
                   value={testingNotes}
                   onChange={(e) => setTestingNotes(e.target.value)}
                   className="w-full px-3 py-2 border border-slate-200 rounded-lg text-xs focus:ring-2 focus:ring-emerald-500 focus:outline-none"
-                  placeholder="e.g. Generating 4.9 kW at 1:30 PM. Inverter display normal."
                 />
               </div>
 
@@ -462,46 +803,34 @@ export const InstallationsPage: React.FC = () => {
                     value={customerSigneeName}
                     onChange={(e) => setCustomerSigneeName(e.target.value)}
                     className="w-full px-3 py-2 border border-slate-200 rounded-lg text-xs focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+                    placeholder="e.g. K. Narayanan"
                   />
                 </div>
-
                 <div>
-                  <label className="block font-semibold text-slate-700 mb-1">Crew Hours Worked (per tech)</label>
+                  <label className="block font-semibold text-slate-700 mb-1">Customer Acceptance Feedback</label>
                   <input
-                    type="number"
-                    step="0.5"
-                    required
-                    value={hoursWorked}
-                    onChange={(e) => setHoursWorked(e.target.value)}
+                    type="text"
+                    value={customerAcceptanceNote}
+                    onChange={(e) => setCustomerAcceptanceNote(e.target.value)}
                     className="w-full px-3 py-2 border border-slate-200 rounded-lg text-xs focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+                    placeholder="e.g. Satisfied with rooftop testing"
                   />
                 </div>
-              </div>
-
-              <div>
-                <label className="block font-semibold text-slate-700 mb-1">Customer Digital Acceptance Remarks</label>
-                <textarea
-                  rows={2}
-                  required
-                  value={customerAcceptanceNote}
-                  onChange={(e) => setCustomerAcceptanceNote(e.target.value)}
-                  className="w-full px-3 py-2 border border-slate-200 rounded-lg text-xs focus:ring-2 focus:ring-emerald-500 focus:outline-none"
-                />
               </div>
 
               <div className="flex justify-end space-x-3 pt-3 border-t border-slate-100">
                 <button
                   type="button"
                   onClick={() => setShowCompleteModal(false)}
-                  className="px-4 py-2 border border-slate-200 text-slate-600 rounded-xl hover:bg-slate-50 font-medium"
+                  className="px-4 py-2 border border-slate-200 text-slate-600 rounded-xl hover:bg-slate-50 font-medium cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 font-semibold shadow-xs"
+                  className="px-4 py-2 bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 font-semibold shadow-xs cursor-pointer"
                 >
-                  Submit Completion & Customer Acceptance
+                  Finalize & Activate Warranties
                 </button>
               </div>
             </form>

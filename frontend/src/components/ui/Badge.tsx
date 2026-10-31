@@ -15,6 +15,7 @@ export const StatusBadge: React.FC<BadgeProps> = ({ status }) => {
       case 'ACTIVE':
       case 'SUCCESS':
       case 'PAID':
+      case 'INSTALLED':
         return 'bg-emerald-100 text-emerald-800 border-emerald-300';
       case 'IN_PROGRESS':
       case 'IN_INSTALLATION':
@@ -24,6 +25,10 @@ export const StatusBadge: React.FC<BadgeProps> = ({ status }) => {
       case 'SUBMITTED':
       case 'PARTIALLY_PAID':
         return 'bg-blue-100 text-blue-800 border-blue-300';
+      case 'SITE_RECEIVED':
+        return 'bg-indigo-100 text-indigo-800 border-indigo-300';
+      case 'REPORT_SUBMITTED':
+        return 'bg-purple-100 text-purple-800 border-purple-300';
       case 'PENDING':
       case 'PENDING_PAYMENT':
       case 'DRAFT':
@@ -32,6 +37,7 @@ export const StatusBadge: React.FC<BadgeProps> = ({ status }) => {
       case 'DOCUMENTS_PENDING':
       case 'OPEN':
       case 'WAITING_FOR_PARTS':
+      case 'REVISIT_REQUIRED':
         return 'bg-amber-100 text-amber-800 border-amber-300';
       case 'RESOLVED':
       case 'CUSTOMER_CONFIRMED':
@@ -43,6 +49,7 @@ export const StatusBadge: React.FC<BadgeProps> = ({ status }) => {
       case 'FAILED':
       case 'DEFECTIVE':
         return 'bg-rose-100 text-rose-800 border-rose-300';
+      case 'NOT_STARTED':
       default:
         return 'bg-slate-100 text-slate-800 border-slate-300';
     }

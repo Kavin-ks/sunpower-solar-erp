@@ -43,8 +43,10 @@ public class Enums {
         PENDING,
         SCHEDULED,
         IN_PROGRESS,
+        REPORT_SUBMITTED,
         APPROVED,
-        REJECTED
+        REJECTED,
+        REVISIT_REQUIRED
     }
 
     public enum QuotationStatus {
@@ -94,8 +96,11 @@ public class Enums {
 
     public enum SerialNumberStatus {
         IN_STOCK,
+        RESERVED,
         ALLOCATED,
+        PICKED,
         DISPATCHED,
+        SITE_RECEIVED,
         INSTALLED,
         DEFECTIVE,
         REPLACED
@@ -117,6 +122,7 @@ public class Enums {
     }
 
     public enum WarrantyStatus {
+        NOT_STARTED,
         ACTIVE,
         EXPIRED,
         VOIDED

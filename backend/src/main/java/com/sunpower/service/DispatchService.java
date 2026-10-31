@@ -14,6 +14,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -264,12 +265,14 @@ public class DispatchService {
                 SerialNumber sn = item.getSerialNumber();
                 sn.setStatus(SerialNumberStatus.DISPATCHED);
                 sn.setDispatchDate(LocalDate.now());
+                sn.setDispatchAt(LocalDateTime.now());
+                sn.setDispatchId(dispatch.getId());
                 serialNumberRepository.save(sn);
 
                 SerialNumberHistory history = new SerialNumberHistory(
                         sn,
                         SerialNumberStatus.DISPATCHED,
-                        "Dispatched in vehicle " + dispatch.getVehicleNumber(),
+                        "Dispatched in vehicle " + dispatch.getVehicleNumber() + " with manifest for Order " + dispatch.getSalesOrder().getOrderNumber(),
                         dispatch.getCustomer().getFullName(),
                         confirmedBy
                 );
@@ -297,32 +300,21 @@ public class DispatchService {
 
         dispatch = dispatchRepository.save(dispatch);
 
-        // Update serial numbers and automatically activate warranties!
+        // Update serial numbers delivery status (ready for site verification and installation)
         for (DispatchItem item : dispatch.getItems()) {
-            Product product = item.getProduct();
             SerialNumber sn = item.getSerialNumber();
-
             if (sn != null) {
-                sn.setStatus(SerialNumberStatus.INSTALLED);
                 sn.setDeliveryDate(deliveryDate);
                 serialNumberRepository.save(sn);
 
                 SerialNumberHistory history = new SerialNumberHistory(
                         sn,
-                        SerialNumberStatus.INSTALLED,
-                        "Delivered and verified at customer site. Warranty automatically activated.",
+                        sn.getStatus(),
+                        "Delivered to customer site. Awaiting technician physical barcode verification.",
                         dispatch.getCustomer().getAddress(),
                         confirmedBy
                 );
                 serialNumberHistoryRepository.save(history);
-
-                // Automatic warranty activation for serialized items
-                warrantyService.activateWarranty(dispatch.getCustomer(), dispatch.getSalesOrder(), product, sn, deliveryDate);
-            } else {
-                // Also activate warranty for major non-serialized items like Solar Panels (20 years)
-                if (product.getCategory().getName().toUpperCase().contains("PANEL")) {
-                    warrantyService.activateWarranty(dispatch.getCustomer(), dispatch.getSalesOrder(), product, null, deliveryDate);
-                }
             }
         }
 

@@ -62,6 +62,17 @@ public class SiteSurveyController {
         return ResponseEntity.ok(survey);
     }
 
+    @PostMapping("/{id}/inspection-report")
+    @PreAuthorize("hasAnyRole('TECHNICIAN', 'DIRECTOR')")
+    public ResponseEntity<SiteSurvey> submitInspectionReport(
+            @PathVariable Long id,
+            @RequestBody com.sunpower.dto.SiteSurveyDTOs.SurveyInspectionReportRequest request,
+            Authentication authentication) {
+        String actor = authentication != null ? authentication.getName() : "Technician";
+        SiteSurvey survey = siteSurveyService.submitInspectionReport(id, request, actor);
+        return ResponseEntity.ok(survey);
+    }
+
     @PatchMapping("/{id}/approval")
     @PreAuthorize("hasAnyRole('SALES', 'DIRECTOR')")
     public ResponseEntity<SiteSurvey> reviewAndApprove(

@@ -5,17 +5,18 @@ import { StatusBadge } from '../components/ui/Badge';
 import { useAuth } from '../context/AuthContext';
 import {
   Users,
-  Plus,
   Search,
   Filter,
   Phone,
   Mail,
   Zap,
-  ArrowRight,
   Clock,
   CheckCircle2,
-  XCircle,
   Calendar,
+  ExternalLink,
+  MessageSquare,
+  ShieldCheck,
+  Send,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
@@ -24,23 +25,9 @@ export const EnquiriesPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
-  const [showModal, setShowModal] = useState(false);
   const [selectedEnquiry, setSelectedEnquiry] = useState<Enquiry | null>(null);
-
-  // Form State
-  const [formData, setFormData] = useState({
-    customerName: '',
-    customerPhone: '',
-    customerEmail: '',
-    customerAddress: '',
-    customerType: 'RESIDENTIAL',
-    requestedCapacityKw: '3.00',
-    systemType: 'ON_GRID',
-    subsidyRequired: false,
-    monthlyElectricityBill: '',
-    source: 'WEBSITE',
-    notes: '',
-  });
+  const [followupNote, setFollowupNote] = useState('');
+  const [submittingNote, setSubmittingNote] = useState(false);
 
   const navigate = useNavigate();
 
@@ -63,40 +50,11 @@ export const EnquiriesPage: React.FC = () => {
     }
   };
 
-  const handleCreateEnquiry = async (e: React.FormEvent) => {
-    e.preventDefault();
-    try {
-      await api.post('/enquiries', {
-        ...formData,
-        requestedCapacityKw: parseFloat(formData.requestedCapacityKw),
-        monthlyElectricityBill: formData.monthlyElectricityBill ? parseFloat(formData.monthlyElectricityBill) : null,
-      });
-      setShowModal(false);
-      fetchEnquiries();
-      // Reset form
-      setFormData({
-        customerName: '',
-        customerPhone: '',
-        customerEmail: '',
-        customerAddress: '',
-        customerType: 'RESIDENTIAL',
-        requestedCapacityKw: '3.00',
-        systemType: 'ON_GRID',
-        subsidyRequired: false,
-        monthlyElectricityBill: '',
-        source: 'WEBSITE',
-        notes: '',
-      });
-    } catch (err: any) {
-      alert(err.response?.data?.message || 'Failed to create enquiry');
-    }
-  };
-
-  const handleStatusUpdate = async (id: number, newStatus: EnquiryStatus) => {
+  const handleStatusUpdate = async (id: number, newStatus: EnquiryStatus, customNote?: string) => {
     try {
       await api.patch(`/enquiries/${id}/status`, {
         status: newStatus,
-        actionNote: `Stage updated to ${newStatus}`,
+        actionNote: customNote || `Stage updated to ${newStatus}`,
       });
       fetchEnquiries();
       if (selectedEnquiry && selectedEnquiry.id === id) {
@@ -105,6 +63,26 @@ export const EnquiriesPage: React.FC = () => {
       }
     } catch (err: any) {
       alert(err.response?.data?.message || 'Failed to update status');
+    }
+  };
+
+  const handleAddFollowup = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedEnquiry || !followupNote.trim()) return;
+    setSubmittingNote(true);
+    try {
+      await api.patch(`/enquiries/${selectedEnquiry.id}/status`, {
+        status: selectedEnquiry.status,
+        actionNote: followupNote.trim(),
+      });
+      setFollowupNote('');
+      const res = await api.get(`/enquiries/${selectedEnquiry.id}`);
+      setSelectedEnquiry(res.data);
+      fetchEnquiries();
+    } catch (err: any) {
+      alert(err.response?.data?.message || 'Failed to log follow-up note');
+    } finally {
+      setSubmittingNote(false);
     }
   };
 
@@ -118,18 +96,33 @@ export const EnquiriesPage: React.FC = () => {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-slate-200">
         <div>
           <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Customer Enquiries & Leads</h1>
-          <p className="text-sm text-slate-500">Capture, qualify, and track solar rooftop enquiries</p>
+          <p className="text-sm text-slate-500">
+            Qualify incoming solar rooftop customer enquiries originating from the public customer portal
+          </p>
         </div>
 
-        {isSales && (
-          <button
-            onClick={() => setShowModal(true)}
-            className="flex items-center space-x-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-semibold shadow-sm transition cursor-pointer"
+        {/* Public customer enquiry portal link - Enquiries strictly originate from public form */}
+        <div className="flex items-center space-x-2">
+          <a
+            href="/enquiry"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center space-x-1.5 px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-semibold border border-slate-200 transition"
           >
-            <Plus className="w-4 h-4" />
-            <span>New Customer Lead</span>
-          </button>
-        )}
+            <ExternalLink className="w-3.5 h-3.5" />
+            <span>Open Customer Enquiry Portal</span>
+          </a>
+        </div>
+      </div>
+
+      {/* Compliance Callout Banner */}
+      <div className="bg-blue-50/80 border border-blue-200 p-3.5 rounded-xl flex items-center space-x-3 text-xs text-blue-900">
+        <ShieldCheck className="w-5 h-5 text-blue-600 shrink-0" />
+        <p>
+          <strong>Department Workflow Notice:</strong> Manual lead creation has been decommissioned from Sales interface.
+          All customer enquiries originate automatically from the public customer submission portal to preserve customer source integrity,
+          prevent duplicate phone numbers, and ensure centralized database synchronization.
+        </p>
       </div>
 
       {/* Filters & Search */}
@@ -212,25 +205,29 @@ export const EnquiriesPage: React.FC = () => {
                     <td className="py-3 px-4">
                       {enq.subsidyRequired ? (
                         <span className="text-[11px] font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
-                          Yes (Govt)
+                          Yes (PM Surya Ghar)
                         </span>
                       ) : (
                         <span className="text-[11px] text-slate-400">No</span>
                       )}
                     </td>
-                    <td className="py-3 px-4 capitalize text-slate-500">{enq.source.toLowerCase()}</td>
+                    <td className="py-3 px-4 capitalize text-slate-500">
+                      <span className="px-2 py-0.5 bg-slate-100 rounded text-[11px] font-mono text-slate-700">
+                        {enq.source.toLowerCase()}
+                      </span>
+                    </td>
                     <td className="py-3 px-4">
                       <StatusBadge status={enq.status} />
                     </td>
                     <td className="py-3 px-4 text-right space-x-2">
                       <button
                         onClick={() => setSelectedEnquiry(enq)}
-                        className="px-2.5 py-1 text-slate-600 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 rounded text-xs font-medium cursor-pointer"
+                        className="px-2.5 py-1 text-slate-700 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 rounded text-xs font-semibold cursor-pointer"
                       >
-                        Details
+                        View & Qualify
                       </button>
 
-                      {enq.status === 'QUALIFIED' && (
+                      {enq.status === 'QUALIFIED' && isSales && (
                         <button
                           onClick={() => navigate('/surveys', { state: { customerId: enq.customer.id, enquiryId: enq.id } })}
                           className="px-2.5 py-1 text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded text-xs font-semibold cursor-pointer inline-flex items-center space-x-1"
@@ -240,7 +237,7 @@ export const EnquiriesPage: React.FC = () => {
                         </button>
                       )}
 
-                      {enq.status === 'SURVEY_APPROVED' && (
+                      {enq.status === 'SURVEY_APPROVED' && isSales && (
                         <button
                           onClick={() => navigate('/quotations', { state: { customerId: enq.customer.id, enquiryId: enq.id } })}
                           className="px-2.5 py-1 text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded text-xs font-semibold cursor-pointer inline-flex items-center space-x-1"
@@ -258,186 +255,14 @@ export const EnquiriesPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Lead Capture Modal */}
-      {showModal && (
-        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100 mb-4">
-              <h2 className="text-lg font-bold text-slate-900">New Solar Customer Lead</h2>
-              <button onClick={() => setShowModal(false)} className="text-slate-400 hover:text-slate-600 text-lg">
-                ✕
-              </button>
-            </div>
-
-            <form onSubmit={handleCreateEnquiry} className="space-y-4 text-xs">
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block font-semibold text-slate-700 mb-1">Customer Full Name *</label>
-                  <input
-                    type="text"
-                    required
-                    value={formData.customerName}
-                    onChange={(e) => setFormData({ ...formData, customerName: e.target.value })}
-                    className="w-full px-3 py-2 border border-slate-200 rounded-lg text-xs focus:ring-2 focus:ring-emerald-500 focus:outline-none"
-                    placeholder="e.g. Ramesh Chandran"
-                  />
-                </div>
-                <div>
-                  <label className="block font-semibold text-slate-700 mb-1">Phone Number *</label>
-                  <input
-                    type="tel"
-                    required
-                    value={formData.customerPhone}
-                    onChange={(e) => setFormData({ ...formData, customerPhone: e.target.value })}
-                    className="w-full px-3 py-2 border border-slate-200 rounded-lg text-xs focus:ring-2 focus:ring-emerald-500 focus:outline-none"
-                    placeholder="e.g. 9841029384"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block font-semibold text-slate-700 mb-1">Email Address</label>
-                  <input
-                    type="email"
-                    value={formData.customerEmail}
-                    onChange={(e) => setFormData({ ...formData, customerEmail: e.target.value })}
-                    className="w-full px-3 py-2 border border-slate-200 rounded-lg text-xs focus:ring-2 focus:ring-emerald-500 focus:outline-none"
-                    placeholder="name@example.com"
-                  />
-                </div>
-                <div>
-                  <label className="block font-semibold text-slate-700 mb-1">Customer Category</label>
-                  <select
-                    value={formData.customerType}
-                    onChange={(e) => setFormData({ ...formData, customerType: e.target.value })}
-                    className="w-full px-3 py-2 border border-slate-200 rounded-lg text-xs focus:ring-2 focus:ring-emerald-500 focus:outline-none"
-                  >
-                    <option value="RESIDENTIAL">Residential Rooftop</option>
-                    <option value="SMALL_FACTORY">Small Factory / Industrial</option>
-                  </select>
-                </div>
-              </div>
-
-              <div>
-                <label className="block font-semibold text-slate-700 mb-1">Site / Roof Address</label>
-                <textarea
-                  rows={2}
-                  value={formData.customerAddress}
-                  onChange={(e) => setFormData({ ...formData, customerAddress: e.target.value })}
-                  className="w-full px-3 py-2 border border-slate-200 rounded-lg text-xs focus:ring-2 focus:ring-emerald-500 focus:outline-none"
-                  placeholder="Street address, city, landmarks..."
-                />
-              </div>
-
-              <div className="grid grid-cols-3 gap-3">
-                <div>
-                  <label className="block font-semibold text-slate-700 mb-1">Required Capacity</label>
-                  <select
-                    value={formData.requestedCapacityKw}
-                    onChange={(e) => setFormData({ ...formData, requestedCapacityKw: e.target.value })}
-                    className="w-full px-3 py-2 border border-slate-200 rounded-lg text-xs focus:ring-2 focus:ring-emerald-500 focus:outline-none"
-                  >
-                    <option value="1.00">1 kW System</option>
-                    <option value="2.00">2 kW System</option>
-                    <option value="3.00">3 kW System (Standard)</option>
-                    <option value="4.00">4 kW System</option>
-                    <option value="5.00">5 kW System</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block font-semibold text-slate-700 mb-1">Grid Architecture</label>
-                  <select
-                    value={formData.systemType}
-                    onChange={(e) => setFormData({ ...formData, systemType: e.target.value as any })}
-                    className="w-full px-3 py-2 border border-slate-200 rounded-lg text-xs focus:ring-2 focus:ring-emerald-500 focus:outline-none"
-                  >
-                    <option value="ON_GRID">On-Grid (Net Meter)</option>
-                    <option value="OFF_GRID">Off-Grid (Battery Bank)</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block font-semibold text-slate-700 mb-1">Monthly EB Bill (₹)</label>
-                  <input
-                    type="number"
-                    value={formData.monthlyElectricityBill}
-                    onChange={(e) => setFormData({ ...formData, monthlyElectricityBill: e.target.value })}
-                    className="w-full px-3 py-2 border border-slate-200 rounded-lg text-xs focus:ring-2 focus:ring-emerald-500 focus:outline-none"
-                    placeholder="e.g. 3500"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3 items-center">
-                <div>
-                  <label className="block font-semibold text-slate-700 mb-1">Lead Source</label>
-                  <select
-                    value={formData.source}
-                    onChange={(e) => setFormData({ ...formData, source: e.target.value })}
-                    className="w-full px-3 py-2 border border-slate-200 rounded-lg text-xs focus:ring-2 focus:ring-emerald-500 focus:outline-none"
-                  >
-                    <option value="WEBSITE">Website Form</option>
-                    <option value="WHATSAPP">WhatsApp Enquiry</option>
-                    <option value="PHONE">Phone Call</option>
-                    <option value="MANUAL">Direct Field Walk-in</option>
-                  </select>
-                </div>
-
-                <div className="pt-4 flex items-center space-x-2">
-                  <input
-                    type="checkbox"
-                    id="subsidyReq"
-                    checked={formData.subsidyRequired}
-                    onChange={(e) => setFormData({ ...formData, subsidyRequired: e.target.checked })}
-                    className="h-4 w-4 text-emerald-600 rounded border-slate-300"
-                  />
-                  <label htmlFor="subsidyReq" className="text-xs font-semibold text-slate-700 cursor-pointer">
-                    Apply for Govt Subsidy (PM Surya Ghar)
-                  </label>
-                </div>
-              </div>
-
-              <div>
-                <label className="block font-semibold text-slate-700 mb-1">Notes / Special Requirements</label>
-                <textarea
-                  rows={2}
-                  value={formData.notes}
-                  onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                  className="w-full px-3 py-2 border border-slate-200 rounded-lg text-xs focus:ring-2 focus:ring-emerald-500 focus:outline-none"
-                  placeholder="e.g. Flat roof, wants morning survey call..."
-                />
-              </div>
-
-              <div className="flex justify-end space-x-3 pt-3 border-t border-slate-100">
-                <button
-                  type="button"
-                  onClick={() => setShowModal(false)}
-                  className="px-4 py-2 border border-slate-200 text-slate-600 rounded-xl hover:bg-slate-50 font-medium"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="px-4 py-2 bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 font-semibold shadow-xs"
-                >
-                  Save Lead
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* Enquiry Details Slide-over / Modal */}
+      {/* Enquiry Details & Qualification Drawer / Modal */}
       {selectedEnquiry && (
         <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl max-w-xl w-full p-6 shadow-2xl max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between pb-3 border-b border-slate-100 mb-4">
               <div>
                 <h2 className="text-lg font-bold text-slate-900">{selectedEnquiry.enquiryNumber}</h2>
-                <p className="text-xs text-slate-500">Customer: {selectedEnquiry.customer.fullName}</p>
+                <p className="text-xs text-slate-500">Customer: {selectedEnquiry.customer.fullName} • Source: {selectedEnquiry.source}</p>
               </div>
               <button onClick={() => setSelectedEnquiry(null)} className="text-slate-400 hover:text-slate-600 text-lg">
                 ✕
@@ -445,8 +270,8 @@ export const EnquiriesPage: React.FC = () => {
             </div>
 
             <div className="space-y-4 text-xs">
-              {/* Quick Status Advance */}
-              <div className="bg-slate-50 p-3 rounded-xl border border-slate-200 flex items-center justify-between">
+              {/* Quick Status Qualification */}
+              <div className="bg-slate-50 p-3 rounded-xl border border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div>
                   <span className="font-semibold text-slate-600">Current Lead Stage:</span>
                   <div className="mt-1">
@@ -454,23 +279,30 @@ export const EnquiriesPage: React.FC = () => {
                   </div>
                 </div>
 
-                {!isAdmin && (
+                {isSales && (
                   <div className="flex items-center space-x-2">
-                    <span className="text-slate-500">Advance to:</span>
-                    <select
-                      value={selectedEnquiry.status}
-                      onChange={(e) => handleStatusUpdate(selectedEnquiry.id, e.target.value as any)}
-                      className="bg-white border border-slate-200 rounded-lg px-2 py-1 font-semibold text-slate-800"
+                    <span className="text-slate-500 font-medium">Update Status:</span>
+                    <button
+                      onClick={() => handleStatusUpdate(selectedEnquiry.id, 'CONTACTED', 'Customer contacted by Sales phone follow-up')}
+                      disabled={selectedEnquiry.status === 'CONTACTED'}
+                      className="px-2.5 py-1 bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 rounded font-semibold text-xs cursor-pointer disabled:opacity-50"
                     >
-                      <option value="NEW">NEW</option>
-                      <option value="CONTACTED">CONTACTED</option>
-                      <option value="QUALIFIED">QUALIFIED</option>
-                      <option value="SURVEY_SCHEDULED">SURVEY_SCHEDULED</option>
-                      <option value="SURVEY_APPROVED">SURVEY_APPROVED</option>
-                      <option value="QUOTED">QUOTED</option>
-                      <option value="CONVERTED">CONVERTED</option>
-                      <option value="REJECTED">REJECTED</option>
-                    </select>
+                      Contacted
+                    </button>
+                    <button
+                      onClick={() => handleStatusUpdate(selectedEnquiry.id, 'QUALIFIED', 'Lead qualified: rooftop feasible and budget verified')}
+                      disabled={selectedEnquiry.status === 'QUALIFIED' || ['SURVEY_SCHEDULED', 'SURVEY_APPROVED', 'QUOTED', 'CONVERTED'].includes(selectedEnquiry.status)}
+                      className="px-2.5 py-1 bg-blue-50 hover:bg-blue-100 text-blue-800 border border-blue-200 rounded font-semibold text-xs cursor-pointer disabled:opacity-50"
+                    >
+                      Qualify
+                    </button>
+                    <button
+                      onClick={() => handleStatusUpdate(selectedEnquiry.id, 'REJECTED', 'Customer not interested / unreachable')}
+                      disabled={selectedEnquiry.status === 'REJECTED'}
+                      className="px-2.5 py-1 bg-rose-50 hover:bg-rose-100 text-rose-800 border border-rose-200 rounded font-semibold text-xs cursor-pointer disabled:opacity-50"
+                    >
+                      Lost / Reject
+                    </button>
                   </div>
                 )}
               </div>
@@ -486,22 +318,49 @@ export const EnquiriesPage: React.FC = () => {
                   <p className="font-semibold text-slate-800">{selectedEnquiry.customer.email || 'N/A'}</p>
                 </div>
                 <div>
-                  <p className="text-slate-400">System Capacity</p>
+                  <p className="text-slate-400">System Capacity Requested</p>
                   <p className="font-semibold text-slate-800">
                     {selectedEnquiry.requestedCapacityKw} kW ({selectedEnquiry.systemType})
                   </p>
                 </div>
                 <div>
-                  <p className="text-slate-400">Monthly Bill</p>
+                  <p className="text-slate-400">Monthly EB Bill</p>
                   <p className="font-semibold text-slate-800">
                     {selectedEnquiry.monthlyElectricityBill ? `₹${selectedEnquiry.monthlyElectricityBill}` : 'N/A'}
                   </p>
                 </div>
                 <div className="col-span-2">
-                  <p className="text-slate-400">Address</p>
+                  <p className="text-slate-400">Installation Address</p>
                   <p className="text-slate-700">{selectedEnquiry.customer.address || 'N/A'}</p>
                 </div>
+                {selectedEnquiry.notes && (
+                  <div className="col-span-2 bg-slate-50 p-2 rounded-lg border border-slate-100">
+                    <p className="text-slate-400 font-semibold mb-0.5">Customer Initial Remarks</p>
+                    <p className="text-slate-700 italic">{selectedEnquiry.notes}</p>
+                  </div>
+                )}
               </div>
+
+              {/* Add Follow-up Note Form */}
+              {isSales && (
+                <form onSubmit={handleAddFollowup} className="flex gap-2">
+                  <input
+                    type="text"
+                    value={followupNote}
+                    onChange={(e) => setFollowupNote(e.target.value)}
+                    placeholder="Log a follow-up conversation note with customer..."
+                    className="flex-1 px-3 py-2 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  />
+                  <button
+                    type="submit"
+                    disabled={submittingNote || !followupNote.trim()}
+                    className="px-3 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white rounded-xl font-semibold flex items-center space-x-1 cursor-pointer"
+                  >
+                    <Send className="w-3.5 h-3.5" />
+                    <span>Log</span>
+                  </button>
+                </form>
+              )}
 
               {/* Activity History */}
               <div>
@@ -527,7 +386,30 @@ export const EnquiriesPage: React.FC = () => {
                 </div>
               </div>
 
-              <div className="flex justify-end pt-3 border-t border-slate-100">
+              {/* Action buttons */}
+              <div className="flex justify-between items-center pt-3 border-t border-slate-100">
+                <div className="space-x-2">
+                  {selectedEnquiry.status === 'QUALIFIED' && isSales && (
+                    <button
+                      onClick={() => navigate('/surveys', { state: { customerId: selectedEnquiry.customer.id, enquiryId: selectedEnquiry.id } })}
+                      className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-semibold inline-flex items-center space-x-1 cursor-pointer"
+                    >
+                      <Calendar className="w-3.5 h-3.5" />
+                      <span>Proceed to Schedule Survey</span>
+                    </button>
+                  )}
+
+                  {selectedEnquiry.status === 'SURVEY_APPROVED' && isSales && (
+                    <button
+                      onClick={() => navigate('/quotations', { state: { customerId: selectedEnquiry.customer.id, enquiryId: selectedEnquiry.id } })}
+                      className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-semibold inline-flex items-center space-x-1 cursor-pointer"
+                    >
+                      <Zap className="w-3.5 h-3.5" />
+                      <span>Proceed to Create Quote</span>
+                    </button>
+                  )}
+                </div>
+
                 <button
                   onClick={() => setSelectedEnquiry(null)}
                   className="px-4 py-2 bg-slate-100 text-slate-700 rounded-xl hover:bg-slate-200 font-medium"

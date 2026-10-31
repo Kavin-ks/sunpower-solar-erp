@@ -142,7 +142,7 @@ public class OrderService {
         }
 
         orderItemRepository.saveAll(orderItems);
-        order.setItems(orderItems);
+        order.getItems().addAll(orderItems);
 
         // Generate GST Tax Invoice with reconciled Subtotal + Tax = Total
         BigDecimal installationCharge = quotation.getInstallationFee() != null ? quotation.getInstallationFee() : BigDecimal.ZERO;

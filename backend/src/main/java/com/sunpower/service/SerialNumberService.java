@@ -48,6 +48,10 @@ public class SerialNumberService {
         return serialNumberRepository.searchSerialNumbers(query.trim());
     }
 
+    public List<SerialNumber> getSerialsByOrderId(Long salesOrderId) {
+        return serialNumberRepository.findBySalesOrderId(salesOrderId);
+    }
+
     @Transactional
     public SerialNumber registerSerialNumber(Long productId, String serialCode, String purchaseReference, String location, String recordedBy) {
         if (serialNumberRepository.findBySerialCode(serialCode).isPresent()) {

@@ -27,6 +27,8 @@ public class Warranty {
     @JoinColumn(name = "sales_order_id", nullable = false)
     private SalesOrder salesOrder;
 
+    private Long installationId;
+
     @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "product_id", nullable = false)
     private Product product;
@@ -74,6 +76,8 @@ public class Warranty {
     public void setCustomer(Customer customer) { this.customer = customer; }
     public SalesOrder getSalesOrder() { return salesOrder; }
     public void setSalesOrder(SalesOrder salesOrder) { this.salesOrder = salesOrder; }
+    public Long getInstallationId() { return installationId; }
+    public void setInstallationId(Long installationId) { this.installationId = installationId; }
     public Product getProduct() { return product; }
     public void setProduct(Product product) { this.product = product; }
     public LocalDate getDeliveryDate() { return deliveryDate; }

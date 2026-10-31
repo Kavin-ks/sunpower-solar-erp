@@ -93,6 +93,16 @@ public class InstallationDTOs {
         public void setTechnicianHours(List<TechnicianHoursRequest> technicianHours) { this.technicianHours = technicianHours; }
     }
 
+    public static class VerifyProductRequest {
+        @NotNull(message = "Scanned barcode or serial code is required")
+        private String barcode;
+
+        public VerifyProductRequest() {}
+        public VerifyProductRequest(String barcode) { this.barcode = barcode; }
+        public String getBarcode() { return barcode; }
+        public void setBarcode(String barcode) { this.barcode = barcode; }
+    }
+
     public static class TechnicianHoursRequest {
         private Long technicianId;
         private BigDecimal hoursWorked;

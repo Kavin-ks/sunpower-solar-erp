@@ -914,7 +914,7 @@ public class DataInitializationService implements CommandLineRunner {
     }
 
     private void ensurePickingDispatchExists() {
-        if (dispatchRepository.findAll().stream().anyMatch(d -> d.getStatus() == DispatchStatus.PICKING)) {
+        if (dispatchRepository.findByDispatchNumber("DSP-00002").isPresent()) {
             return;
         }
 
