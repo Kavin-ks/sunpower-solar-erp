@@ -66,6 +66,8 @@ public class FinanceDTOs {
         private BigDecimal netProfit;
         private BigDecimal profitMarginPercentage;
         private BigDecimal outstandingBalance;
+        private String subsidyStatus;
+        private long openServiceTicketsCount;
 
         public JobProfitabilityDTO() {}
 
@@ -97,5 +99,9 @@ public class FinanceDTOs {
         public void setProfitMarginPercentage(BigDecimal profitMarginPercentage) { this.profitMarginPercentage = profitMarginPercentage; }
         public BigDecimal getOutstandingBalance() { return outstandingBalance; }
         public void setOutstandingBalance(BigDecimal outstandingBalance) { this.outstandingBalance = outstandingBalance; }
+        public String getSubsidyStatus() { return subsidyStatus; }
+        public void setSubsidyStatus(String subsidyStatus) { this.subsidyStatus = subsidyStatus; }
+        public long getOpenServiceTicketsCount() { return openServiceTicketsCount; }
+        public void setOpenServiceTicketsCount(long openServiceTicketsCount) { this.openServiceTicketsCount = openServiceTicketsCount; }
     }
 }

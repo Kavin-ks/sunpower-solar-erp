@@ -31,6 +31,11 @@ public class DashboardController {
         return ResponseEntity.ok(dashboardService.getDashboardMetrics(period));
     }
 
+    @GetMapping("/job-profitability")
+    public ResponseEntity<List<JobProfitabilityDTO>> getJobProfitability() {
+        return ResponseEntity.ok(financeService.calculateAllJobProfitability());
+    }
+
     @GetMapping("/export-profitability-csv")
     public ResponseEntity<byte[]> exportProfitabilityCsv() {
         List<JobProfitabilityDTO> jobs = financeService.calculateAllJobProfitability();

@@ -50,7 +50,20 @@ public class WarrantyService {
         if (serialNumber != null) {
             Optional<Warranty> existing = warrantyRepository.findBySerialNumberId(serialNumber.getId());
             if (existing.isPresent()) {
-                return existing.get();
+                Warranty w = existing.get();
+                if (completionDate != null) {
+                    w.setDeliveryDate(completionDate);
+                    w.setWarrantyStartDate(completionDate);
+                    int dur = w.getDurationMonths() != null ? w.getDurationMonths() :
+                            (product.getDefaultWarrantyMonths() != null ? product.getDefaultWarrantyMonths() : 24);
+                    w.setWarrantyEndDate(completionDate.plusMonths(dur));
+                    w.setStatus(WarrantyStatus.ACTIVE);
+                    if (installationId != null) {
+                        w.setInstallationId(installationId);
+                    }
+                    return warrantyRepository.save(w);
+                }
+                return w;
             }
         }
 

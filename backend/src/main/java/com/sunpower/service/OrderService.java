@@ -41,6 +41,18 @@ public class OrderService {
     @Autowired
     private SubsidyApplicationRepository subsidyApplicationRepository;
 
+    @Autowired
+    private DispatchRepository dispatchRepository;
+
+    @Autowired
+    private DispatchItemRepository dispatchItemRepository;
+
+    @Autowired
+    private InstallationRepository installationRepository;
+
+    @Autowired
+    private PackageBOMRepository packageBOMRepository;
+
     public List<SalesOrder> getAllOrders() {
         return salesOrderRepository.findAll();
     }
@@ -117,28 +129,63 @@ public class OrderService {
 
         // Copy quotation items to order items and reserve inventory stock transactionally
         List<OrderItem> orderItems = new ArrayList<>();
-        for (QuotationItem qItem : quotation.getItems()) {
-            OrderItem oItem = new OrderItem(order, qItem.getProduct(), qItem.getQuantity(), qItem.getUnitPrice());
-            orderItems.add(oItem);
+        List<QuotationItem> qItems = quotation.getItems();
+        if ((qItems == null || qItems.isEmpty()) && quotation.getSolarPackage() != null) {
+            List<PackageBOM> bomList = packageBOMRepository.findBySolarPackageId(quotation.getSolarPackage().getId());
+            for (PackageBOM bom : bomList) {
+                OrderItem oItem = new OrderItem(order, bom.getProduct(), bom.getQuantity(), bom.getProduct().getSellingPrice());
+                orderItems.add(oItem);
 
-            // Reserve the needed stock
-            InventoryStock stock = inventoryStockRepository.findByProductId(qItem.getProduct().getId()).get();
-            int needed = qItem.getQuantity();
+                // Reserve stock
+                InventoryStock stock = inventoryStockRepository.findByProductId(bom.getProduct().getId())
+                        .orElseGet(() -> {
+                            InventoryStock s = new InventoryStock(bom.getProduct(), bom.getProduct().getCurrentStock(), 0, "Main Warehouse");
+                            return inventoryStockRepository.save(s);
+                        });
 
-            stock.setReservedQuantity(stock.getReservedQuantity() + needed);
-            stock.setAvailableQuantity(stock.getAvailableQuantity() - needed);
-            inventoryStockRepository.save(stock);
+                int needed = bom.getQuantity();
+                stock.setReservedQuantity(stock.getReservedQuantity() + needed);
+                stock.setAvailableQuantity(Math.max(0, stock.getAvailableQuantity() - needed));
+                inventoryStockRepository.save(stock);
 
-            // Log stock movement audit
-            StockMovement movement = new StockMovement(
-                    qItem.getProduct(),
-                    StockMovementType.ADJUSTMENT,
-                    -needed,
-                    order.getOrderNumber(),
-                    "Hard-reserved " + needed + " units for confirmed sales order " + order.getOrderNumber(),
-                    createdBy != null ? createdBy : "Sales System"
-            );
-            stockMovementRepository.save(movement);
+                StockMovement movement = new StockMovement(
+                        bom.getProduct(),
+                        StockMovementType.ADJUSTMENT,
+                        -needed,
+                        order.getOrderNumber(),
+                        "Hard-reserved " + needed + " units for confirmed sales order " + order.getOrderNumber(),
+                        createdBy != null ? createdBy : "Sales System"
+                );
+                stockMovementRepository.save(movement);
+            }
+        } else if (qItems != null) {
+            for (QuotationItem qItem : qItems) {
+                OrderItem oItem = new OrderItem(order, qItem.getProduct(), qItem.getQuantity(), qItem.getUnitPrice());
+                orderItems.add(oItem);
+
+                // Reserve the needed stock
+                InventoryStock stock = inventoryStockRepository.findByProductId(qItem.getProduct().getId())
+                        .orElseGet(() -> {
+                            InventoryStock s = new InventoryStock(qItem.getProduct(), qItem.getProduct().getCurrentStock(), 0, "Main Warehouse");
+                            return inventoryStockRepository.save(s);
+                        });
+                int needed = qItem.getQuantity();
+
+                stock.setReservedQuantity(stock.getReservedQuantity() + needed);
+                stock.setAvailableQuantity(Math.max(0, stock.getAvailableQuantity() - needed));
+                inventoryStockRepository.save(stock);
+
+                // Log stock movement audit
+                StockMovement movement = new StockMovement(
+                        qItem.getProduct(),
+                        StockMovementType.ADJUSTMENT,
+                        -needed,
+                        order.getOrderNumber(),
+                        "Hard-reserved " + needed + " units for confirmed sales order " + order.getOrderNumber(),
+                        createdBy != null ? createdBy : "Sales System"
+                );
+                stockMovementRepository.save(movement);
+            }
         }
 
         orderItemRepository.saveAll(orderItems);
@@ -186,6 +233,65 @@ public class OrderService {
     public SalesOrder updateOrderStatus(Long id, OrderStatusUpdateRequest request) {
         SalesOrder order = getOrderById(id);
         order.setStatus(request.getStatus());
-        return salesOrderRepository.save(order);
+        order = salesOrderRepository.save(order);
+
+        if (request.getStatus() == OrderStatus.CONFIRMED) {
+            ensureDispatchAndInstallation(order);
+        }
+
+        return order;
+    }
+
+    @Transactional
+    public void ensureDispatchAndInstallation(SalesOrder order) {
+        if (order == null || order.getId() == null) return;
+
+        // 1. Ensure Dispatch exists
+        List<Dispatch> existingDispatches = dispatchRepository.findBySalesOrderId(order.getId());
+        if (existingDispatches == null || existingDispatches.isEmpty()) {
+            Dispatch dispatch = new Dispatch();
+            dispatch.setSalesOrder(order);
+            dispatch.setCustomer(order.getCustomer());
+            dispatch.setStatus(com.sunpower.entity.enums.Enums.DispatchStatus.PICKING);
+            dispatch.setDispatchNotes("Auto-created on order confirmation");
+            dispatch = dispatchRepository.save(dispatch);
+            if (dispatch.getDispatchNumber() == null) {
+                dispatch.setDispatchNumber("DSP-" + String.format("%05d", dispatch.getId()));
+                dispatch = dispatchRepository.save(dispatch);
+            }
+
+            List<DispatchItem> dispatchItems = new ArrayList<>();
+            List<OrderItem> items = order.getItems() != null && !order.getItems().isEmpty() ?
+                    order.getItems() : orderItemRepository.findBySalesOrderId(order.getId());
+            for (OrderItem orderItem : items) {
+                Product product = orderItem.getProduct();
+                if (product.isSerialized()) {
+                    for (int i = 0; i < orderItem.getQuantity(); i++) {
+                        dispatchItems.add(new DispatchItem(dispatch, product, 1, null));
+                    }
+                } else {
+                    dispatchItems.add(new DispatchItem(dispatch, product, orderItem.getQuantity(), null));
+                }
+            }
+            dispatchItemRepository.saveAll(dispatchItems);
+            dispatch.setItems(dispatchItems);
+        }
+
+        // 2. Ensure Installation exists
+        java.util.Optional<Installation> existingInstallation = installationRepository.findBySalesOrderId(order.getId());
+        if (existingInstallation.isEmpty()) {
+            Installation installation = new Installation();
+            installation.setSalesOrder(order);
+            installation.setCustomer(order.getCustomer());
+            installation.setScheduledDate(LocalDate.now().plusDays(3));
+            installation.setInstalledCapacityKw(order.getCapacityKw());
+            installation.setStatus(com.sunpower.entity.enums.Enums.InstallationStatus.SCHEDULED);
+            installation.setWorkNotes("Auto-scheduled on order confirmation");
+            installation = installationRepository.save(installation);
+            if (installation.getInstallationNumber() == null) {
+                installation.setInstallationNumber("INS-" + String.format("%05d", installation.getId()));
+                installationRepository.save(installation);
+            }
+        }
     }
 }

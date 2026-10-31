@@ -14,6 +14,7 @@ public class ServiceTicketDTOs {
         private String customerName;
 
         private String serialCode; // Look up warranty & product by serial code
+        private Long serialNumberId;
 
         @NotBlank(message = "Complaint description is required")
         private String complaintDescription;
@@ -31,6 +32,8 @@ public class ServiceTicketDTOs {
         public void setCustomerName(String customerName) { this.customerName = customerName; }
         public String getSerialCode() { return serialCode; }
         public void setSerialCode(String serialCode) { this.serialCode = serialCode; }
+        public Long getSerialNumberId() { return serialNumberId; }
+        public void setSerialNumberId(Long serialNumberId) { this.serialNumberId = serialNumberId; }
         public String getComplaintDescription() { return complaintDescription; }
         public void setComplaintDescription(String complaintDescription) { this.complaintDescription = complaintDescription; }
         public String getFaultCode() { return faultCode; }

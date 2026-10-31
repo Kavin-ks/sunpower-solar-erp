@@ -329,6 +329,7 @@ export const DashboardPage: React.FC = () => {
                 <th className="py-3 px-4">Order #</th>
                 <th className="py-3 px-4">Customer</th>
                 <th className="py-3 px-4">Capacity</th>
+                <th className="py-3 px-4 text-center">Subsidy Status</th>
                 <th className="py-3 px-4 text-right">Order Value</th>
                 <th className="py-3 px-4 text-right">Received</th>
                 <th className="py-3 px-4 text-right">Hardware Cost</th>
@@ -346,6 +347,16 @@ export const DashboardPage: React.FC = () => {
                   <td className="py-3 px-4">
                     <span className="bg-slate-100 px-2 py-0.5 rounded text-[11px] font-medium text-slate-700">
                       {job.capacityKw} kW {job.systemType}
+                    </span>
+                  </td>
+                  <td className="py-3 px-4 text-center whitespace-nowrap">
+                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${
+                      job.subsidyStatus === 'APPROVED' ? 'bg-emerald-100 text-emerald-800' :
+                      job.subsidyStatus === 'SUBMITTED' ? 'bg-blue-100 text-blue-800' :
+                      job.subsidyStatus === 'DOCUMENTS_PENDING' ? 'bg-amber-100 text-amber-800' :
+                      'bg-slate-100 text-slate-600'
+                    }`}>
+                      {job.subsidyStatus ? job.subsidyStatus.replace('_', ' ') : 'N/A'}
                     </span>
                   </td>
                   <td className="py-3 px-4 text-right font-medium">{formatCurrency(job.orderAmount)}</td>

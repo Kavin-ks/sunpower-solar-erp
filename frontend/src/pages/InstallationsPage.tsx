@@ -65,6 +65,54 @@ export const InstallationsPage: React.FC = () => {
   const [customerAcceptanceNote, setCustomerAcceptanceNote] = useState('Satisfied with rooftop solar mounting and inverter operation.');
   const [hoursWorked, setHoursWorked] = useState('8.0');
 
+  // Digital Signature Canvas
+  const signatureCanvasRef = React.useRef<HTMLCanvasElement | null>(null);
+  const [isDrawing, setIsDrawing] = useState(false);
+  const [hasSignature, setHasSignature] = useState(false);
+
+  const startDrawing = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
+    const canvas = signatureCanvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    setIsDrawing(true);
+    setHasSignature(true);
+    const rect = canvas.getBoundingClientRect();
+    const x = 'touches' in e ? e.touches[0].clientX - rect.left : e.clientX - rect.left;
+    const y = 'touches' in e ? e.touches[0].clientY - rect.top : e.clientY - rect.top;
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+  };
+
+  const draw = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
+    if (!isDrawing) return;
+    const canvas = signatureCanvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    const rect = canvas.getBoundingClientRect();
+    const x = 'touches' in e ? e.touches[0].clientX - rect.left : e.clientX - rect.left;
+    const y = 'touches' in e ? e.touches[0].clientY - rect.top : e.clientY - rect.top;
+    ctx.lineWidth = 2;
+    ctx.lineCap = 'round';
+    ctx.strokeStyle = '#0f172a';
+    ctx.lineTo(x, y);
+    ctx.stroke();
+  };
+
+  const stopDrawing = () => {
+    setIsDrawing(false);
+  };
+
+  const clearSignature = () => {
+    const canvas = signatureCanvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    setHasSignature(false);
+  };
+
   const location = useLocation();
 
   useEffect(() => {
@@ -231,6 +279,11 @@ export const InstallationsPage: React.FC = () => {
     if (!selectedInstallation) return;
     try {
       const hours = parseFloat(hoursWorked) || 8.0;
+      let signatureUrl: string | undefined = undefined;
+      if (signatureCanvasRef.current && hasSignature) {
+        signatureUrl = signatureCanvasRef.current.toDataURL('image/png');
+      }
+
       await api.post(`/installations/${selectedInstallation.id}/complete`, {
         installedCapacityKw: parseFloat(installedCapacityKw) || selectedInstallation.salesOrder.capacityKw,
         panelMountingConfirmed: panelMounting,
@@ -239,11 +292,12 @@ export const InstallationsPage: React.FC = () => {
         testingPassed,
         testingNotes,
         customerSigneeName,
+        customerSignatureUrl: signatureUrl,
         customerAcceptanceNote,
         technicianHours: selectedInstallation.assignedTechnicians.map((it) => ({
           technicianId: it.technician.id,
           hoursWorked: hours,
-          payoutAmount: hours * 250, // ₹250/hr standard rate
+          payoutAmount: hours * (it.technician.hourlyRate || 250), // Auto-calculated with technician hourly rate
         })),
       });
       setShowCompleteModal(false);
@@ -395,11 +449,23 @@ export const InstallationsPage: React.FC = () => {
                         </button>
                       )}
 
+                      {isAdmin && inst.status !== 'COMPLETED' && (
+                        <span className="text-xs text-slate-400 font-medium italic">View Only</span>
+                      )}
+
                       {inst.status === 'COMPLETED' && (
-                        <span className="text-xs text-emerald-700 font-medium inline-flex items-center space-x-1">
-                          <Check className="w-3.5 h-3.5" />
-                          <span>Commissioned</span>
-                        </span>
+                        <div className="inline-flex items-center space-x-1.5">
+                          {inst.customerSignatureUrl ? (
+                            <span className="text-[10px] text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200 font-semibold flex items-center space-x-1">
+                              <span>Digital Sign-Off ✓</span>
+                            </span>
+                          ) : (
+                            <span className="text-xs text-emerald-700 font-medium inline-flex items-center space-x-1">
+                              <Check className="w-3.5 h-3.5" />
+                              <span>Commissioned</span>
+                            </span>
+                          )}
+                        </div>
                       )}
                     </td>
                   </tr>
@@ -818,6 +884,35 @@ export const InstallationsPage: React.FC = () => {
                 </div>
               </div>
 
+              {/* Digital Signature Pad */}
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block font-semibold text-slate-700">Homeowner On-Screen Digital Signature</label>
+                  <button
+                    type="button"
+                    onClick={clearSignature}
+                    className="text-[11px] text-slate-500 hover:text-rose-600 underline cursor-pointer"
+                  >
+                    Clear Signature
+                  </button>
+                </div>
+                <div className="border border-slate-300 rounded-xl overflow-hidden bg-slate-50 p-1">
+                  <canvas
+                    ref={signatureCanvasRef}
+                    width={450}
+                    height={100}
+                    onMouseDown={startDrawing}
+                    onMouseMove={draw}
+                    onMouseUp={stopDrawing}
+                    onMouseLeave={stopDrawing}
+                    onTouchStart={startDrawing}
+                    onTouchMove={draw}
+                    onTouchEnd={stopDrawing}
+                    className="w-full h-24 touch-none bg-white rounded-lg cursor-crosshair border border-slate-200"
+                  />
+                </div>
+                <p className="text-[10px] text-slate-400 mt-0.5">Please draw signature above (touchscreen or mouse supported)</p>
+              </div>
               <div className="flex justify-end space-x-3 pt-3 border-t border-slate-100">
                 <button
                   type="button"

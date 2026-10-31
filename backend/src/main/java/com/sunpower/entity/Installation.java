@@ -48,6 +48,9 @@ public class Installation {
     @Column(length = 100)
     private String customerSigneeName;
 
+    @Column(columnDefinition = "LONGTEXT")
+    private String customerSignatureUrl;
+
     private LocalDateTime customerSignedAt;
 
     @Enumerated(EnumType.STRING)
@@ -112,6 +115,8 @@ public class Installation {
     public void setCustomerAcceptanceNote(String customerAcceptanceNote) { this.customerAcceptanceNote = customerAcceptanceNote; }
     public String getCustomerSigneeName() { return customerSigneeName; }
     public void setCustomerSigneeName(String customerSigneeName) { this.customerSigneeName = customerSigneeName; }
+    public String getCustomerSignatureUrl() { return customerSignatureUrl; }
+    public void setCustomerSignatureUrl(String customerSignatureUrl) { this.customerSignatureUrl = customerSignatureUrl; }
     public LocalDateTime getCustomerSignedAt() { return customerSignedAt; }
     public void setCustomerSignedAt(LocalDateTime customerSignedAt) { this.customerSignedAt = customerSignedAt; }
     public InstallationStatus getStatus() { return status; }

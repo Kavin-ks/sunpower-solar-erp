@@ -50,6 +50,9 @@ public class ServiceTicketService {
     @Autowired
     private ExpenseRepository expenseRepository;
 
+    @Autowired
+    private InvoiceRepository invoiceRepository;
+
     public List<ServiceTicket> getAllTickets() {
         return serviceTicketRepository.findAll();
     }
@@ -80,16 +83,19 @@ public class ServiceTicketService {
         SerialNumber serialNumber = null;
         Warranty warranty = null;
 
-        if (request.getSerialCode() != null && !request.getSerialCode().trim().isEmpty()) {
+        if (request.getSerialNumberId() != null) {
+            serialNumber = serialNumberRepository.findById(request.getSerialNumberId()).orElse(null);
+        } else if (request.getSerialCode() != null && !request.getSerialCode().trim().isEmpty()) {
             serialNumber = serialNumberRepository.findBySerialCode(request.getSerialCode().trim()).orElse(null);
-            if (serialNumber != null) {
-                if (customer == null && serialNumber.getCustomer() != null) {
-                    customer = serialNumber.getCustomer();
-                }
-                Optional<Warranty> wOpt = warrantyRepository.findBySerialNumberId(serialNumber.getId());
-                if (wOpt.isPresent()) {
-                    warranty = wOpt.get();
-                }
+        }
+
+        if (serialNumber != null) {
+            if (customer == null && serialNumber.getCustomer() != null) {
+                customer = serialNumber.getCustomer();
+            }
+            Optional<Warranty> wOpt = warrantyRepository.findBySerialNumberId(serialNumber.getId());
+            if (wOpt.isPresent()) {
+                warranty = wOpt.get();
             }
         }
 
@@ -118,10 +124,16 @@ public class ServiceTicketService {
 
         // Calculate warranty coverage
         boolean underWarranty = false;
-        if (warranty != null && warranty.isValidCurrently()) {
-            underWarranty = true;
+        if (warranty != null && warranty.getStatus() == WarrantyStatus.ACTIVE) {
+            LocalDate today = LocalDate.now();
+            if (warranty.getWarrantyEndDate() != null && !today.isAfter(warranty.getWarrantyEndDate())) {
+                underWarranty = true;
+            }
         }
         ticket.setUnderWarranty(underWarranty);
+        if (underWarranty) {
+            ticket.setTotalCustomerCharges(BigDecimal.ZERO);
+        }
 
         if (request.getAssignedTechnicianId() != null) {
             Technician tech = technicianRepository.findById(request.getAssignedTechnicianId()).orElse(null);
@@ -210,8 +222,33 @@ public class ServiceTicketService {
         }
 
         ticket.setParts(parts);
-        ticket.setPartsCharges(partsTotal);
-        ticket.setTotalCustomerCharges(laborCharges.add(partsTotal));
+        ticket.setPartsCharges(underWarranty ? BigDecimal.ZERO : partsTotal);
+        BigDecimal totalCharges = underWarranty ? BigDecimal.ZERO : laborCharges.add(partsTotal);
+        ticket.setTotalCustomerCharges(totalCharges);
+
+        // If out-of-warranty and chargeable, create invoice linked to service_ticket_id
+        if (!underWarranty && totalCharges.compareTo(BigDecimal.ZERO) > 0) {
+            Optional<Invoice> existingInv = invoiceRepository.findByServiceTicketId(ticket.getId());
+            if (existingInv.isEmpty()) {
+                Invoice invoice = new Invoice();
+                invoice.setServiceTicket(ticket);
+                invoice.setCustomer(ticket.getCustomer());
+                invoice.setInvoiceDate(LocalDate.now());
+                invoice.setDueDate(LocalDate.now().plusDays(15));
+                invoice.setSubtotal(totalCharges);
+                invoice.setTaxAmount(BigDecimal.ZERO);
+                invoice.setTotalAmount(totalCharges);
+                invoice.setPaidAmount(BigDecimal.ZERO);
+                invoice.setBalanceAmount(totalCharges);
+                invoice.setStatus("ISSUED");
+                invoice.setNotes("Out-of-warranty service repair charges for ticket " + ticket.getTicketNumber());
+                invoice = invoiceRepository.save(invoice);
+                if (invoice.getInvoiceNumber() == null) {
+                    invoice.setInvoiceNumber("INV-SRV-" + String.format("%05d", invoice.getId()));
+                    invoiceRepository.save(invoice);
+                }
+            }
+        }
 
         ticket = serviceTicketRepository.save(ticket);
 

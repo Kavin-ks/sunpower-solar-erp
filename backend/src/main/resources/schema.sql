@@ -58,6 +58,7 @@ CREATE TABLE IF NOT EXISTS technicians (
     phone VARCHAR(20) NOT NULL,
     email VARCHAR(100),
     skills VARCHAR(255),
+    hourly_rate DECIMAL(10,2) DEFAULT 250.00,
     available BOOLEAN DEFAULT TRUE,
     active BOOLEAN DEFAULT TRUE,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -125,6 +126,8 @@ CREATE TABLE IF NOT EXISTS enquiries (
     system_type VARCHAR(30) NOT NULL,
     subsidy_required BOOLEAN DEFAULT FALSE,
     monthly_electricity_bill DECIMAL(10,2),
+    shadow_free_area_sq_ft DECIMAL(8,2) NULL,
+    grid_suitable BOOLEAN DEFAULT TRUE,
     source VARCHAR(30) NOT NULL DEFAULT 'MANUAL',
     status VARCHAR(30) NOT NULL DEFAULT 'NEW',
     assigned_to_user_id BIGINT,
@@ -396,6 +399,7 @@ CREATE TABLE IF NOT EXISTS installations (
     testing_notes VARCHAR(255),
     customer_acceptance_note TEXT,
     customer_signee_name VARCHAR(100),
+    customer_signature_url LONGTEXT,
     customer_signed_at DATETIME,
     status VARCHAR(30) NOT NULL DEFAULT 'SCHEDULED',
     work_notes TEXT,
@@ -521,7 +525,8 @@ CREATE TABLE IF NOT EXISTS technician_payments (
 CREATE TABLE IF NOT EXISTS invoices (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
     invoice_number VARCHAR(30) UNIQUE,
-    sales_order_id BIGINT NOT NULL,
+    sales_order_id BIGINT NULL,
+    service_ticket_id BIGINT NULL,
     customer_id BIGINT NOT NULL,
     invoice_date DATE,
     due_date DATE,
@@ -536,6 +541,7 @@ CREATE TABLE IF NOT EXISTS invoices (
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     CONSTRAINT fk_inv_order FOREIGN KEY (sales_order_id) REFERENCES sales_orders(id),
+    CONSTRAINT fk_inv_ticket FOREIGN KEY (service_ticket_id) REFERENCES service_tickets(id),
     CONSTRAINT fk_inv_cust FOREIGN KEY (customer_id) REFERENCES customers(id)
 ) ENGINE=InnoDB;
 
@@ -581,3 +587,14 @@ CREATE TABLE IF NOT EXISTS purchase_items (
     CONSTRAINT fk_pi_purchase FOREIGN KEY (purchase_id) REFERENCES purchases(id) ON DELETE CASCADE,
     CONSTRAINT fk_pi_prod FOREIGN KEY (product_id) REFERENCES products(id)
 ) ENGINE=InnoDB;
+
+-- =========================================================================
+-- Safe Incremental Schema Additions
+-- =========================================================================
+ALTER TABLE technicians ADD COLUMN IF NOT EXISTS hourly_rate DECIMAL(10,2) DEFAULT 250.00;
+ALTER TABLE enquiries ADD COLUMN IF NOT EXISTS shadow_free_area_sq_ft DECIMAL(8,2) NULL;
+ALTER TABLE enquiries ADD COLUMN IF NOT EXISTS grid_suitable BOOLEAN DEFAULT TRUE;
+ALTER TABLE installations ADD COLUMN IF NOT EXISTS customer_signature_url LONGTEXT NULL;
+ALTER TABLE invoices MODIFY COLUMN sales_order_id BIGINT NULL;
+ALTER TABLE invoices ADD COLUMN IF NOT EXISTS service_ticket_id BIGINT NULL;
+

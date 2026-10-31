@@ -71,7 +71,7 @@ public class QuotationService {
 
         // CRITICAL BUSINESS RULE: Verify Site Survey is APPROVED!
         if (survey.getStatus() != SurveyStatus.APPROVED) {
-            throw new IllegalStateException("Business Rule Violation: A quotation cannot be generated until the site survey has been APPROVED. Current survey status is " + survey.getStatus());
+            throw new IllegalStateException("Site survey must be approved before generating a quotation. Current status: " + survey.getStatus());
         }
 
         SolarPackage solarPackage = solarPackageRepository.findById(request.getSolarPackageId())
