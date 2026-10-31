@@ -296,26 +296,20 @@ const AuthWelcomePage = () => {
 
           <div>
             {/* Brand Logo & Name */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '32px' }}>
-              <div
+            <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginBottom: '32px' }}>
+              <img
+                src="/odoo_logo.png"
+                alt="Odoo Solar System ERP"
                 style={{
-                  width: '42px',
-                  height: '42px',
-                  borderRadius: '10px',
-                  backgroundColor: '#e63a27',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  color: '#ffffff',
-                  fontSize: '22px',
-                  boxShadow: '0 4px 14px rgba(230, 58, 39, 0.4)',
+                  height: '46px',
+                  width: 'auto',
+                  objectFit: 'contain',
+                  borderRadius: '6px',
                 }}
-              >
-                <i className="bi bi-sun-fill"></i>
-              </div>
+              />
               <div>
-                <h1 style={{ fontSize: '20px', fontWeight: 800, margin: 0, letterSpacing: '0.04em', color: '#ffffff' }}>
-                  SUNPOWER SOLAR ERP
+                <h1 style={{ fontSize: '19px', fontWeight: 800, margin: 0, letterSpacing: '0.03em', color: '#ffffff' }}>
+                  ODOO SOLAR SYSTEM ERP
                 </h1>
                 <p style={{ margin: 0, fontSize: '11px', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
                   Rooftop Installation & CRM Portal
@@ -910,7 +904,7 @@ const AuthWelcomePage = () => {
                     Account Verified!
                   </h3>
                   <p style={{ fontSize: '14.5px', color: '#64748b', margin: 0 }}>
-                    Welcome to SunPower Solar ERP. Redirecting to your dashboard...
+                    Welcome to Odoo Solar System ERP. Redirecting to your dashboard...
                   </p>
                 </div>
               )}
