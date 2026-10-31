@@ -32,11 +32,16 @@ export const EnquiriesPage: React.FC = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    fetchEnquiries();
+    fetchEnquiries(true);
+    // Background polling every 8 seconds so customer portal submissions appear automatically
+    const pollInterval = setInterval(() => {
+      fetchEnquiries(false);
+    }, 8000);
+    return () => clearInterval(pollInterval);
   }, [search, statusFilter]);
 
-  const fetchEnquiries = async () => {
-    setLoading(true);
+  const fetchEnquiries = async (showLoading = true) => {
+    if (showLoading) setLoading(true);
     try {
       let url = '/enquiries?';
       if (search) url += `search=${encodeURIComponent(search)}&`;
@@ -46,7 +51,7 @@ export const EnquiriesPage: React.FC = () => {
     } catch (err) {
       console.error(err);
     } finally {
-      setLoading(false);
+      if (showLoading) setLoading(false);
     }
   };
 
@@ -326,25 +331,36 @@ export const EnquiriesPage: React.FC = () => {
                 <div>
                   <p className="text-slate-400">System Capacity Requested</p>
                   <p className="font-semibold text-slate-800">
-                    {selectedEnquiry.requestedCapacityKw} kW ({selectedEnquiry.systemType})
+                    {selectedEnquiry.requestedCapacityKw} kW ({selectedEnquiry.systemType === 'ON_GRID' ? 'On-Grid' : 'Off-Grid'})
                   </p>
                 </div>
                 <div>
-                  <p className="text-slate-400">Monthly EB Bill</p>
-                  <p className="font-semibold text-slate-800">
-                    {selectedEnquiry.monthlyElectricityBill ? `₹${selectedEnquiry.monthlyElectricityBill}` : 'N/A'}
+                  <p className="text-slate-400">Government Subsidy</p>
+                  <p className="font-semibold text-emerald-700">
+                    {selectedEnquiry.subsidyRequired ? '✓ Requested (PM Surya Ghar)' : 'Not Required'}
                   </p>
                 </div>
                 <div className="col-span-2">
-                  <p className="text-slate-400">Installation Address</p>
-                  <p className="text-slate-700">{selectedEnquiry.customer.address || 'N/A'}</p>
+                  <p className="text-slate-400">Installation Site Address</p>
+                  <p className="text-slate-800 font-medium">
+                    {selectedEnquiry.customer.address || 'N/A'}
+                    {(selectedEnquiry.customer.city || selectedEnquiry.customer.state || selectedEnquiry.customer.pincode) && (
+                      <span className="text-slate-500 font-normal block mt-0.5">
+                        {[selectedEnquiry.customer.city, selectedEnquiry.customer.state, selectedEnquiry.customer.pincode].filter(Boolean).join(', ')}
+                      </span>
+                    )}
+                  </p>
                 </div>
                 {selectedEnquiry.notes && (
-                  <div className="col-span-2 bg-slate-50 p-2 rounded-lg border border-slate-100">
-                    <p className="text-slate-400 font-semibold mb-0.5">Customer Initial Remarks</p>
-                    <p className="text-slate-700 italic">{selectedEnquiry.notes}</p>
+                  <div className="col-span-2 bg-slate-50 p-2.5 rounded-lg border border-slate-200/80">
+                    <p className="text-slate-500 font-semibold mb-0.5">Customer Initial Remarks / Roof Area</p>
+                    <p className="text-slate-700">{selectedEnquiry.notes}</p>
                   </div>
                 )}
+                <div className="col-span-2 pt-2 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-400">
+                  <span>Enquiry Source: <strong className="text-slate-600 uppercase font-mono">{selectedEnquiry.source}</strong></span>
+                  <span>Submitted: {selectedEnquiry.createdAt ? new Date(selectedEnquiry.createdAt).toLocaleString() : 'N/A'}</span>
+                </div>
               </div>
 
               {/* Add Follow-up Note Form */}

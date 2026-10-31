@@ -26,11 +26,11 @@ public class Customer {
     @Column(length = 100)
     private String city;
 
-    @Column(length = 20)
-    private String pincode;
-
     @Column(length = 50)
     private String state = "Tamil Nadu";
+
+    @Column(length = 20)
+    private String pincode;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 30)
@@ -64,10 +64,10 @@ public class Customer {
     public void setAddress(String address) { this.address = address; }
     public String getCity() { return city; }
     public void setCity(String city) { this.city = city; }
-    public String getPincode() { return pincode; }
-    public void setPincode(String pincode) { this.pincode = pincode; }
     public String getState() { return state; }
     public void setState(String state) { this.state = state; }
+    public String getPincode() { return pincode; }
+    public void setPincode(String pincode) { this.pincode = pincode; }
     public CustomerType getCustomerType() { return customerType; }
     public void setCustomerType(CustomerType customerType) { this.customerType = customerType; }
     public LocalDateTime getCreatedAt() { return createdAt; }

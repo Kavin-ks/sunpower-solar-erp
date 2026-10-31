@@ -22,12 +22,6 @@ public class EnquiryController {
     @Autowired
     private EnquiryService enquiryService;
 
-    @PostMapping("/public")
-    public ResponseEntity<Enquiry> submitPublicEnquiry(@Valid @RequestBody com.sunpower.dto.EnquiryDTOs.PublicEnquiryRequest request) {
-        Enquiry enquiry = enquiryService.createPublicEnquiry(request);
-        return ResponseEntity.status(HttpStatus.CREATED).body(enquiry);
-    }
-
     @GetMapping
     @PreAuthorize("hasAnyRole('ADMIN', 'SALES', 'DIRECTOR')")
     public ResponseEntity<List<Enquiry>> getAllEnquiries(
