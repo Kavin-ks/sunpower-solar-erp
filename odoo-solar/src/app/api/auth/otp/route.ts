@@ -1,4 +1,26 @@
-﻿import { NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
+
+// 3-Tier Google Apps Script Cascade Pool
+const getAppsScriptUrls = (): string[] => {
+  const urls: string[] = [];
+  if (process.env.APPSCRIPT_PRIMARY_URL) urls.push(process.env.APPSCRIPT_PRIMARY_URL);
+  if (process.env.APPSCRIPT_WEBAPP_URL && !urls.includes(process.env.APPSCRIPT_WEBAPP_URL)) {
+    urls.push(process.env.APPSCRIPT_WEBAPP_URL);
+  }
+  if (process.env.APPSCRIPT_BACKUP_URL1) urls.push(process.env.APPSCRIPT_BACKUP_URL1);
+  if (process.env.APPSCRIPT_BACKUP_URL2) urls.push(process.env.APPSCRIPT_BACKUP_URL2);
+
+  // Default hardcoded fallbacks
+  const defaultList = [
+    'https://script.google.com/macros/s/AKfycbwvj28CeDEk0G0vXnHHHf13ZHbCBvnBM1kaix5ei5xBT854u2kceZu2RF4gK3z75OAM/exec',
+    'https://script.google.com/macros/s/AKfycbz5Npc-7ELsbWnOmNKQFmKm5r4T5G5uXYGAaCVO6LWNkYI0pauqtAN-lNTVK0SUItCw/exec',
+    'https://script.google.com/macros/s/AKfycbxqSJaJYfqxUD6PUfenZf-Lx2kKPMkY7WaPr_wFGkAxDkMbsz5kuMOHPoEHsUPlio-z/exec',
+  ];
+  for (const item of defaultList) {
+    if (!urls.includes(item)) urls.push(item);
+  }
+  return urls;
+};
 
 // In-memory fallback cache for development/failover
 const localOtpStore = new Map<string, { otp: string; expiresAt: number }>();
@@ -8,26 +30,30 @@ export async function POST(request: Request) {
     const body = await request.json();
     const { action, email, otp, name } = body;
 
-    const appscriptUrl = process.env.APPSCRIPT_WEBAPP_URL || process.env.NEXT_PUBLIC_APPSCRIPT_URL;
     const cleanEmail = (email || '').trim().toLowerCase();
 
     if (!cleanEmail) {
       return NextResponse.json({ success: false, message: 'Email address is required.' }, { status: 400 });
     }
 
+    const scriptUrls = getAppsScriptUrls();
+
     // -------------------------------------------------------------
-    // 1. ACTION: SEND_OTP
+    // 1. ACTION: SEND_OTP (with 3-Tier Cascade Failover)
     // -------------------------------------------------------------
     if (action === 'SEND_OTP') {
       console.log(`[Auth OTP API] Dispatching OTP for: ${cleanEmail}`);
 
-      let appsScriptDispatched = false;
-      let appScriptMsg = '';
+      let emailSent = false;
+      let activeUrlUsed = '';
 
-      // Attempt to dispatch via Google Apps Script if URL configured
-      if (appscriptUrl && appscriptUrl.startsWith('http')) {
+      // Try Primary -> Backup 1 -> Backup 2
+      for (let i = 0; i < scriptUrls.length; i++) {
+        const url = scriptUrls[i];
+        const tierName = i === 0 ? 'Primary' : `Backup ${i}`;
         try {
-          const response = await fetch(appscriptUrl, {
+          console.log(`[Auth OTP API] Attempting dispatch via ${tierName} URL...`);
+          const response = await fetch(url, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -43,17 +69,28 @@ export async function POST(request: Request) {
             return { message: text };
           });
 
-          console.log('[Auth OTP API] Apps Script response:', resData);
-          if (resData.success || resData.status === 'success') {
-            appsScriptDispatched = true;
-            appScriptMsg = resData.message;
+          const isQuotaHit =
+            resData.quotaExceeded ||
+            (resData.message &&
+              (resData.message.includes('Service invoked too many times') ||
+               resData.message.includes('quota')));
+
+          const isSuccess = (resData.success || resData.status === 'success') && !isQuotaHit;
+
+          if (isSuccess) {
+            emailSent = true;
+            activeUrlUsed = tierName;
+            console.log(`[Auth OTP API] Email successfully delivered via ${tierName}!`);
+            break; // Stop cascade on success
+          } else {
+            console.warn(`[Auth OTP API] ${tierName} URL hit quota or returned error. Cascading to next backup...`);
           }
-        } catch (scriptErr) {
-          console.warn('[Auth OTP API] Apps Script call failed or pending compilation, using fallback generator:', scriptErr);
+        } catch (err) {
+          console.warn(`[Auth OTP API] Error contacting ${tierName} URL, cascading...`, err);
         }
       }
 
-      // Always maintain local fallback token so verification never fails even if offline
+      // Always maintain local backup token so verification never fails
       const localCode = Math.floor(100000 + Math.random() * 900000).toString();
       localOtpStore.set(cleanEmail, {
         otp: localCode,
@@ -63,15 +100,16 @@ export async function POST(request: Request) {
 
       return NextResponse.json({
         success: true,
-        message: appsScriptDispatched
-          ? (appScriptMsg || `Verification OTP sent to ${cleanEmail}`)
-          : `Verification OTP dispatched to ${cleanEmail}. (Check inbox)`,
-        dispatchedViaAppsScript: appsScriptDispatched,
+        message: emailSent
+          ? 'Verification code sent to your email! Please check your inbox or spam folder.'
+          : `Email services at quota limit. For instant testing, your OTP is: ${localCode}`,
+        demoOtp: !emailSent ? localCode : undefined,
+        dispatchedVia: activeUrlUsed || 'LocalFallback',
       });
     }
 
     // -------------------------------------------------------------
-    // 2. ACTION: VERIFY_OTP
+    // 2. ACTION: VERIFY_OTP (Checks All Active Endpoints + Local Store)
     // -------------------------------------------------------------
     if (action === 'VERIFY_OTP') {
       const submittedCode = (otp || '').toString().trim();
@@ -79,10 +117,10 @@ export async function POST(request: Request) {
         return NextResponse.json({ success: false, message: 'Please enter the 6-digit OTP code.' }, { status: 400 });
       }
 
-      // First check Google Apps Script if available
-      if (appscriptUrl && appscriptUrl.startsWith('http')) {
+      // 1. Verify against Apps Script endpoints
+      for (const url of scriptUrls) {
         try {
-          const response = await fetch(appscriptUrl, {
+          const response = await fetch(url, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -93,7 +131,7 @@ export async function POST(request: Request) {
             redirect: 'follow',
           });
 
-          const resData = await response.json();
+          const resData = await response.json().catch(() => ({}));
           if (resData.success && resData.verified) {
             localOtpStore.delete(cleanEmail);
             return NextResponse.json({
@@ -102,12 +140,10 @@ export async function POST(request: Request) {
               message: 'Email address verified successfully!',
             });
           }
-        } catch (scriptErr) {
-          console.warn('[Auth OTP API] Apps Script verify check error, checking local store:', scriptErr);
-        }
+        } catch {}
       }
 
-      // Check local fallback store
+      // 2. Check local fallback store
       const record = localOtpStore.get(cleanEmail);
       if (record && record.otp === submittedCode && Date.now() < record.expiresAt) {
         localOtpStore.delete(cleanEmail);

@@ -156,7 +156,7 @@ const ProfilePage = () => {
 
                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                       <i className="bi bi-shield-check text-success fs-5"></i>
-                      <span>Google Apps Script OTP Verified</span>
+                      <span>Verified Customer Account</span>
                     </div>
                   </div>
 
