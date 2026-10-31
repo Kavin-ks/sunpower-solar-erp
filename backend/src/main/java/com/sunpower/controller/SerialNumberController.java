@@ -35,7 +35,7 @@ public class SerialNumberController {
     }
 
     @GetMapping("/lookup/{serialCode}")
-    @PreAuthorize("hasAnyRole('WAREHOUSE', 'ADMIN', 'SUPPORT', 'TECHNICIAN', 'SALES', 'DIRECTOR')")
+    @PreAuthorize("hasAnyRole('WAREHOUSE', 'ADMIN', 'SUPPORT', 'TECHNICIAN', 'SALES')")
     public ResponseEntity<?> lookupSerial(@PathVariable String serialCode) {
         return serialNumberService.findBySerialCode(serialCode)
                 .map(ResponseEntity::ok)
@@ -43,13 +43,13 @@ public class SerialNumberController {
     }
 
     @GetMapping("/order/{orderId}")
-    @PreAuthorize("hasAnyRole('WAREHOUSE', 'ADMIN', 'SUPPORT', 'TECHNICIAN', 'SALES', 'DIRECTOR')")
+    @PreAuthorize("hasAnyRole('WAREHOUSE', 'ADMIN', 'SUPPORT', 'TECHNICIAN', 'SALES')")
     public ResponseEntity<List<SerialNumber>> getSerialsByOrder(@PathVariable Long orderId) {
         return ResponseEntity.ok(serialNumberService.getSerialsByOrderId(orderId));
     }
 
     @PostMapping
-    @PreAuthorize("hasRole('WAREHOUSE')")
+    @PreAuthorize("hasAnyRole('WAREHOUSE', 'ADMIN')")
     public ResponseEntity<SerialNumber> registerSerialNumber(
             @RequestBody Map<String, String> payload,
             Authentication authentication) {

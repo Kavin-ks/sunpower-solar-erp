@@ -52,6 +52,20 @@ public class SiteSurveyService {
         return siteSurveyRepository.findApprovedSurveysByCustomerId(customerId);
     }
 
+    public List<SiteSurvey> getSurveysForTechnician(String username) {
+        if (username == null || username.equalsIgnoreCase("admin") || username.equalsIgnoreCase("technician")) {
+            return siteSurveyRepository.findAll();
+        }
+        java.util.Optional<Technician> techOpt = technicianRepository.findByUserUsername(username);
+        if (techOpt.isEmpty()) {
+            techOpt = technicianRepository.findByNameContainingIgnoreCase(username);
+        }
+        if (techOpt.isPresent()) {
+            return siteSurveyRepository.findByTechnicianId(techOpt.get().getId());
+        }
+        return new java.util.ArrayList<>();
+    }
+
     @Transactional
     public SiteSurvey scheduleSurvey(SurveyScheduleRequest request, String scheduledBy) {
         Customer customer = customerRepository.findById(request.getCustomerId())

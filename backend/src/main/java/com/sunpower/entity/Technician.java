@@ -1,10 +1,12 @@
 package com.sunpower.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "technicians")
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 public class Technician {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -27,6 +29,11 @@ public class Technician {
 
     private boolean available = true;
     private boolean active = true;
+
+    @OneToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "user_id")
+    @JsonIgnoreProperties({"password", "roles", "hibernateLazyInitializer", "handler"})
+    private User user;
 
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
@@ -73,4 +80,6 @@ public class Technician {
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
     public LocalDateTime getUpdatedAt() { return updatedAt; }
     public void setUpdatedAt(LocalDateTime updatedAt) { this.updatedAt = updatedAt; }
+    public User getUser() { return user; }
+    public void setUser(User user) { this.user = user; }
 }

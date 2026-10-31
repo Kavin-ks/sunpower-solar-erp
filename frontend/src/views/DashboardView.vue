@@ -35,7 +35,7 @@ const authStore = useAuthStore();
 const router = useRouter();
 
 const roles = computed(() => authStore.user?.roles || []);
-const isAdmin = computed(() => roles.value.includes('ROLE_ADMIN') || roles.value.includes('ROLE_DIRECTOR'));
+const isAdmin = computed(() => roles.value.includes('ROLE_ADMIN'));
 const isSales = computed(() => roles.value.includes('ROLE_SALES'));
 const isWarehouse = computed(() => roles.value.includes('ROLE_WAREHOUSE'));
 const isTechnician = computed(() => roles.value.includes('ROLE_TECHNICIAN'));
@@ -51,11 +51,6 @@ const financeData = ref<FinanceDashboardData | null>(null);
 
 const loading = ref(true);
 const selectedPeriod = ref('ALL');
-
-// Quick serial lookup for Support
-const quickSerial = ref('');
-const serialLookupResult = ref<any>(null);
-const searchingSerial = ref(false);
 
 const formatCurrency = (val: number | undefined) => {
   return new Intl.NumberFormat('en-IN', {
@@ -94,25 +89,6 @@ const fetchDepartmentDashboard = async () => {
     console.error('Failed to load department dashboard data', err);
   } finally {
     loading.value = false;
-  }
-};
-
-const handleQuickSerialSearch = async () => {
-  if (!quickSerial.value.trim()) return;
-  searchingSerial.value = true;
-  serialLookupResult.value = null;
-  try {
-    const res = await api.get(`/warranties/serial/${quickSerial.value.trim()}`);
-    serialLookupResult.value = { found: true, data: res.data };
-  } catch (err) {
-    try {
-      const sRes = await api.get(`/serial-numbers/lookup/${quickSerial.value.trim()}`);
-      serialLookupResult.value = { found: true, serialOnly: true, data: sRes.data };
-    } catch (err2) {
-      serialLookupResult.value = { found: false };
-    }
-  } finally {
-    searchingSerial.value = false;
   }
 };
 
@@ -319,82 +295,232 @@ onMounted(() => {
 
     <!-- 4. TECHNICIAN DASHBOARD -->
     <div v-else-if="isTechnician && technicianData" class="space-y-6">
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-xs">
-          <span class="text-xs uppercase font-bold text-slate-400">Assigned Site Surveys</span>
-          <div class="text-2xl font-bold text-slate-900 mt-1">{{ technicianData.assignedSurveysCount }}</div>
-          <span class="text-[11px] text-amber-700 font-semibold">{{ technicianData.pendingSurveysCount }} Pending Physical Inspection</span>
+      <!-- Top Overview Header -->
+      <div class="flex items-center justify-between bg-white p-4 rounded-xl border border-slate-200 shadow-xs">
+        <div>
+          <span class="text-xs uppercase font-bold text-slate-400">Authenticated Technician Profile</span>
+          <h2 class="text-lg font-bold text-slate-900 mt-0.5">
+            {{ technicianData.technicianName }}
+            <span v-if="technicianData.isLead" class="ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-blue-100 text-blue-800 border border-blue-200">
+              Technician Lead
+            </span>
+            <span v-else class="ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800 border border-emerald-200">
+              Field Technician
+            </span>
+          </h2>
+          <p class="text-xs text-slate-500">Specialization: {{ technicianData.specialization }} • Phone: {{ technicianData.phone }}</p>
+        </div>
+        <router-link
+          to="/my-work"
+          class="flex items-center space-x-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-semibold shadow-2xs transition"
+        >
+          <Wrench class="w-4 h-4" />
+          <span>Go to My Assigned Work</span>
+        </router-link>
+      </div>
+
+      <!-- Live Database Metrics Grid -->
+      <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-3">
+        <div v-if="technicianData.isLead" class="bg-white p-3 rounded-xl border border-slate-200 shadow-xs">
+          <span class="text-[10px] uppercase font-bold text-slate-400 block truncate">Active Techs</span>
+          <div class="text-xl font-bold text-emerald-700 mt-0.5">{{ technicianData.activeTechniciansCount ?? 0 }}</div>
+          <span class="text-[10px] text-slate-400">Fleet strength</span>
         </div>
 
-        <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-xs">
-          <span class="text-xs uppercase font-bold text-slate-400">Active Installations</span>
-          <div class="text-2xl font-bold text-blue-700 mt-1">{{ technicianData.inProgressInstallationsCount }}</div>
-          <span class="text-[11px] text-emerald-600 font-semibold">{{ technicianData.completedInstallationsCount }} Successfully Commissioned</span>
+        <div v-if="technicianData.isLead" class="bg-white p-3 rounded-xl border border-slate-200 shadow-xs">
+          <span class="text-[10px] uppercase font-bold text-slate-400 block truncate">Available</span>
+          <div class="text-xl font-bold text-blue-700 mt-0.5">{{ technicianData.availableTechniciansCount ?? 0 }}</div>
+          <span class="text-[10px] text-slate-400">Ready to dispatch</span>
         </div>
 
-        <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-xs">
-          <span class="text-xs uppercase font-bold text-slate-400">Service & Repair Visits</span>
-          <div class="text-2xl font-bold text-purple-700 mt-1">{{ technicianData.assignedServiceVisitsCount }}</div>
-          <span class="text-[11px] text-slate-500">Field complaints assigned</span>
+        <div class="bg-white p-3 rounded-xl border border-slate-200 shadow-xs">
+          <span class="text-[10px] uppercase font-bold text-slate-400 block truncate">Assigned Surveys</span>
+          <div class="text-xl font-bold text-slate-900 mt-0.5">{{ technicianData.assignedSurveysCount }}</div>
+          <span class="text-[10px] text-amber-600 font-semibold">{{ technicianData.pendingSurveysCount }} Pending</span>
+        </div>
+
+        <div class="bg-white p-3 rounded-xl border border-slate-200 shadow-xs">
+          <span class="text-[10px] uppercase font-bold text-slate-400 block truncate">Active Installs</span>
+          <div class="text-xl font-bold text-indigo-700 mt-0.5">{{ technicianData.inProgressInstallationsCount }}</div>
+          <span class="text-[10px] text-slate-500">In Progress</span>
+        </div>
+
+        <div class="bg-white p-3 rounded-xl border border-slate-200 shadow-xs">
+          <span class="text-[10px] uppercase font-bold text-slate-400 block truncate">Completed Installs</span>
+          <div class="text-xl font-bold text-emerald-700 mt-0.5">{{ technicianData.completedInstallationsCount }}</div>
+          <span class="text-[10px] text-slate-500">Commissioned</span>
+        </div>
+
+        <div class="bg-white p-3 rounded-xl border border-slate-200 shadow-xs">
+          <span class="text-[10px] uppercase font-bold text-slate-400 block truncate">Pending Visits</span>
+          <div class="text-xl font-bold text-purple-700 mt-0.5">{{ technicianData.pendingServiceVisitsCount ?? 0 }}</div>
+          <span class="text-[10px] text-slate-400">Complaints queue</span>
+        </div>
+
+        <div class="bg-white p-3 rounded-xl border border-slate-200 shadow-xs">
+          <span class="text-[10px] uppercase font-bold text-slate-400 block truncate">Jobs In Progress</span>
+          <div class="text-xl font-bold text-amber-700 mt-0.5">{{ technicianData.inProgressJobsCount ?? 0 }}</div>
+          <span class="text-[10px] text-slate-400">On-site work</span>
+        </div>
+
+        <div class="bg-white p-3 rounded-xl border border-slate-200 shadow-xs">
+          <span class="text-[10px] uppercase font-bold text-slate-400 block truncate">Overdue</span>
+          <div class="text-xl font-bold text-rose-700 mt-0.5">{{ technicianData.overdueAssignmentsCount ?? 0 }}</div>
+          <span class="text-[10px] text-rose-500 font-semibold">Attention</span>
+        </div>
+      </div>
+
+      <!-- Lead Fleet Workload Table -->
+      <div v-if="technicianData.isLead && technicianData.teamWorkloads && technicianData.teamWorkloads.length > 0" class="bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden">
+        <div class="p-4 border-b border-slate-200 flex items-center justify-between bg-slate-50/50">
+          <div>
+            <h3 class="text-sm font-bold text-slate-900">Technician Fleet Workload & Completion History</h3>
+            <p class="text-xs text-slate-500">Live operational assignment distribution across all registered field technicians</p>
+          </div>
+          <span class="text-xs font-semibold text-slate-600 bg-white px-3 py-1 rounded-lg border border-slate-200">
+            {{ technicianData.teamWorkloads.length }} Technicians Monitored
+          </span>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-xs text-slate-600">
+            <thead class="bg-slate-50 text-slate-700 uppercase font-semibold text-[10px] tracking-wider border-b border-slate-200">
+              <tr>
+                <th class="py-3 px-4">Technician</th>
+                <th class="py-3 px-4">Specialization</th>
+                <th class="py-3 px-4 text-center">Active Surveys</th>
+                <th class="py-3 px-4 text-center">Active Installs</th>
+                <th class="py-3 px-4 text-center">Active Service Visits</th>
+                <th class="py-3 px-4 text-center">Total Active Jobs</th>
+                <th class="py-3 px-4 text-center">Completed Installs</th>
+                <th class="py-3 px-4 text-center">Completed Repairs</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100">
+              <tr v-for="member in technicianData.teamWorkloads" :key="member.technicianId" class="hover:bg-slate-50/70 transition">
+                <td class="py-2.5 px-4 font-semibold text-slate-900 flex items-center space-x-2">
+                  <div class="w-6 h-6 rounded-full bg-slate-200 text-slate-700 flex items-center justify-center font-bold text-[10px]">
+                    {{ member.name.charAt(0) }}
+                  </div>
+                  <span>{{ member.name }}</span>
+                </td>
+                <td class="py-2.5 px-4 text-slate-500">{{ member.specialization }}</td>
+                <td class="py-2.5 px-4 text-center font-mono font-medium" :class="member.activeSurveys > 0 ? 'text-amber-700 font-bold' : 'text-slate-400'">
+                  {{ member.activeSurveys }}
+                </td>
+                <td class="py-2.5 px-4 text-center font-mono font-medium" :class="member.activeInstallations > 0 ? 'text-blue-700 font-bold' : 'text-slate-400'">
+                  {{ member.activeInstallations }}
+                </td>
+                <td class="py-2.5 px-4 text-center font-mono font-medium" :class="member.activeServiceVisits > 0 ? 'text-purple-700 font-bold' : 'text-slate-400'">
+                  {{ member.activeServiceVisits }}
+                </td>
+                <td class="py-2.5 px-4 text-center">
+                  <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold" :class="member.totalActiveJobs > 0 ? 'bg-amber-100 text-amber-800' : 'bg-slate-100 text-slate-600'">
+                    {{ member.totalActiveJobs }}
+                  </span>
+                </td>
+                <td class="py-2.5 px-4 text-center font-mono text-emerald-700 font-semibold">{{ member.completedInstallations }}</td>
+                <td class="py-2.5 px-4 text-center font-mono text-teal-700 font-semibold">{{ member.completedServiceVisits }}</td>
+              </tr>
+            </tbody>
+          </table>
         </div>
       </div>
     </div>
 
     <!-- 5. SUPPORT DASHBOARD -->
     <div v-else-if="isSupport && supportData" class="space-y-6">
-      <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <!-- Authoritative Metrics Grid -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
+        <!-- A. Open Complaints -->
         <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-xs">
-          <span class="text-xs uppercase font-bold text-slate-400">Open Complaints</span>
+          <span class="text-[10px] uppercase font-bold text-slate-400">Open Complaints</span>
           <div class="text-2xl font-bold text-rose-700 mt-1">{{ supportData.openTickets }}</div>
-          <span class="text-[11px] text-slate-500">{{ supportData.inProgressTickets }} In Progress</span>
+          <span class="text-[11px] text-slate-500">Awaiting technician</span>
         </div>
 
+        <!-- B. In Progress -->
         <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-xs">
-          <span class="text-xs uppercase font-bold text-slate-400">Resolved Complaints</span>
-          <div class="text-2xl font-bold text-emerald-700 mt-1">{{ supportData.resolvedTickets }}</div>
-          <span class="text-[11px] text-slate-500">{{ supportData.closedTickets }} Confirmed & Closed</span>
+          <span class="text-[10px] uppercase font-bold text-slate-400">In Progress</span>
+          <div class="text-2xl font-bold text-amber-600 mt-1">{{ supportData.inProgressTickets }}</div>
+          <span class="text-[11px] text-slate-500">Technician on site</span>
         </div>
 
+        <!-- C. Awaiting Customer Sign-off -->
         <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-xs">
-          <span class="text-xs uppercase font-bold text-slate-400">Active Warranties</span>
-          <div class="text-2xl font-bold text-blue-700 mt-1">{{ supportData.activeWarrantiesCount }}</div>
-          <span class="text-[11px] text-slate-500">Registered serialized equipment</span>
+          <span class="text-[10px] uppercase font-bold text-slate-400">Awaiting Confirmation</span>
+          <div class="text-2xl font-bold text-blue-700 mt-1">{{ supportData.resolvedTickets }}</div>
+          <span class="text-[11px] text-slate-500">Repair completed</span>
         </div>
 
+        <!-- D. Confirmed & Closed -->
         <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-xs">
-          <span class="text-xs uppercase font-bold text-slate-400">Avg Resolution Turnaround</span>
-          <div class="text-2xl font-bold text-slate-900 mt-1">{{ supportData.avgResolutionDays?.toFixed(1) }} Days</div>
-          <span class="text-[11px] text-emerald-600 font-semibold">Under SLA targets</span>
+          <span class="text-[10px] uppercase font-bold text-slate-400">Confirmed & Closed</span>
+          <div class="text-2xl font-bold text-emerald-700 mt-1">{{ supportData.closedTickets }}</div>
+          <span class="text-[11px] text-slate-500">Verified resolved</span>
+        </div>
+
+        <!-- E. Active Warranties -->
+        <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-xs">
+          <span class="text-[10px] uppercase font-bold text-slate-400">Active Warranties</span>
+          <div class="text-2xl font-bold text-slate-900 mt-1">{{ supportData.activeWarrantiesCount }}</div>
+          <span class="text-[11px] text-slate-500">Valid serialized equipment</span>
+        </div>
+
+        <!-- F. Avg Turnaround -->
+        <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-xs">
+          <span class="text-[10px] uppercase font-bold text-slate-400">Resolution Turnaround</span>
+          <div v-if="supportData.avgResolutionDays != null" class="text-2xl font-bold text-slate-900 mt-1">
+            {{ supportData.avgResolutionDays }} Days
+          </div>
+          <div v-else class="text-xs font-semibold text-slate-400 mt-2">
+            N/A — No resolved complaints
+          </div>
+          <span class="text-[10px] text-slate-400 block mt-0.5">{{ supportData.avgResolutionTurnaroundText || 'SLA calculation' }}</span>
         </div>
       </div>
 
-      <!-- Quick Serial Lookup Card -->
-      <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-xs">
-        <h3 class="text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">Instant Serial & Warranty Verification</h3>
-        <form @submit.prevent="handleQuickSerialSearch" class="flex gap-2">
-          <input
-            type="text"
-            v-model="quickSerial"
-            placeholder="Enter component serial number (e.g. SN-INV-5KW-001)..."
-            class="flex-1 px-3 py-2 border border-slate-200 rounded-xl text-xs font-mono focus:ring-2 focus:ring-emerald-500 focus:outline-none"
-          />
-          <button
-            type="submit"
-            :disabled="searchingSerial"
-            class="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-semibold cursor-pointer"
-          >
-            {{ searchingSerial ? 'Verifying...' : 'Check Warranty' }}
-          </button>
-        </form>
-
-        <div v-if="serialLookupResult" class="mt-3 p-3 rounded-xl border text-xs">
-          <div v-if="serialLookupResult.found && serialLookupResult.data" class="bg-emerald-50 border-emerald-200 text-emerald-900 p-2 rounded-lg">
-            <p class="font-bold">✓ Serial Verified Active</p>
-            <p>Product: {{ serialLookupResult.data.product?.name || serialLookupResult.data.name }}</p>
-            <p v-if="serialLookupResult.data.warrantyEndDate">Valid until: {{ serialLookupResult.data.warrantyEndDate }}</p>
+      <!-- Dynamic Fault Distribution & Priority Tickets -->
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Dynamic Fault Breakdown -->
+        <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-xs lg:col-span-1">
+          <h2 class="text-xs font-bold uppercase tracking-wider text-slate-700 mb-3">Fault Category Breakdown</h2>
+          <div v-if="supportData.faultBreakdown && supportData.faultBreakdown.length > 0" class="space-y-2.5">
+            <div v-for="f in supportData.faultBreakdown" :key="f.faultType" class="flex justify-between items-center text-xs">
+              <span class="text-slate-600 truncate pr-2">{{ f.faultType }}</span>
+              <span class="font-bold text-slate-900 bg-slate-100 px-2 py-0.5 rounded-full text-[10px]">{{ f.count }}</span>
+            </div>
           </div>
-          <div v-else class="bg-rose-50 border-rose-200 text-rose-800 p-2 rounded-lg">
-            <p class="font-bold">✗ No active warranty record found for this serial number.</p>
+          <div v-else class="text-xs text-slate-400 italic py-4">No fault records registered.</div>
+        </div>
+
+        <!-- Urgent Inbound Service Tickets -->
+        <div class="bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden lg:col-span-2">
+          <div class="p-4 border-b border-slate-200 flex justify-between items-center">
+            <h2 class="text-xs font-bold uppercase tracking-wider text-slate-700">Recent Service Tickets Queue</h2>
+            <router-link to="/service" class="text-xs font-semibold text-emerald-700 hover:text-emerald-800">Open Service Workspace →</router-link>
+          </div>
+          <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs text-slate-600">
+              <thead class="bg-slate-50 text-slate-700 uppercase font-semibold text-[10px] tracking-wider border-b border-slate-200">
+                <tr>
+                  <th class="py-2.5 px-4">Ticket #</th>
+                  <th class="py-2.5 px-4">Customer</th>
+                  <th class="py-2.5 px-4">Equipment / Serial</th>
+                  <th class="py-2.5 px-4">Status</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-slate-100">
+                <tr v-if="!supportData.urgentTickets || supportData.urgentTickets.length === 0">
+                  <td colspan="4" class="py-6 text-center text-slate-400">No active tickets.</td>
+                </tr>
+                <tr v-for="t in supportData.urgentTickets.slice(0, 5)" :key="t.id" class="hover:bg-slate-50">
+                  <td class="py-2.5 px-4 font-mono font-bold text-slate-900">{{ t.ticketNumber }}</td>
+                  <td class="py-2.5 px-4 font-semibold text-slate-800">{{ t.customer?.fullName }}</td>
+                  <td class="py-2.5 px-4 font-mono text-[11px] text-slate-500">{{ t.serialNumber?.serialCode || 'N/A' }}</td>
+                  <td class="py-2.5 px-4"><StatusBadge :status="t.status" /></td>
+                </tr>
+              </tbody>
+            </table>
           </div>
         </div>
       </div>

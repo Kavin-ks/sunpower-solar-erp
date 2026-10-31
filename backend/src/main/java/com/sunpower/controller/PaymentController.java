@@ -23,7 +23,7 @@ public class PaymentController {
     private PaymentService paymentService;
 
     @GetMapping
-    @PreAuthorize("hasAnyRole('ADMIN', 'FINANCE', 'SALES', 'DIRECTOR')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'FINANCE', 'SALES')")
     public ResponseEntity<List<Payment>> getAllPayments(
             @RequestParam(required = false) Long orderId,
             @RequestParam(required = false) Long customerId) {

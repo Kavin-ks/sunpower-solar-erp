@@ -3,6 +3,7 @@ package com.sunpower.controller;
 import com.sunpower.dto.FinanceDTOs.*;
 import com.sunpower.entity.*;
 import com.sunpower.service.FinanceService;
+import com.sunpower.service.PaymentService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -19,11 +20,14 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/finance")
-@PreAuthorize("hasAnyRole('FINANCE', 'DIRECTOR', 'ADMIN')")
+@PreAuthorize("hasAnyRole('FINANCE', 'ADMIN', 'DIRECTOR')")
 public class FinanceController {
 
     @Autowired
     private FinanceService financeService;
+
+    @Autowired
+    private PaymentService paymentService;
 
     @GetMapping("/dashboard")
     public ResponseEntity<FinanceDashboardDTO> getFinanceDashboard(
@@ -31,6 +35,12 @@ public class FinanceController {
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
         return ResponseEntity.ok(financeService.getFinanceDashboard(period, startDate, endDate));
+    }
+
+    @GetMapping("/payments")
+    @PreAuthorize("hasAnyRole('ADMIN', 'FINANCE', 'SALES', 'DIRECTOR')")
+    public ResponseEntity<List<Payment>> getAllPayments() {
+        return ResponseEntity.ok(paymentService.getAllPayments());
     }
 
     @GetMapping("/expenses")
@@ -47,9 +57,11 @@ public class FinanceController {
     @PostMapping("/expenses/{id}/approve")
     public ResponseEntity<Expense> approveExpense(
             @PathVariable Long id,
+            @RequestBody(required = false) ExpenseApprovalRequest request,
             Authentication authentication) {
-        String approvedBy = authentication != null ? authentication.getName() : "Finance Officer";
-        return ResponseEntity.ok(financeService.approveExpense(id, approvedBy));
+        String actor = authentication != null ? authentication.getName() : "Finance Lead";
+        Expense expense = financeService.approveExpense(id, actor);
+        return ResponseEntity.ok(expense);
     }
 
     @PostMapping("/expenses/{id}/reject")
@@ -57,9 +69,10 @@ public class FinanceController {
             @PathVariable Long id,
             @RequestBody(required = false) ExpenseApprovalRequest request,
             Authentication authentication) {
-        String reason = request != null && request.getRejectionReason() != null ? request.getRejectionReason() : "Disapproved by Finance";
-        String rejectedBy = authentication != null ? authentication.getName() : "Finance Officer";
-        return ResponseEntity.ok(financeService.rejectExpense(id, reason, rejectedBy));
+        String actor = authentication != null ? authentication.getName() : "Finance Lead";
+        String reason = (request != null && request.getRejectionReason() != null) ? request.getRejectionReason() : "Rejected by Finance Controller";
+        Expense expense = financeService.rejectExpense(id, reason, actor);
+        return ResponseEntity.ok(expense);
     }
 
     @GetMapping("/invoices")
@@ -72,14 +85,6 @@ public class FinanceController {
     @PreAuthorize("hasAnyRole('ADMIN', 'FINANCE', 'SALES', 'DIRECTOR')")
     public ResponseEntity<Invoice> getInvoiceById(@PathVariable Long id) {
         return ResponseEntity.ok(financeService.getInvoiceById(id));
-    }
-
-    @PostMapping("/invoices/{id}/cancel")
-    public ResponseEntity<Invoice> cancelInvoice(
-            @PathVariable Long id,
-            @Valid @RequestBody InvoiceCancelRequest request) {
-        Invoice invoice = financeService.cancelInvoice(id, request.getReason(), request.getCancelledBy());
-        return ResponseEntity.ok(invoice);
     }
 
     @PostMapping("/invoices/generate/{orderId}")

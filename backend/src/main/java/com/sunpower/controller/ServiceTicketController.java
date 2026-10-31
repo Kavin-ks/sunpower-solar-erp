@@ -1,6 +1,8 @@
 package com.sunpower.controller;
 
 import com.sunpower.dto.ServiceTicketDTOs.CustomerConfirmationRequest;
+import com.sunpower.dto.ServiceTicketDTOs.PublicComplaintRequest;
+import com.sunpower.dto.ServiceTicketDTOs.TechnicianJobCompleteRequest;
 import com.sunpower.dto.ServiceTicketDTOs.TicketCreateRequest;
 import com.sunpower.dto.ServiceTicketDTOs.TicketResolveRequest;
 import com.sunpower.entity.ServiceTicket;
@@ -37,6 +39,13 @@ public class ServiceTicketController {
         return ResponseEntity.ok(serviceTicketService.getAllTickets());
     }
 
+    @GetMapping("/my-assigned")
+    @PreAuthorize("hasAnyRole('TECHNICIAN', 'ADMIN', 'SUPPORT')")
+    public ResponseEntity<List<ServiceTicket>> getMyAssignedTickets(Authentication authentication) {
+        String username = authentication != null ? authentication.getName() : "technician";
+        return ResponseEntity.ok(serviceTicketService.getTicketsForTechnician(username));
+    }
+
     @GetMapping("/{id}")
     @PreAuthorize("hasAnyRole('SUPPORT', 'ADMIN', 'TECHNICIAN')")
     public ResponseEntity<ServiceTicket> getTicketById(@PathVariable Long id) {
@@ -64,8 +73,29 @@ public class ServiceTicketController {
         return ResponseEntity.ok(ticket);
     }
 
+    @PostMapping("/{id}/start-work")
+    @PreAuthorize("hasAnyRole('TECHNICIAN', 'ADMIN', 'SUPPORT')")
+    public ResponseEntity<ServiceTicket> startWork(
+            @PathVariable Long id,
+            Authentication authentication) {
+        String actor = authentication != null ? authentication.getName() : "Technician";
+        ServiceTicket ticket = serviceTicketService.startTechnicianWork(id, actor);
+        return ResponseEntity.ok(ticket);
+    }
+
+    @RequestMapping(value = {"/{id}/technician-complete", "/{id}/complete-work"}, method = RequestMethod.POST)
+    @PreAuthorize("hasAnyRole('TECHNICIAN', 'ADMIN', 'SUPPORT')")
+    public ResponseEntity<ServiceTicket> technicianComplete(
+            @PathVariable Long id,
+            @Valid @RequestBody TechnicianJobCompleteRequest request,
+            Authentication authentication) {
+        String actor = authentication != null ? authentication.getName() : "Technician";
+        ServiceTicket ticket = serviceTicketService.completeTechnicianWork(id, request, actor);
+        return ResponseEntity.ok(ticket);
+    }
+
     @PostMapping("/{id}/resolve")
-    @PreAuthorize("hasAnyRole('SUPPORT', 'TECHNICIAN')")
+    @PreAuthorize("hasAnyRole('SUPPORT', 'TECHNICIAN', 'ADMIN')")
     public ResponseEntity<ServiceTicket> resolveTicket(
             @PathVariable Long id,
             @Valid @RequestBody TicketResolveRequest request,
@@ -75,7 +105,7 @@ public class ServiceTicketController {
         return ResponseEntity.ok(ticket);
     }
 
-    @PostMapping("/{id}/confirm-and-close")
+    @RequestMapping(value = {"/{id}/confirm-and-close", "/{id}/confirm-customer"}, method = RequestMethod.POST)
     @PreAuthorize("hasAnyRole('SUPPORT', 'ADMIN', 'DIRECTOR')")
     public ResponseEntity<ServiceTicket> confirmAndClose(
             @PathVariable Long id,
@@ -85,4 +115,45 @@ public class ServiceTicketController {
         ServiceTicket ticket = serviceTicketService.confirmAndClose(id, request, actor);
         return ResponseEntity.ok(ticket);
     }
+
+    @PostMapping("/{id}/reopen")
+    @PreAuthorize("hasAnyRole('SUPPORT', 'ADMIN')")
+    public ResponseEntity<ServiceTicket> reopenTicket(
+            @PathVariable Long id,
+            @RequestBody(required = false) java.util.Map<String, String> payload,
+            Authentication authentication) {
+        String actor = authentication != null ? authentication.getName() : "Customer Support";
+        String reason = payload != null ? payload.get("reason") : "Customer reported issue unresolved";
+        ServiceTicket ticket = serviceTicketService.reopenTicket(id, reason, actor);
+        return ResponseEntity.ok(ticket);
+    }
+
+    // ==========================================
+    // Public Endpoints for Customer Portal
+    // ==========================================
+
+    @PostMapping("/public/submit")
+    public ResponseEntity<ServiceTicket> submitPublicComplaint(
+            @Valid @RequestBody PublicComplaintRequest request) {
+        ServiceTicket ticket = serviceTicketService.createPublicComplaint(request);
+        return ResponseEntity.status(HttpStatus.CREATED).body(ticket);
+    }
+
+    @GetMapping("/public/track/{ticketNumber}")
+    public ResponseEntity<ServiceTicket> trackPublicComplaint(
+            @PathVariable String ticketNumber,
+            @RequestParam(required = false) String phone) {
+        ServiceTicket ticket = serviceTicketService.getTicketForCustomer(ticketNumber, phone);
+        return ResponseEntity.ok(ticket);
+    }
+
+    @PostMapping("/public/confirm/{ticketNumber}")
+    public ResponseEntity<ServiceTicket> confirmPublicComplaint(
+            @PathVariable String ticketNumber,
+            @Valid @RequestBody CustomerConfirmationRequest request) {
+        ServiceTicket ticket = serviceTicketService.getTicketForCustomer(ticketNumber, null);
+        ticket = serviceTicketService.confirmAndClose(ticket.getId(), request, "Customer (Portal)");
+        return ResponseEntity.ok(ticket);
+    }
 }
+

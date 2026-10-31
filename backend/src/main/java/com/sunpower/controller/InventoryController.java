@@ -20,13 +20,13 @@ public class InventoryController {
     private InventoryService inventoryService;
 
     @GetMapping
-    @PreAuthorize("hasAnyRole('ADMIN', 'WAREHOUSE', 'SALES', 'FINANCE', 'DIRECTOR')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'WAREHOUSE', 'SALES', 'FINANCE')")
     public ResponseEntity<List<InventoryStock>> getAllStock() {
         return ResponseEntity.ok(inventoryService.getAllStock());
     }
 
     @GetMapping("/product/{productId}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'WAREHOUSE', 'SALES', 'FINANCE', 'DIRECTOR')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'WAREHOUSE', 'SALES', 'FINANCE')")
     public ResponseEntity<InventoryStock> getStockByProductId(@PathVariable Long productId) {
         return ResponseEntity.ok(inventoryService.getStockByProductId(productId));
     }
@@ -41,7 +41,7 @@ public class InventoryController {
     }
 
     @PostMapping("/adjust")
-    @PreAuthorize("hasAnyRole('WAREHOUSE', 'DIRECTOR')")
+    @PreAuthorize("hasAnyRole('WAREHOUSE', 'ADMIN')")
     public ResponseEntity<InventoryStock> adjustStock(
             @RequestBody Map<String, Object> payload,
             Authentication authentication) {

@@ -618,10 +618,25 @@ export interface WarehouseDashboardData {
   categoryBreakdown: CategoryStock[];
 }
 
+export interface TechnicianWorkload {
+  technicianId: number;
+  name: string;
+  specialization: string;
+  activeSurveys: number;
+  activeInstallations: number;
+  activeServiceVisits: number;
+  completedInstallations: number;
+  completedServiceVisits: number;
+  totalActiveJobs: number;
+}
+
 export interface TechnicianDashboardData {
+  isLead?: boolean;
   technicianName: string;
   phone: string;
   specialization: string;
+  activeTechniciansCount?: number;
+  availableTechniciansCount?: number;
   assignedSurveysCount: number;
   pendingSurveysCount: number;
   completedSurveysCount: number;
@@ -629,6 +644,11 @@ export interface TechnicianDashboardData {
   inProgressInstallationsCount: number;
   completedInstallationsCount: number;
   assignedServiceVisitsCount: number;
+  pendingServiceVisitsCount?: number;
+  pendingJobsCount?: number;
+  inProgressJobsCount?: number;
+  overdueAssignmentsCount?: number;
+  teamWorkloads?: TechnicianWorkload[];
   upcomingSurveys: SiteSurvey[];
   activeInstallations: Installation[];
   assignedServiceTickets: ServiceTicket[];
@@ -648,7 +668,8 @@ export interface SupportDashboardData {
   closedTickets: number;
   criticalTicketsCount: number;
   activeWarrantiesCount: number;
-  avgResolutionDays: number;
+  avgResolutionDays?: number | null;
+  avgResolutionTurnaroundText?: string;
   urgentTickets: ServiceTicket[];
   faultBreakdown: FaultBreakdown[];
 }

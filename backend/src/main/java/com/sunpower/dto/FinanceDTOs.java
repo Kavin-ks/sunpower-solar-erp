@@ -205,6 +205,10 @@ public class FinanceDTOs {
         public void setApplicableRate(BigDecimal rate) { this.applicableRate = rate != null ? rate.doubleValue() : null; }
         public BigDecimal getAmountPaid() { return amountPaid; }
         public void setAmountPaid(BigDecimal amountPaid) { this.amountPaid = amountPaid; }
+        public BigDecimal getAmount() { return amountPaid; }
+        public void setAmount(BigDecimal amount) {
+            if (this.amountPaid == null) this.amountPaid = amount;
+        }
         public String getPaymentMethod() { return paymentMethod; }
         public void setPaymentMethod(String paymentMethod) { this.paymentMethod = paymentMethod; }
         public String getReferenceNumber() { return referenceNumber; }

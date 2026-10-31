@@ -58,6 +58,14 @@ public class SerialNumber {
     private LocalDate warrantyStartDate;
     private LocalDate warrantyExpiryDate;
 
+    @Column(length = 100)
+    private String manufacturerSerialNumber;
+
+    @Column(length = 100)
+    private String internalTrackingId;
+
+    private boolean isInternalTracking = false;
+
     @OneToMany(mappedBy = "serialNumber", cascade = CascadeType.ALL, orphanRemoval = true)
     @OrderBy("createdAt DESC")
     private List<SerialNumberHistory> history = new ArrayList<>();
@@ -142,4 +150,11 @@ public class SerialNumber {
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
     public LocalDateTime getUpdatedAt() { return updatedAt; }
     public void setUpdatedAt(LocalDateTime updatedAt) { this.updatedAt = updatedAt; }
+
+    public String getManufacturerSerialNumber() { return manufacturerSerialNumber; }
+    public void setManufacturerSerialNumber(String manufacturerSerialNumber) { this.manufacturerSerialNumber = manufacturerSerialNumber; }
+    public String getInternalTrackingId() { return internalTrackingId; }
+    public void setInternalTrackingId(String internalTrackingId) { this.internalTrackingId = internalTrackingId; }
+    public boolean isInternalTracking() { return isInternalTracking; }
+    public void setInternalTracking(boolean isInternalTracking) { this.isInternalTracking = isInternalTracking; }
 }

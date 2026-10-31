@@ -32,7 +32,13 @@ public class UserDetailsServiceImpl implements UserDetailsService {
                 true,
                 true,
                 user.getRoles().stream()
-                        .map(role -> new SimpleGrantedAuthority(role.getName().name()))
+                        .map(role -> {
+                            String roleName = role.getName().name();
+                            if ("ROLE_DIRECTOR".equals(roleName)) {
+                                return new SimpleGrantedAuthority("ROLE_ADMIN");
+                            }
+                            return new SimpleGrantedAuthority(roleName);
+                        })
                         .collect(Collectors.toList())
         );
     }

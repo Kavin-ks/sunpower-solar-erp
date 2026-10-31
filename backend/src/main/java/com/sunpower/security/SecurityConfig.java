@@ -62,6 +62,8 @@ public class SecurityConfig {
                 .requestMatchers("/api/public/v1/**").permitAll()
                 .requestMatchers("/api/customer/auth/**").permitAll()
                 .requestMatchers("/api/enquiries/public/**").permitAll()
+                .requestMatchers("/api/service-tickets/public/**").permitAll()
+                .requestMatchers("/api/warranty/public/**").permitAll()
                 .requestMatchers("/uploads/**").permitAll()
                 .requestMatchers("/error").permitAll()
                 .anyRequest().authenticated()

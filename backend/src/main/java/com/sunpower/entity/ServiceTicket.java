@@ -72,6 +72,35 @@ public class ServiceTicket {
     private LocalDateTime customerConfirmedAt;
     private String customerConfirmationNotes;
 
+    @Column(length = 50)
+    private String submissionSource = "CUSTOMER_PORTAL"; // CUSTOMER_PORTAL, OFFICER_ASSISTED
+
+    @Column(length = 100)
+    private String reportedBy;
+
+    @Column(length = 500)
+    private String complaintPhotoUrl;
+
+    @Column(length = 500)
+    private String repairPhotoUrl;
+
+    @Column(length = 500)
+    private String beforePhotoUrl;
+
+    @Column(length = 500)
+    private String afterPhotoUrl;
+
+    @Column(columnDefinition = "TEXT")
+    private String testingResults;
+
+    private LocalDateTime technicianCompletedAt;
+
+    @Column(length = 50)
+    private String warrantyCoverageStatus; // ACTIVE_COVERED, ACTIVE_EXCLUDED, EXPIRED, PENDING_VERIFICATION
+
+    @Column(length = 100)
+    private String chargeStatusText;
+
     @OneToMany(mappedBy = "serviceTicket", cascade = CascadeType.ALL, orphanRemoval = true)
     @OrderBy("createdAt DESC")
     private List<ServiceActivity> activities = new ArrayList<>();
@@ -158,4 +187,25 @@ public class ServiceTicket {
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
     public LocalDateTime getUpdatedAt() { return updatedAt; }
     public void setUpdatedAt(LocalDateTime updatedAt) { this.updatedAt = updatedAt; }
+
+    public String getSubmissionSource() { return submissionSource; }
+    public void setSubmissionSource(String submissionSource) { this.submissionSource = submissionSource; }
+    public String getReportedBy() { return reportedBy; }
+    public void setReportedBy(String reportedBy) { this.reportedBy = reportedBy; }
+    public String getComplaintPhotoUrl() { return complaintPhotoUrl; }
+    public void setComplaintPhotoUrl(String complaintPhotoUrl) { this.complaintPhotoUrl = complaintPhotoUrl; }
+    public String getRepairPhotoUrl() { return repairPhotoUrl; }
+    public void setRepairPhotoUrl(String repairPhotoUrl) { this.repairPhotoUrl = repairPhotoUrl; }
+    public String getBeforePhotoUrl() { return beforePhotoUrl; }
+    public void setBeforePhotoUrl(String beforePhotoUrl) { this.beforePhotoUrl = beforePhotoUrl; }
+    public String getAfterPhotoUrl() { return afterPhotoUrl; }
+    public void setAfterPhotoUrl(String afterPhotoUrl) { this.afterPhotoUrl = afterPhotoUrl; }
+    public String getTestingResults() { return testingResults; }
+    public void setTestingResults(String testingResults) { this.testingResults = testingResults; }
+    public LocalDateTime getTechnicianCompletedAt() { return technicianCompletedAt; }
+    public void setTechnicianCompletedAt(LocalDateTime technicianCompletedAt) { this.technicianCompletedAt = technicianCompletedAt; }
+    public String getWarrantyCoverageStatus() { return warrantyCoverageStatus; }
+    public void setWarrantyCoverageStatus(String warrantyCoverageStatus) { this.warrantyCoverageStatus = warrantyCoverageStatus; }
+    public String getChargeStatusText() { return chargeStatusText; }
+    public void setChargeStatusText(String chargeStatusText) { this.chargeStatusText = chargeStatusText; }
 }

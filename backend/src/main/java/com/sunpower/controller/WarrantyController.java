@@ -34,4 +34,12 @@ public class WarrantyController {
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }
+
+    @GetMapping("/evaluate")
+    public ResponseEntity<com.sunpower.dto.ServiceTicketDTOs.WarrantyDecisionDTO> evaluateWarranty(
+            @RequestParam String serialCode,
+            @RequestParam(required = false) Long customerId,
+            @RequestParam(required = false) String faultCategory) {
+        return ResponseEntity.ok(warrantyService.evaluateWarranty(serialCode, customerId, faultCategory));
+    }
 }

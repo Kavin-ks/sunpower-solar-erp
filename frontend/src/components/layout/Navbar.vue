@@ -8,13 +8,14 @@ const authStore = useAuthStore();
 const router = useRouter();
 
 const roleOptions = [
-  { label: 'Admin (Full Access)', username: 'admin' },
+  { label: 'Admin (Full Access & Oversight)', username: 'admin' },
   { label: 'Sales Lead', username: 'sales' },
   { label: 'Warehouse Manager', username: 'warehouse' },
-  { label: 'Technician Lead', username: 'technician' },
+  { label: 'Technician Lead (Karthik Raja)', username: 'technician' },
+  { label: 'Technician (Ganesh Moorthy)', username: 'tech.ganesh' },
+  { label: 'Technician (Selvakumar R)', username: 'tech.selva' },
   { label: 'Support Officer', username: 'support' },
   { label: 'Finance Manager', username: 'finance' },
-  { label: 'Managing Director', username: 'director' },
 ];
 
 const handleRoleSwitch = async (event: Event) => {
@@ -41,9 +42,6 @@ const handleLogout = () => {
           <div class="flex items-center space-x-2">
             <span class="text-xl font-bold tracking-tight text-slate-900">SunPower</span>
             <span class="text-xl font-light text-emerald-600">Solutions</span>
-            <span class="text-xs bg-emerald-50 text-emerald-700 font-semibold px-2 py-0.5 rounded-md border border-emerald-200">
-              Enterprise ERP
-            </span>
           </div>
           <p class="text-xs text-slate-500">Solar Project & Installation Management System</p>
         </div>
