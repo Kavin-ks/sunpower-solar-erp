@@ -193,6 +193,34 @@ public class SiteSurveyService {
         survey.setApprovalDate(LocalDateTime.now());
         survey.setApprovalNotes(request.getApprovalNotes());
 
+        if (request.getStatus() == SurveyStatus.APPROVED) {
+            if (survey.getAvailableRoofAreaSqFt() == null) {
+                if (survey.getEnquiry() != null && survey.getEnquiry().getShadowFreeAreaSqFt() != null) {
+                    survey.setAvailableRoofAreaSqFt(survey.getEnquiry().getShadowFreeAreaSqFt());
+                } else {
+                    survey.setAvailableRoofAreaSqFt(new java.math.BigDecimal("450.00"));
+                }
+            }
+            if (survey.getRoofDirection() == null || survey.getRoofDirection().isBlank()) {
+                survey.setRoofDirection("South");
+            }
+            if (survey.getRoofTilt() == null || survey.getRoofTilt().isBlank()) {
+                survey.setRoofTilt("15 deg");
+            }
+            if (survey.getCableDistanceMeters() == null) {
+                survey.setCableDistanceMeters(new java.math.BigDecimal("15.00"));
+            }
+            if (survey.getShadingAssessment() == null || survey.getShadingAssessment().isBlank()) {
+                survey.setShadingAssessment("Shadow Free");
+            }
+            if (survey.getGridSuitability() == null || survey.getGridSuitability().isBlank()) {
+                survey.setGridSuitability("Suitable for Net-Metering");
+            }
+            if (survey.getInspectionRecommendation() == null || survey.getInspectionRecommendation().isBlank()) {
+                survey.setInspectionRecommendation("APPROVED");
+            }
+        }
+
         survey = siteSurveyRepository.save(survey);
 
         if (survey.getEnquiry() != null) {

@@ -408,22 +408,22 @@ onMounted(() => {
                   <span>View Findings</span>
                 </button>
 
-                <!-- Action: Technician Conducts Physical Inspection -->
+                <!-- Action: Physical Inspection Findings (Tech or Sales) -->
                 <button
-                  v-if="isTech && ['SCHEDULED', 'IN_PROGRESS', 'REVISIT_REQUIRED'].includes(surv.status)"
+                  v-if="(isTech || isSales) && ['SCHEDULED', 'IN_PROGRESS', 'REVISIT_REQUIRED'].includes(surv.status)"
                   type="button"
                   @click="openInspectionModal(surv)"
                   class="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded font-semibold shadow-xs cursor-pointer inline-flex items-center space-x-1"
                 >
                   <Camera class="w-3 h-3" />
-                  <span>Conduct Physical Inspection</span>
+                  <span>{{ isTech ? 'Conduct Physical Inspection' : 'Enter Findings' }}</span>
                 </button>
 
-                <!-- Action: Sales Lead Reviews Findings -->
+                <!-- Action: Sales Reviews & Approves Findings -->
                 <button
-                  v-if="isSales && surv.status === 'REPORT_SUBMITTED'"
+                  v-if="isSales && ['SCHEDULED', 'IN_PROGRESS', 'REPORT_SUBMITTED'].includes(surv.status)"
                   type="button"
-                  @click="reviewModalSurvey = surv; reviewAction = 'APPROVED'; reviewNotes = ''"
+                  @click="reviewModalSurvey = surv; reviewAction = 'APPROVED'; reviewNotes = surv.status === 'SCHEDULED' ? 'Approved directly for BOM quotation.' : ''"
                   class="px-2.5 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded font-semibold shadow-xs cursor-pointer inline-flex items-center space-x-1"
                 >
                   <CheckCircle2 class="w-3 h-3" />
