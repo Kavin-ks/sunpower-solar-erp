@@ -4,6 +4,7 @@ import com.sunpower.entity.Warranty;
 import com.sunpower.service.WarrantyService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -16,6 +17,7 @@ public class WarrantyController {
     private WarrantyService warrantyService;
 
     @GetMapping
+    @PreAuthorize("hasAnyRole('SUPPORT', 'ADMIN', 'DIRECTOR', 'TECHNICIAN', 'SALES', 'FINANCE')")
     public ResponseEntity<List<Warranty>> getAllWarranties(@RequestParam(required = false) Long customerId) {
         if (customerId != null) {
             return ResponseEntity.ok(warrantyService.getWarrantiesByCustomerId(customerId));
@@ -24,6 +26,7 @@ public class WarrantyController {
     }
 
     @GetMapping("/{id}")
+    @PreAuthorize("hasAnyRole('SUPPORT', 'ADMIN', 'DIRECTOR', 'TECHNICIAN', 'SALES', 'FINANCE')")
     public ResponseEntity<Warranty> getWarrantyById(@PathVariable Long id) {
         return ResponseEntity.ok(warrantyService.getWarrantyById(id));
     }

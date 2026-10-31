@@ -63,7 +63,7 @@ public class SecurityConfig {
                 .requestMatchers("/api/customer/auth/**").permitAll()
                 .requestMatchers("/api/enquiries/public/**").permitAll()
                 .requestMatchers("/api/service-tickets/public/**").permitAll()
-                .requestMatchers("/api/warranty/public/**").permitAll()
+                .requestMatchers("/api/warranty/public/**", "/api/warranties/public/**", "/api/warranties/serial/**", "/api/warranties/evaluate").permitAll()
                 .requestMatchers("/uploads/**").permitAll()
                 .requestMatchers("/error").permitAll()
                 .anyRequest().authenticated()

@@ -3,7 +3,7 @@ import { ref, onMounted } from 'vue';
 import { api } from '../api/client';
 import type { Warranty } from '../types';
 import StatusBadge from '../components/ui/StatusBadge.vue';
-import { Barcode, CheckCircle2, Award, Printer } from 'lucide-vue-next';
+import { Barcode, CheckCircle2, Award, Printer, ExternalLink } from 'lucide-vue-next';
 
 const warranties = ref<Warranty[]>([]);
 const searchSerial = ref('');
@@ -62,24 +62,37 @@ onMounted(() => {
         </p>
       </div>
 
-      <!-- Quick Serial Lookup -->
-      <form @submit.prevent="handleSerialLookup" class="flex items-center space-x-2">
-        <div class="relative">
-          <Barcode class="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
-          <input
-            type="text"
-            v-model="searchSerial"
-            placeholder="Instant Serial Lookup..."
-            class="pl-9 pr-3 py-1.5 bg-white border border-slate-200 rounded-xl text-xs font-mono focus:ring-2 focus:ring-emerald-500 focus:outline-none"
-          />
-        </div>
-        <button
-          type="submit"
-          class="px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-semibold shadow-xs cursor-pointer"
+      <div class="flex items-center gap-3">
+        <a
+          href="http://localhost:3000/complaint"
+          target="_blank"
+          rel="noopener noreferrer"
+          class="flex items-center space-x-1.5 px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300 rounded-xl text-xs font-semibold shadow-2xs transition cursor-pointer"
+          title="Opens the customer-facing warranty and complaints portal on port 3000"
         >
-          Verify
-        </button>
-      </form>
+          <ExternalLink class="w-3.5 h-3.5 text-emerald-600" />
+          <span>Customer Portal (odoo-solar) ↗</span>
+        </a>
+
+        <!-- Quick Serial Lookup -->
+        <form @submit.prevent="handleSerialLookup" class="flex items-center space-x-2">
+          <div class="relative">
+            <Barcode class="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+            <input
+              type="text"
+              v-model="searchSerial"
+              placeholder="Instant Serial Lookup..."
+              class="pl-9 pr-3 py-1.5 bg-white border border-slate-200 rounded-xl text-xs font-mono focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+            />
+          </div>
+          <button
+            type="submit"
+            class="px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-semibold shadow-xs cursor-pointer"
+          >
+            Verify
+          </button>
+        </form>
+      </div>
     </div>
 
     <!-- Warranties Table -->

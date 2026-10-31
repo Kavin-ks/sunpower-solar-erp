@@ -1181,21 +1181,20 @@ public class DataInitializationService implements CommandLineRunner {
                 snInvC.setWarrantyExpiryDate(LocalDate.now().minusMonths(30).plusMonths(24));
                 serialNumberRepository.save(snInvC);
 
-                if (warrantyRepository.findBySerialNumberSerialCode("INV-2023-9901").isEmpty()) {
-                    Warranty warInvC = new Warranty();
-                    warInvC.setWarrantyNumber("WAR-DEMO-30M-INV");
-                    warInvC.setSerialNumber(snInvC);
-                    warInvC.setCustomer(custC);
-                    warInvC.setSalesOrder(orderC);
-                    warInvC.setProduct(pInv3k);
-                    warInvC.setDurationMonths(24);
-                    warInvC.setDeliveryDate(LocalDate.now().minusMonths(30));
-                    warInvC.setWarrantyStartDate(LocalDate.now().minusMonths(30));
-                    warInvC.setWarrantyEndDate(LocalDate.now().minusMonths(30).plusMonths(24));
-                    warInvC.setStatus(WarrantyStatus.EXPIRED);
-                    warInvC.setTermsAndConditions("2-Year Comprehensive Inverter Warranty (EXPIRED)");
-                    warrantyRepository.save(warInvC);
-                }
+                Warranty warInvC = warrantyRepository.findBySerialNumberSerialCode("INV-2023-9901")
+                        .orElseGet(Warranty::new);
+                warInvC.setWarrantyNumber("WAR-DEMO-30M-INV");
+                warInvC.setSerialNumber(snInvC);
+                warInvC.setCustomer(custC);
+                warInvC.setSalesOrder(orderC);
+                warInvC.setProduct(pInv3k);
+                warInvC.setDurationMonths(24);
+                warInvC.setDeliveryDate(LocalDate.now().minusMonths(30));
+                warInvC.setWarrantyStartDate(LocalDate.now().minusMonths(30));
+                warInvC.setWarrantyEndDate(LocalDate.now().minusMonths(30).plusMonths(24));
+                warInvC.setStatus(WarrantyStatus.EXPIRED);
+                warInvC.setTermsAndConditions("2-Year Comprehensive Inverter Warranty (EXPIRED)");
+                warrantyRepository.save(warInvC);
             }
 
             if (pPanel != null) {
@@ -1412,6 +1411,33 @@ public class DataInitializationService implements CommandLineRunner {
             if (modified) {
                 technicianPaymentRepository.save(tp);
             }
+        });
+
+        // Normalize demo warranties for sub-second warranty lookup scenarios
+        serialNumberRepository.findBySerialCode("INV-2023-9901").ifPresent(sn -> {
+            sn.setWarrantyStartDate(LocalDate.now().minusMonths(30));
+            sn.setWarrantyExpiryDate(LocalDate.now().minusMonths(6));
+            serialNumberRepository.save(sn);
+            warrantyRepository.findBySerialNumberSerialCode("INV-2023-9901").ifPresent(w -> {
+                w.setDeliveryDate(LocalDate.now().minusMonths(30));
+                w.setWarrantyStartDate(LocalDate.now().minusMonths(30));
+                w.setWarrantyEndDate(LocalDate.now().minusMonths(6));
+                w.setStatus(WarrantyStatus.EXPIRED);
+                warrantyRepository.save(w);
+            });
+        });
+
+        serialNumberRepository.findBySerialCode("INV-2025-1801").ifPresent(sn -> {
+            sn.setWarrantyStartDate(LocalDate.now().minusMonths(18));
+            sn.setWarrantyExpiryDate(LocalDate.now().plusMonths(6));
+            serialNumberRepository.save(sn);
+            warrantyRepository.findBySerialNumberSerialCode("INV-2025-1801").ifPresent(w -> {
+                w.setDeliveryDate(LocalDate.now().minusMonths(18));
+                w.setWarrantyStartDate(LocalDate.now().minusMonths(18));
+                w.setWarrantyEndDate(LocalDate.now().plusMonths(6));
+                w.setStatus(WarrantyStatus.ACTIVE);
+                warrantyRepository.save(w);
+            });
         });
     }
 }

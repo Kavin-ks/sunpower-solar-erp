@@ -26,7 +26,7 @@ public class ServiceTicketController {
     private ServiceTicketService serviceTicketService;
 
     @GetMapping
-    @PreAuthorize("hasAnyRole('SUPPORT', 'ADMIN', 'TECHNICIAN')")
+    @PreAuthorize("hasAnyRole('SUPPORT', 'ADMIN', 'TECHNICIAN', 'DIRECTOR')")
     public ResponseEntity<List<ServiceTicket>> getAllTickets(
             @RequestParam(required = false) String search,
             @RequestParam(required = false) TicketStatus status) {
@@ -40,14 +40,14 @@ public class ServiceTicketController {
     }
 
     @GetMapping("/my-assigned")
-    @PreAuthorize("hasAnyRole('TECHNICIAN', 'ADMIN', 'SUPPORT')")
+    @PreAuthorize("hasAnyRole('TECHNICIAN', 'ADMIN', 'SUPPORT', 'DIRECTOR')")
     public ResponseEntity<List<ServiceTicket>> getMyAssignedTickets(Authentication authentication) {
         String username = authentication != null ? authentication.getName() : "technician";
         return ResponseEntity.ok(serviceTicketService.getTicketsForTechnician(username));
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasAnyRole('SUPPORT', 'ADMIN', 'TECHNICIAN')")
+    @PreAuthorize("hasAnyRole('SUPPORT', 'ADMIN', 'TECHNICIAN', 'DIRECTOR')")
     public ResponseEntity<ServiceTicket> getTicketById(@PathVariable Long id) {
         return ResponseEntity.ok(serviceTicketService.getTicketById(id));
     }
@@ -95,7 +95,7 @@ public class ServiceTicketController {
     }
 
     @PostMapping("/{id}/resolve")
-    @PreAuthorize("hasAnyRole('SUPPORT', 'TECHNICIAN', 'ADMIN')")
+    @PreAuthorize("hasAnyRole('SUPPORT', 'TECHNICIAN', 'ADMIN', 'DIRECTOR')")
     public ResponseEntity<ServiceTicket> resolveTicket(
             @PathVariable Long id,
             @Valid @RequestBody TicketResolveRequest request,

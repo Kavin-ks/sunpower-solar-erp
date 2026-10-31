@@ -5,7 +5,7 @@ import type { ServiceTicket, Customer, Technician, Product } from '../types';
 import StatusBadge from '../components/ui/StatusBadge.vue';
 import { useAuthStore } from '../stores/auth';
 import { formatFaultCode } from '../utils/faultCatalog';
-import { Headphones, Search, ShieldCheck, UserCheck, CheckCircle2, Clock, Eye, Phone, Calendar, Wrench, AlertCircle, FileText, RotateCcw } from 'lucide-vue-next';
+import { Headphones, Search, ShieldCheck, UserCheck, CheckCircle2, Clock, Eye, Phone, Calendar, Wrench, AlertCircle, FileText, RotateCcw, ExternalLink } from 'lucide-vue-next';
 
 const tickets = ref<any[]>([]);
 const customers = ref<Customer[]>([]);
@@ -201,8 +201,18 @@ onMounted(() => {
         </p>
       </div>
 
-      <!-- Support officers can record an officer-assisted call when a customer calls in -->
+      <!-- Support officers can record an officer-assisted call or view live customer portal -->
       <div class="flex items-center gap-2">
+        <a
+          href="http://localhost:3000/complaint"
+          target="_blank"
+          rel="noopener noreferrer"
+          class="flex items-center space-x-1.5 px-3 py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300 rounded-xl text-xs font-semibold shadow-2xs transition cursor-pointer"
+          title="Opens the customer-facing warranty and complaints portal on port 3000"
+        >
+          <ExternalLink class="w-3.5 h-3.5 text-emerald-600" />
+          <span>Customer Complaint Portal (odoo-solar) ↗</span>
+        </a>
         <button
           v-if="isAdmin || isSupport"
           type="button"

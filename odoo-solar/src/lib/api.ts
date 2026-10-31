@@ -270,3 +270,76 @@ export async function getTechnicians() {
   return apiFetch<any[]>('/api/technicians');
 }
 
+// ─── Public Complaint & Warranty Helpers (Connected to Backend) ─
+export async function createPublicComplaint(payload: {
+  customerPhone: string;
+  customerName?: string;
+  customerEmail?: string;
+  serialCode: string;
+  faultCategory?: string;
+  complaintDescription: string;
+  complaintPhotoUrl?: string;
+}) {
+  const url = `${API_BASE}/api/service-tickets/public/submit`;
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({ message: 'Failed to submit complaint' }));
+    throw new Error(errorData.message || errorData.error || `HTTP ${res.status}`);
+  }
+  return res.json();
+}
+
+export async function trackPublicComplaint(ticketNumber: string, phone?: string) {
+  const url = `${API_BASE}/api/service-tickets/public/track/${encodeURIComponent(ticketNumber)}${phone ? '?phone=' + encodeURIComponent(phone) : ''}`;
+  const res = await fetch(url, {
+    headers: { 'Content-Type': 'application/json' },
+  });
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({ message: 'Ticket not found' }));
+    throw new Error(errorData.message || errorData.error || `HTTP ${res.status}`);
+  }
+  return res.json();
+}
+
+export async function confirmPublicComplaint(ticketNumber: string, notes?: string, customerName?: string) {
+  const url = `${API_BASE}/api/service-tickets/public/confirm/${encodeURIComponent(ticketNumber)}`;
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      confirmationNotes: notes || 'Customer confirmed generation restored.',
+      confirmedByCustomerName: customerName || 'Customer (Portal)',
+    }),
+  });
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({ message: 'Failed to confirm resolution' }));
+    throw new Error(errorData.message || errorData.error || `HTTP ${res.status}`);
+  }
+  return res.json();
+}
+
+export async function getWarrantyBySerial(serialCode: string) {
+  const url = `${API_BASE}/api/warranties/serial/${encodeURIComponent(serialCode)}`;
+  const res = await fetch(url, {
+    headers: { 'Content-Type': 'application/json' },
+  });
+  if (!res.ok) return null;
+  return res.json();
+}
+
+export async function evaluateWarranty(serialCode: string, customerId?: number, faultCategory?: string) {
+  let q = `serialCode=${encodeURIComponent(serialCode)}`;
+  if (customerId) q += `&customerId=${customerId}`;
+  if (faultCategory) q += `&faultCategory=${encodeURIComponent(faultCategory)}`;
+  const url = `${API_BASE}/api/warranties/evaluate?${q}`;
+  const res = await fetch(url, {
+    headers: { 'Content-Type': 'application/json' },
+  });
+  if (!res.ok) return null;
+  return res.json();
+}
+
