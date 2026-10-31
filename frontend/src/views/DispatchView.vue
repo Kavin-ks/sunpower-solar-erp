@@ -466,7 +466,10 @@ onBeforeUnmount(() => {
                 <span class="block text-[10px] text-slate-400">{{ disp.driverName }} ({{ disp.driverPhone }})</span>
               </td>
               <td class="py-3 px-4">
-                <span class="font-bold text-slate-800">{{ disp.items.length }} line items</span>
+                <span class="font-bold text-slate-800">{{ disp.items.filter(i => i.product.serialized).length }} serialized units</span>
+                <span class="block text-[10px]" :class="disp.items.filter(i => i.product.serialized && !i.serialNumber).length > 0 ? 'text-amber-600 font-semibold' : 'text-emerald-600 font-medium'">
+                  {{ disp.items.filter(i => i.product.serialized && i.serialNumber).length }} / {{ disp.items.filter(i => i.product.serialized).length }} picked
+                </span>
               </td>
               <td class="py-3 px-4">
                 <StatusBadge :status="disp.status" />
@@ -876,16 +879,28 @@ onBeforeUnmount(() => {
                 </td>
                 <td class="py-2.5 px-3 text-center font-bold text-slate-700">{{ item.quantity }} {{ item.product.unit }}</td>
                 <td class="py-2.5 px-3">
-                  <span v-if="item.serialNumber" class="font-mono font-bold text-purple-700 bg-purple-50 px-2 py-0.5 rounded border border-purple-200">
-                    {{ item.serialNumber.serialCode }}
-                  </span>
-                  <span v-else class="text-amber-600 italic text-[11px]">Pending Barcode Scan</span>
+                  <template v-if="item.product.serialized">
+                    <span v-if="item.serialNumber" class="font-mono font-bold text-purple-700 bg-purple-50 px-2 py-0.5 rounded border border-purple-200">
+                      {{ item.serialNumber.serialCode }}
+                    </span>
+                    <span v-else class="text-amber-600 italic text-[11px] font-semibold">Pending Barcode Scan</span>
+                  </template>
+                  <template v-else>
+                    <span class="text-slate-400 italic text-[11px]">Bulk Item (No Serial Required)</span>
+                  </template>
                 </td>
                 <td class="py-2.5 px-3 text-right">
-                  <span v-if="item.serialNumber" class="text-emerald-700 font-bold text-[11px] inline-flex items-center gap-1">
-                    <Check class="w-3.5 h-3.5 text-emerald-600" /> Picked
-                  </span>
-                  <span v-else class="text-slate-400 text-[11px]">Unallocated</span>
+                  <template v-if="item.product.serialized">
+                    <span v-if="item.serialNumber" class="text-emerald-700 font-bold text-[11px] inline-flex items-center gap-1">
+                      <Check class="w-3.5 h-3.5 text-emerald-600" /> Picked
+                    </span>
+                    <span v-else class="text-amber-600 font-medium text-[11px]">Unallocated</span>
+                  </template>
+                  <template v-else>
+                    <span class="text-slate-600 font-medium text-[11px] inline-flex items-center gap-1">
+                      <Check class="w-3.5 h-3.5 text-slate-400" /> Bulk Packed
+                    </span>
+                  </template>
                 </td>
               </tr>
             </tbody>

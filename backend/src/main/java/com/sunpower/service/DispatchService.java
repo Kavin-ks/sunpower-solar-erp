@@ -295,6 +295,15 @@ public class DispatchService {
     @Transactional
     public Dispatch confirmDelivery(Long dispatchId, ConfirmDeliveryRequest request, String confirmedBy) {
         Dispatch dispatch = getDispatchById(dispatchId);
+
+        // Verify all serialized items have serial numbers assigned before confirming delivery
+        for (DispatchItem item : dispatch.getItems()) {
+            if (item.getProduct().isSerialized() && item.getSerialNumber() == null) {
+                throw new IllegalStateException("Delivery cannot be confirmed: Serial number missing for product '" +
+                        item.getProduct().getName() + "'. Every serialized item must be scanned and assigned.");
+            }
+        }
+
         LocalDate deliveryDate = request.getDeliveryDate() != null ? request.getDeliveryDate() : LocalDate.now();
 
         dispatch.setStatus(DispatchStatus.DELIVERED);

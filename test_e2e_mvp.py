@@ -180,11 +180,11 @@ if status_q in [200, 201] and quote_id:
     status_stk, stocks = req(f"{BASE_URL}/inventory", "GET", token=tokens["warehouse"])
     if status_stk == 200 and isinstance(stocks, list):
         for s in stocks:
-            if s.get("availableQuantity", 0) < 20 and s.get("product", {}).get("id"):
+            if s.get("availableQuantity", 0) < 150 and s.get("product", {}).get("id"):
                 pid = s["product"]["id"]
                 req(f"{BASE_URL}/inventory/adjust", "POST", {
                     "productId": pid,
-                    "quantityDelta": 50,
+                    "quantityDelta": 500,
                     "reason": "Automated warehouse buffer replenishment"
                 }, token=tokens["warehouse"])
 
