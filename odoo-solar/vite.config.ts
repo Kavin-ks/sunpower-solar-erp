@@ -13,6 +13,11 @@ export default defineConfig({
     port: 3000,
     host: true,
     proxy: {
+      '/api/enquiry': {
+        target: 'http://localhost:8080',
+        changeOrigin: true,
+        rewrite: () => '/api/public/v1/enquiries',
+      },
       '/api': {
         target: 'http://localhost:8080',
         changeOrigin: true,

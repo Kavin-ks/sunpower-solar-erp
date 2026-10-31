@@ -5,7 +5,7 @@ import sys
 import time
 
 BASE_URL = "http://localhost:8080/api"
-PORTAL_URL = "http://localhost:3000/api/enquiry"
+PORTAL_URL = "http://localhost:3000/api/public/v1/enquiries"
 
 tokens = {}
 
@@ -65,11 +65,10 @@ enquiry_payload = {
     "city": "Chennai",
     "state": "Tamil Nadu",
     "pincode": "600040",
-    "monthlyBill": 5200,
-    "sanctionedLoad": 5.0,
+    "monthlyElectricityBill": 5200,
     "systemType": "ON_GRID",
-    "capacity": 5.0,
-    "roofType": "CONCRETE_FLAT",
+    "requestedCapacityKw": 5.0,
+    "subsidyRequired": True,
     "notes": "Verified rooftop with clear southern orientation. Needs site inspection."
 }
 status, p_res = req(PORTAL_URL, "POST", enquiry_payload)
