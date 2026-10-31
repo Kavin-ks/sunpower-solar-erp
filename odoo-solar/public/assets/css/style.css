@@ -1,0 +1,4791 @@
+/*===============================================
+Template Name: Solar Panel-HTML5 Template
+Author:  https://themeforest.net/user/website stock
+Description: Description
+Version: 1.0.0
+Text Domain: Solar Panel 
+Tags: alternative energy, company, eco, eco-friendly, ecology, environment, nature, recycling, renewable energy, solar energy, solar power, corporate, business, technology, software, company.
+================================================*/
+
+/*TABLE OF CONTENTS*/
+/*=====================
+01. Solar Panel  Header Top Menu Area Css
+02. Solar Panel  Nav Menu Area Css 
+03. Solar Panel  Slider Area Css
+04. Solar Panel  Section Title Css
+05. Solar Panel  Service Area css
+06. Solar Panel  About Area Css
+07. Solar Panel  Counter Area Css
+08. Solar Panel  Testimonial Area Css
+09. Solar Panel  Process Area Css
+10. Solar Panel  Team Area Css
+11. Solar Panel  Faq Area Css
+12. Solar Panel  Call Do Section Css
+13. Solar Panel  Form Box Css
+14. Solar Panel  Blog Area Css
+15. Solar Panel  footer Area Css
+16. Solar Panel  Subscribe Area Css
+17. Solar Panel  Prossess Ber Css
+18. Solar Panel  Scrollup Section
+19. Solar Panel  Breadcumb Area Css
+20. Solar Panel  abouts_areas Css
+21. Solar Panel  Pricing Section Css
+22. Solar Panel  Contact  US Css
+23. Solar Panel  Blog Sidber Widget CSS
+24. Solar Panel  Search Box Css
+25. Solar Panel  Loader Css
+=======================*/
+
+/*==================================================
+ <-- Solar Panel  Header Top Menu Area Css-->
+===================================================*/
+
+.solar-topbar-section {
+    padding: 18px 0;
+    background: #19142d;
+    padding-bottom: 0;
+}
+
+.solar-top-menu ul {
+    list-style: none;
+}
+
+.solar-top-menu ul li {
+    display: inline-block;
+    margin-right: 36px;
+    position: relative;
+}
+
+.solar-top-menu ul li a::after {
+    position: absolute;
+    content: "";
+    height: 30px;
+    width: 2px;
+    background: #3a3a42;
+    left: -22px;
+    top: -2px;
+    opacity: 0.702;
+}
+
+.solar-top-menu ul li.line a::after {
+    display: none;
+}
+
+.solar-top-menu ul li a {
+    display: inline-block;
+    text-decoration: none;
+    color: #ffffff;
+    font-size: 14px;
+}
+
+
+.solar-top-menu ul li a i {
+    color: #e63a27;
+    font-size: 15px;
+    margin-right: 7px;
+}
+
+.solar-top-content-menu {
+    text-align: right;
+}
+
+.solar-top-content {
+    display: inline-block;
+    margin-right: 25px;
+    position: relative;
+}
+
+.solar-top-content select#Language {
+    background: no-repeat;
+    border: none;
+    font-size: 17px;
+    color: #ffffff;
+    font-weight: 400;
+    outline: 0;
+}
+
+.solar-top-content::before {
+    position: absolute;
+    content: "";
+    height: 30px;
+    width: 2px;
+    opacity: 0.702;
+    background: #3a3a42;
+    right: -22px;
+}
+
+.solar-top-content option {
+    background: #19142d;
+    font-size: 16px;
+}
+
+.solar-top-social-icon {
+    display: inline-block;
+}
+
+.solar-top-social-icon ul li {
+    display: inline-block;
+    margin-left: 13px;
+}
+
+.solar-top-social-icon ul li a i {
+    color: #ffffff;
+    font-size: 15px;
+    transition: .5s;
+}
+
+.solar-top-social-icon ul li a:hover i {
+    color: #e63a27;
+}
+
+
+/*==================================================
+ <-- Solar Panel  Header  Menu Area Css-->
+===================================================*/
+
+.solar-header-section {
+    background: #ffffff;
+    position: relative;
+    z-index: 999;
+    position: relative;
+}
+
+.solar-header-section::before {
+    position: absolute;
+    content: "";
+    height: 100%;
+    width: 215%;
+    top: 0%;
+    left: -182%;
+    background: #e63a27;
+    transform: skew(-30deg, 0deg);
+    z-index: -1;
+}
+
+.solar-menu {
+    text-align: right;
+}
+
+.solar-menu ul {
+    list-style: none;
+    margin-bottom: 0 !important;
+}
+
+.solar-menu ul li {
+    display: inline-block;
+    margin-right: 28px;
+}
+
+.solar-menu ul li a {
+    display: inline-block;
+    color: #141422;
+    font-size: 17px;
+    font-weight: 500;
+    padding: 38px 0;
+    text-decoration: none;
+    transition: .5s;
+}
+
+.solar-menu ul li a:hover{
+    color: #e63a27;
+}
+
+.solar-menu ul li a i {
+    font-size: 12px;
+    margin-left: 4px;
+}
+
+.solar-search-button {
+    text-align: right;
+}
+
+.solar-social-menu {
+    display: inline-block;
+}
+
+.solar-social-menu ul li {
+    display: inline-block;
+    margin-left: 10px;
+}
+
+.solar-social-menu ul li a i {
+    color: #141422;
+    font-size: 21px;
+}
+
+a.handbag {
+    position: relative;
+}
+
+a.handbag:before {
+    position: absolute;
+    content: "0";
+    font-size: 11px;
+    color: #fff;
+    font-weight: 500;
+    background: #e63a27;
+    width: 15px;
+    height: 15px;
+    line-height: 15px;
+    text-align: center;
+    border-radius: 100%;
+    left: 11px;
+    top: -8px;
+}
+
+/* sticky css */
+
+.sticky-nav {
+    left: 0;
+    margin: auto;
+    top: 0;
+    width: 100%;
+    position: fixed !important;
+    box-shadow: 0 0 60px 0 rgba(0, 0, 0, 0.07);
+    -webkit-animation: 300ms running fadeInDown;
+    animation: 500ms running fadeInUp;
+    -webkit-box-shadow: 0 10px 15px rgba(25, 25, 25, 0.1);
+    transition: 0.5s !important;
+    background: #e3e3e3!important;
+    z-index: 9999 !important;
+    animation-name: slideInDown;
+    padding: 0 30px;
+  }
+
+/* sub menu area css */
+.solar-menu ul .sub-menu {
+    background: #fff;
+    position: absolute;
+    top: 125%;
+    border-radius: 5px;
+    width: 217px;
+    text-align: left;
+    margin: 0;
+    -webkit-box-shadow: 0px 1px 3px rgb(0 0 0 / 30%);
+    transition: .5s;
+    visibility: hidden;
+    border-top: 2px solid #e63a27;
+    opacity: 0;
+    z-index: 11;
+  }
+  .solar-menu ul .sub-menu ul li {
+    display: inline-block;
+    margin-left: 0;
+    width: 100%;
+  }
+  .solar-menu ul .sub-menu ul li a {
+    padding: 12px 20px;
+    text-align: left;
+    width: 100%;
+    display: inline-block;
+    visibility: inherit !important;
+    color: #202020;
+    margin: 0;
+  }
+  .solar-menu ul .sub-menu ul li a:hover {
+    background: #e63a27 !important;
+    color: #fff;
+  }
+  .solar-menu ul li:hover .sub-menu {
+    visibility: visible;
+    opacity: 1;
+    top: 99%;
+  }
+  
+
+
+/* header style two */
+
+.solar-header-section.style-two {
+    background: #fff;
+}
+
+.solar-header-section.style-two::before {
+    display: none;
+}
+
+/* logo style two */
+
+.logo.style-two::before {
+    display: none;
+}
+
+.logo.style-two::after {
+    display: none;
+}
+
+
+/* sola btn */
+
+.solar-btn {
+    display: inline-block;
+    margin-left: 32px;
+}
+
+.load-more{
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.load-more button {
+    border: none;
+    outline: none;
+    font-size: 17px; 
+    background: #e63a27;
+    color: #fff;
+    padding: 13px 25px;
+    border-radius: 3px; 
+    z-index: 1; 
+}
+.social_icon a{
+    color: black;
+}
+
+.solar-btn a {
+    display: inline-block;
+    text-decoration: none;
+    font-size: 17px;
+    font-weight: 500;
+    letter-spacing: 1px;
+    background: #e63a27;
+    color: #fff;
+    padding: 13px 25px;
+    border-radius: 3px;
+    position: relative;
+    z-index: 1;
+}
+
+
+.solar-btn a::before {
+    position: absolute;
+    content: "";
+    background-color: #19142d;
+    width: 100%;
+    height: 0%;
+    left: 50%;
+    top: 50%;
+    border-radius: 3px;
+    transform: translate(-50%, -50%) rotate(0deg);
+    z-index: -1;
+    transition: all 500ms ease;
+}
+
+.solar-btn a:hover::before {
+    height: 104%;
+}
+
+/* slider btn */
+
+.solar-btn.slider1 {
+    margin: 0;
+}
+
+.solar-btn.slider2 {
+    margin-left: 14px;
+}
+
+.solar-btn.slider2 a {
+    background: #fff;
+    color: #0f0f0f;
+}
+
+.solar-btn.slider2 a:hover{
+    color: #ffffff;
+}
+
+/* about btn */
+
+.solar-btn.about {
+    margin: 0;
+}
+
+.solar-btn.about a {
+    padding: 16px 33px;
+}
+
+/* about style two btn */
+
+.solar-btn.about.about2 {
+    margin-top: 50px;
+}
+
+/* contact us btn */
+
+.solar-btn.contact-us a {
+    background: #fff;
+    color: #1c1632;
+}
+
+.solar-btn.contact-us a:hover{
+    color: #ffffff;
+}
+
+/* choose btn */
+
+.solar-btn.choose {
+    margin: 0;
+}
+
+.solar-btn.choose a {
+    padding: 16px 30px;
+}
+
+/* protfolio btn */
+
+.solar-btn.protfolio {
+    text-align: right;
+    display: inherit;
+    margin-left: 0;
+    margin-top: -33px;
+}
+
+.solar-btn.protfolio a {
+    padding: 14px 20px;
+}       
+
+.solar-btn.protfolio a:hover{
+    color:#e63a27;
+}
+
+.solar-btn.protfolio a::before{
+    background: #ffffff; 
+}
+
+/* call back section btn */
+
+.solar-btn.call-back a::before {
+    background: #ffff;
+}
+
+.solar-btn.call-back a:hover{
+    color: #e63a27;
+}
+
+/*==================================================
+ <-- Solar Panel  Slider Section Css-->
+===================================================*/
+
+.slider-section {
+    background: url(../images/slider/slider-bg.jpg);
+    background-repeat: no-repeat;
+    background-size: cover;
+    background-position: center;
+    height: 800px;
+    position: relative;
+}
+
+.slider-section.style-three {
+    background: url(../images/slider/slider3.jpg);
+
+}
+
+ 
+.slider-content h4 {
+    font-size: 24px;
+    line-height: 24px;
+    color: #fefefe;
+    font-weight: 500;
+    margin-bottom: 28px;
+}
+
+.slider-content h1 {
+    font-size: 75px;
+    line-height: 72px;
+    color: #ffffff;
+    font-weight: 600;
+}
+
+.slider-content p {
+    font-size: 16px;
+    line-height: 24px;
+    color: #ffffff;
+    font-weight: 400;
+    width: 53%;
+    margin: 37px 0 50px;
+}
+
+
+/* owl nav css */
+
+.slider-section .owl-carousel .owl-dots.disabled, .owl-carousel .owl-nav.disabled {
+    display: block;
+}
+
+.owl-nav {
+    position: absolute;
+    bottom: 42%;
+    right: 60px;
+}
+
+.owl-prev i {
+    width: 62px;
+    height: 62px;
+    line-height: 62px;
+    background: #e63a27;
+    text-align: center;
+    display: inline-block;
+    border-radius: 50%;
+    color: #ffffff;
+    font-size: 24px;
+    transition: .5s;
+    margin-bottom: 10px;
+    position: relative;
+    z-index: 1;
+    cursor: pointer;
+}
+
+.owl-prev i:hover{
+    color: #e63a27;
+ }
+
+ .owl-prev i::after{
+    position: absolute;
+    top: 0;
+    left: 0;
+    content: "";
+    right: 0;
+    bottom: 0;
+    background: #ffffff;
+    transform: scale(0);
+    border-radius: 50%;
+    z-index: -1;
+    transition: .5s;
+}
+
+.owl-prev i:hover::after{
+    transform:scale(1);
+}
+
+ .owl-next i {
+    width: 62px;
+    height: 62px;
+    line-height: 62px;
+    background: #ffffff;
+    text-align: center;
+    display: inline-block;
+    border-radius: 50%;
+    color: #e63a27;
+    font-size: 24px;
+    transition: .5s;
+    position: relative;
+    z-index: 1;
+    cursor: pointer;
+}
+
+ .owl-next i:hover{
+    color:#ffffff ;
+ }
+
+ .owl-next i::after{
+    position: absolute;
+    top: 0;
+    left: 0;
+    content: "";
+    right: 0;
+    bottom: 0;
+    background: #e63a27;
+    transform: scale(0);
+    border-radius: 50%;
+    z-index: -1;
+    transition: .5s;
+}
+
+.owl-next i:hover::after{
+    transform:scale(1);
+}
+
+
+/* slider style two */
+
+.slider-section.style-two {
+    background: url(../images/slider/slider2.jpg);
+}
+
+.slider-section.style-two.three{
+    background: url(../images/slider/slider4.jpg);
+}
+
+.slider-content.style-two {
+    background: #ffffff;
+    padding: 47px 60px 64px;
+    border-radius: 0px 0px 155px 0px;
+    margin-top: 165px;
+}
+.slider-content.style-two h4 {
+    color: #1c1632;
+    margin-bottom: 16px;
+}
+
+.slider-content.style-two h1 {
+    color: #1c1632;
+    font-size: 60px;
+    line-height: 68px;
+    margin-bottom: 54px;
+}
+
+/*==================================================
+ <-- Solar Panel  About Section Css-->
+===================================================*/
+
+
+.about-section {
+    padding: 120px 0 177px;
+}
+
+.about-thumb {
+    position: relative;
+}
+
+.about-thumb img {
+    width: 100%;
+}
+
+.about-counter {
+    position: absolute;
+    background: #e63a27;
+    width: 180px;
+    height: 158px;
+    border-radius: 3px;
+    text-align: center;
+    top: 0;
+    right: 0;
+}
+
+.about-counter-text {
+    position: relative;
+    padding: 28px 0 0;
+}
+
+.about-counter-text::before {
+    position: absolute;
+    content: "";
+    width: 171px;
+    height: 150px;
+    border: 1px dashed #fff;
+    left: 4px;
+    right: 0;
+    bottom: 0;
+    top: 4px;
+}
+
+.about-numbar h4 {
+    font-size: 40px;
+    color: #ffffff;
+    font-weight: 600;
+    display: inline-block;
+}
+
+.about-numbar span {
+    font-size: 40px;
+    color: #ffffff;
+    font-weight: 600;
+}
+
+.about-text h5 {
+    font-size: 18px;
+    color: #ffffff;
+    font-weight: 600;
+    margin: 5px;
+}
+
+/* about counter two */
+
+.about-counter-two {
+    position: absolute;
+    margin-top: -68px;
+    left: 17%;
+    color: #fff;
+    background-color: #fff;
+    padding: 0px 25px 11px;
+    border: 2px solid #f00;
+    border-radius: 3px;
+    width: 325px;
+    height: 125px;
+}
+
+.about-counter-img {
+    margin-right: 34px;
+    margin-top: 9px;
+}
+
+.about-number-two h4 {
+    display: inline-block;
+    font-size: 36px;
+    color: #e63a27;
+    font-weight: 500;
+    margin-bottom: 9px;
+}
+
+.about-number-two span {
+    font-size: 36px;
+    color: #e63a27;
+    font-weight: 500;
+}
+
+.about-number-two h5 {
+    font-size: 18px;
+    color: #434141;
+    font-weight: 500;
+    margin: 0;
+}
+
+
+/* about section title */
+
+.about-section-sub-title {
+    position: relative;
+    display: inline-block;
+    padding: 0 50px 0;
+    margin: 0 -50px 0;
+}
+
+.about-section-sub-title::before {
+    position: absolute;
+    content: "";
+    height: 2px;
+    width: 35px;
+    background: #e63a27;
+    top: 6px;
+    right: 0;
+}
+
+.about-section-sub-title::after {
+    position: absolute;
+    content: "";
+    height: 2px;
+    width: 35px;
+    background: #e63a27;
+    top: 15px;
+    right: -12px;
+}
+
+.about-section-sub-title h4 {
+    font-size: 24px;
+    line-height: 24px;
+    color: #e63a27;
+    font-weight: 500;
+    margin: 0;
+}
+
+.about-section-main-title h2 {
+    font-size: 48px;
+    line-height: 60px;
+    color: #1c1632;
+    font-weight: 600;
+    margin-bottom: 23px;
+}
+
+.about-content-discription p {
+    font-size: 16px;
+    line-height: 24px;
+    color: #434141;
+    font-weight: 400;
+    margin-bottom: 32px;
+}
+
+.about-list {
+    margin-bottom: 40px;
+}
+
+.about-list ul li {
+    font-size: 18px;
+    color: #1c1632;
+    font-weight: 500;
+    margin-bottom: 17px;
+}
+
+.about-list ul li i {
+    color: #e63a27;
+    margin-right: 7px;
+}
+.tab_items:hover{
+    color: #fff !important;
+}
+
+
+
+/* about tab css */
+
+.tab ul {
+    list-style: none;
+}
+
+.tab ul li {
+    display: inline-block;
+    margin-right: 18px;
+}
+
+.tab ul li button {
+    display: inline-block;
+    text-decoration: none;
+    font-size: 16px;
+    color: #ffffff;
+    font-weight: 400;
+    background: #1c1632;
+    padding: 6px 15px;
+    border-radius: 3px;
+    margin-bottom: 40px;
+}
+
+.tab ul li.current button {
+    background: #e63a27 !important;
+    color: #fff !important;
+    border-radius: 3px !important;
+}
+.tab ul li button:hover{
+    background: #e63a27 !important;
+}
+
+
+
+/* about style two */
+
+.about-video-icon {
+    position: absolute;
+    right: 95px;
+    bottom: 16%;
+    margin: auto;
+    border-radius: 100%;
+    -webkit-animation: ripple-white 1s linear infinite;
+    animation: ripple-blue 1s linear infinite;
+    -webkit-transition: .5s;
+}
+
+.about-video-icon a {
+    height: 65px;
+    width: 65px;
+    background: #e63a27;
+    display: inline-block;
+    line-height: 65px;
+    text-align: center;
+    border-radius: 50%;
+    color: #fff;
+    font-size: 32px;
+}
+
+.about-counter-two.style-two {
+    width: 446px;
+    height: 100px;
+    border-radius: 3px;
+    filter: drop-shadow(0px 1px 25.5px rgba(0,0,0,0.1));
+    background-color: #ffffff;
+    border: navajowhite;
+    padding: 17px 33px 0;
+    left: 30px;
+    bottom: -22px;
+}
+
+.about-number-two.style-two {
+    float: left;
+    margin-right: 26px;
+    position: relative;
+}
+
+.about-number-two.style-two::before {
+    border-radius: 50%;
+    position: absolute;
+    content: "";
+    height: 85px;
+    width: 85px;
+    border: 2px dotted #ffaa19;
+    left: -10px;
+    right: 0;
+    margin: auto;
+    top: -10px;
+}
+
+.about-number-two.style-two h4 {
+    height: 65px;
+    width: 65px;
+    background: #e63a27;
+    color: #fff;
+    line-height: 65px;
+    font-size: 30px;
+    text-align: center;
+    border-radius: 50%;
+}
+
+.about-counter-content h5 {
+    font-size: 24px;
+    line-height: 34px;
+    color: #1c1632;
+    font-weight: 500;
+}
+
+
+/* about progress bar  */
+
+
+.about-section.span.process-bar {
+    font-size: 18px;
+}
+
+/* about section style two */
+
+.about-section.style-two {
+    padding: 122px 0 131px;
+}
+
+/* about section style three */
+
+.about-section.style-three {
+    padding: 120px 0 177px;
+}
+
+/*==================================================
+ <-- Solar Panel  Section title Css-->
+===================================================*/
+
+.section-sub-title {
+    position: relative;
+    display: inline-block;
+}
+
+.section-sub-title::before {
+    position: absolute;
+    content: "";
+    height: 2px;
+    width: 35px;
+    background: #e63a27;
+    left: 0;
+    top: 19px;
+}
+
+.section-sub-title::after {
+    position: absolute;
+    content: "";
+    height: 2px;
+    width: 35px;
+    background: #e63a27;
+    left: -12px;
+    top: 28px;
+}
+
+.section-sub-title h4 {
+    font-size: 24px;
+    color: #e63a27;
+    font-weight: 500;
+    margin-bottom: 7px;
+    position: relative;
+    padding: 0 50px 0;
+}
+
+.section-sub-title h4::before {
+    position: absolute;
+    content: "";
+    height: 2px;
+    width: 35px;
+    background: #e63a27;
+    right: 0;
+    top: 9px;
+}
+
+.section-sub-title h4::after {
+    position: absolute;
+    content: "";
+    height: 2px;
+    width: 35px;
+    background: #e63a27;
+    right: -12px;
+    top: 17px;
+}
+
+.section-main-title h2 {
+    font-size: 48px;
+    color: #1c1632;
+    font-weight: 600;
+    margin-bottom: 42px;
+}
+
+
+/* contact us section title */
+
+ .section-main-title.contact-us h2 {
+    color: #ffff;
+    margin-bottom: 17px;
+}
+
+/* pricing section title */
+
+.section-sub-title.pricing::before {
+    display: none;
+}
+
+.section-sub-title.pricing::after {
+    display: none;
+}
+
+.section-main-title.pricing {
+    margin-bottom: 42px;
+}
+
+.section-sub-title.pricing h4 {
+    padding-left: 0;
+}
+
+.section-main-title.pricing h2 {
+    margin-bottom: 0;
+    line-height: 48px;
+}
+
+/* choose us section title */
+
+.section-sub-title.choose::before {
+    display: none;
+}
+
+.section-sub-title.choose::after {
+    display: none;
+}
+
+.section-sub-title.choose h4 {
+    padding-left: 0;
+}
+
+.section-main-title.choose h2 {
+    margin-bottom: 22px;
+}
+
+/* protfolio section title */
+
+.section-sub-title.protfolio::before {
+    display: none;
+}
+
+.section-sub-title.protfolio::after {
+    display: none;
+}
+
+.section-sub-title.protfolio h4 {
+    padding-left: 0;
+}
+
+.section-main-title.protfolio h2 {
+    color: #ffffff;
+}
+
+
+/* offer section title */
+
+.section-sub-title.offer::before {
+    display: none;
+}
+
+.section-sub-title.offer::after {
+    display: none;
+}
+
+.section-sub-title.offer h4 {
+    padding-left: 0;
+}
+
+.section-main-title.offer {
+    margin-bottom: 39px;
+}
+
+.section-main-title.offer h2 {
+    margin-bottom: 0;
+    line-height: 49px;
+}
+
+/* blog-section title */
+
+.section-main-title.blog h2 {
+    margin-bottom: 103px;
+}
+
+/* subscribe section title */
+
+.section-main-title.Subscribe h2 {
+    line-height: 28px;
+    color: #fff;
+}
+
+/* faq section title */
+
+.section-sub-title.faq::before {
+    display: none;
+}
+
+.section-sub-title.faq::after {
+    display: none;
+}
+
+.section-sub-title.faq h4 {
+    margin-bottom: 0px;
+    padding-left: 0;
+}
+
+.section-sub-title.faq h4::before {
+    display: none;
+}
+
+.section-sub-title.faq h4::after {
+    display: none;
+}
+
+.section-main-title.faq h2 {
+    font-size: 40px;
+    margin-bottom: 16px;
+}
+
+
+/*==================================================
+ <-- Solar Panel  Service Section Css-->
+===================================================*/
+
+.service-section {
+    padding: 106px 0 110px;
+    background: #f2f2f2;
+}
+
+.service-thumb img {
+    width: 100%;
+}
+
+.service-content {
+    background: url(../images/resource/servie-hover.png);
+    background-repeat: no-repeat;
+    padding: 0 34px 20px;
+    position: relative;
+    z-index: 1;
+    margin: -130px 23px 33px;
+}
+
+.service-content::before {
+    position: absolute;
+    content: "";
+    width: 100%;
+    height: 0%;
+    background: url(../images/resource/service-shape.png);
+    background-repeat: no-repeat;
+    left: 0;
+    bottom: 0;
+    visibility: hidden;
+    opacity: 0;
+    transform-style: preserve-3d;
+    transform: perspective(370px) rotateY(90deg) translate(0px, 50px);
+    transition: all 900ms ease;
+    -moz-transition: all 900ms ease;
+    -webkit-transition: all 900ms ease;
+    -ms-transition: all 900ms ease;
+    -o-transition: all 900ms ease;
+    z-index: -1;
+}
+
+.service-box:hover .service-content::before{
+    opacity: 1;
+    visibility: visible;
+    transform: perspective(370px) rotateY(0deg) translate(0px, 0px);
+    height: 100%;
+}
+
+.service-icon-thumb {
+    background: #ffffff;
+    width: 90px;
+    height: 100px;
+    line-height: 88px;
+    text-align: center;
+    border-radius: 0px 0px 45px 45px;
+    margin-bottom: 30px;
+    transition: .5s;
+}
+
+.service-box:hover .service-icon-thumb{
+    background: #e63a27;
+}
+
+.service-icon-thumb img {
+    width: auto;
+    transition: .5s;
+}
+
+.service-box:hover .service-icon-thumb img{
+    filter: brightness(0)invert(1);
+}
+
+.service-text a {
+    text-decoration: none!important;
+}
+
+.service-text h4 {
+    line-height: 24px;
+    color: #e2e2e2;
+    font-weight: 500;
+}
+
+.service-text h4 a {
+    font-size: 26px;
+    font-weight: 500;
+}
+
+.service-box:hover .service-text h4 {
+    color: #e63a27;
+}
+
+.service-text p {
+    font-size: 16px;
+    line-height: 24px;
+    color: #ffffff;
+    font-weight: 400;
+    margin: 20px 0 45px;
+    position: relative;
+}
+
+.service-text p::before {
+    position: absolute;
+    content: "";
+    height: 1px;
+    width: 310px;
+    background: #e8e8e8;
+    bottom: -28px;
+    opacity: 0.600;
+}
+
+.service-text a {
+    display: inline-block;
+    font-size: 18px;
+    line-height: 24px;
+    text-decoration: underline;
+    color: #ffffff;
+    font-weight: 400;
+    transition: .5s;
+}
+.service-box:hover .service-text a {
+    color: #e63a27;
+}
+
+.service-text a i {
+    font-size: 12px;
+    margin-left: 8px;
+}
+
+/* service box style two */
+
+.service-box {
+    margin-bottom: -24px;
+}
+
+
+
+/*==================================================
+ <-- Solar Panel  Contact Us Section Css-->
+===================================================*/
+
+.contact-us-section {
+    position: relative;
+}
+
+.contact-us-section::before {
+    position: absolute;
+    content: "";
+    height: 100%;
+    width: 100%;
+    background: url(../images/resource/contact-us.png);
+    background-repeat: no-repeat;
+}
+
+.row.contact-us {
+    background: #e63a27;
+    padding: 50px 0 50px;
+}
+
+.contact-us-discription p {
+    font-size: 18px;
+    color: #ffffff;
+    font-weight: 400;
+}
+
+
+
+/*==================================================
+ <-- Solar Panel  Pricing Section Css-->
+===================================================*/
+
+.pricing-section {
+    padding: 138px 0 92px;
+}
+
+/* accrodion css */
+
+.accordion-item{
+    border: none !important;
+}
+.accordion-button:not(.collapsed),
+.accordion  button{
+    background: none !important;    
+    border: none !important;
+    box-shadow: none !important;
+}
+.accordion-button:focus{
+    border: none !important;
+    box-shadow: none !important;
+}
+.accordion h2 {
+    list-style: none;
+    position: relative;
+    z-index: 1;
+    background: #f3f3f3;
+    margin-bottom: 27px;
+    border-radius: 3px;
+}
+
+.accordion li a {
+    display: block;
+    cursor: pointer;
+    font-weight: 500;
+    font-size: 18px;
+    color: inherit;
+    padding: 11px 35px 11px;
+    text-decoration: none;
+    margin-bottom: 11px;
+}
+.accordion button.active {
+    background: #e63a27 !important;
+    color: #fff !important;
+}
+
+.accordion-button:not(.collapsed)::after{
+    background-image: none !important;
+}
+.accordion-button::after{
+    background-image: none !important;
+}
+.accordion li p {
+    display: none;
+    font-size: 16px;
+    line-height: 26px;
+    color: #434141;
+    padding: 0 38px 17px;
+    margin: 0;
+    width: 91%;
+}
+
+.accordion a:before {
+    width: 2px;
+    height: 16px;
+    background: #e63a27;
+    position: absolute;
+    right: 37px;
+    content: " ";
+    top: 18px;
+    transform: rotate(0deg);
+    transition: all 0.2s ease-in-out;
+}
+
+.accordion a:after {
+    width: 16px;
+    height: 2px;
+    background: #e63a27;
+    position: absolute;
+    right: 30px;
+    content: " ";
+    top: 25px;
+    transition: all 0.2s ease-in-out;
+}
+
+.accordion a.active:after {
+    transform: rotate(0deg);
+    -webkit-transition: all 0.2s ease-in-out;
+    transition: all 0.2s ease-in-out;
+    background: #ffffff;
+}
+
+.accordion a.active:before {
+    display: none;
+}
+
+a.active {
+    color: #1c1632;
+}
+
+/* pricing box */
+
+.pricing-box {
+    background: #f3f3f3;
+    padding: 34px 45px 30px;
+    position: relative;
+    border-radius: 3px;
+    z-index: 1;
+    margin-bottom: 55px;
+}
+
+.pricing-box::before {
+    position: absolute;
+    content: "";
+    height: 0%;
+    width: 100%;
+    background: #e63a27;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%) rotate(0deg);
+    border-radius: 3px;
+    z-index: -1;
+    transition: all 500ms ease;
+}
+
+.pricing-box:hover::before {
+    height: 104%;
+}
+
+.pricing-info {
+    display: flex;
+    justify-content: space-between;
+    margin: 0 8px 0px 67px;
+}
+
+.pricing-year h4 {
+    font-size: 16px;
+    color: #e63a27;
+    font-weight: 400;
+    border: 1px solid rgba(230, 58, 39, 0.251);
+    padding: 6px 16px;
+    border-radius: 3px;
+    transition: .5s;
+}
+
+.pricing-box:hover .pricing-year h4{
+    background: #ffffff;
+}
+
+.pricing-rate h2 {
+    font-size: 30px;
+    color: #1c1632;
+    font-weight: 500;
+    line-height: 24px;
+    transition: .5s;
+}
+
+.pricing-box:hover .pricing-rate h2{
+    color: #ffffff;
+}
+
+.pricing-rate h2 span {
+    font-size: 16px;
+}
+
+.pricing-icon {
+    float: left;
+    margin-top: 27px;
+    margin-right: 28px;
+}
+
+.pricing-icon i {
+    background: #1c1632;
+    height: 38px;
+    width: 38px;
+    display: inline-block;
+    line-height: 38px;
+    text-align: center;
+    color: #fff;
+    font-size: 20px;
+    border-radius: 2px;
+    transition: .5s;
+}
+
+.pricing-box:hover .pricing-icon i{
+    background: #ffffff;
+    color:#e63a27;
+}
+
+.pricing-content {
+    overflow: hidden;
+}
+
+.pricing-content h4 {
+    font-size: 30px;
+    line-height: 55px;
+    color: #1c1632;
+    font-weight: 500;
+    transition: .5s;
+}
+
+.pricing-box:hover .pricing-content h4{
+    color: #ffffff;
+}
+
+.pricing-content p {
+    font-size: 16px;
+    line-height: 24px;
+    color: #434141;
+    font-weight: 400;
+    transition: .5s;
+}
+
+.pricing-box:hover .pricing-content p{
+    color: #ffffff;
+}
+
+.pricing-value {
+    position: absolute;
+    top: -27px;
+    right: 65px;
+}
+
+.pricing-value h5 {
+    font-size: 16px;
+    color: #ffffff;
+    font-weight: 400;
+    background: #1c1632;
+    display: inline-block;
+    padding: 5px 13px;
+    border-radius: 3px;
+    transition: .5s;
+}
+
+.pricing-box:hover .pricing-value h5{
+    background: #f3f3f3;
+    color:#e63a27;
+}
+
+
+/*==================================================
+ <-- Solar Panel  Call Do Section Css-->
+===================================================*/
+
+.call-do-action-section {
+    padding: 120px 0 120px;
+    background: url(../images/resource/call-do-bg.jpg);
+    background-size: cover;
+    background-repeat: no-repeat;
+    height: 800px;
+    margin-bottom: -330px;
+}
+
+.single-video {
+    position: relative;
+    top: 64px;
+}
+
+.video-icon a {
+    height: 105px;
+    width: 105px;
+    background: #e63a27;
+    text-align: center;
+    display: inline-block;
+    line-height: 105px;
+    border-radius: 100%;
+    -webkit-animation: ripple-white 1s linear infinite;
+    animation: ripple-blue 1s linear infinite;
+    -webkit-transition: .5s;
+}
+
+.video-icon a i {
+    color: #ffffff;
+    font-size: 76px;
+}
+
+/* call do action style two */
+
+.call-do-action-section.style-two{
+    background: url(../images/resource/call-do-bg2.jpg);
+}
+
+
+/*==================================================
+ <-- Solar Panel  Choose Us Section Css-->
+===================================================*/
+.choose-us-section {
+    padding: 0 0 122px;
+}
+
+.row.choose {
+    background: url(../images/resource/choose-bg.png);
+    background-size: cover;
+    background-repeat: no-repeat;
+    background-position: center center;
+    padding: 90px 70px 91px;
+    border-radius: 3px;
+}
+.choose-us-discription p {
+    font-size: 16px;
+    line-height: 24px;
+    color: #434141;
+    font-weight: 400;
+    margin-bottom: 65px;
+}
+
+.choose-us-thumb {
+    float: left;
+    margin-right: 35px;
+    margin-top: -10px;
+}
+
+.choose-us-list {
+    margin-bottom: 60px;
+}
+
+.choose-us-list ul {
+    list-style: none;
+}
+
+.choose-us-list ul li {
+    font-size: 18px;
+    color: #1c1632;
+    font-weight: 400;
+    display: block;
+    margin-bottom: 14px;
+}
+
+.choose-us-list ul li i {
+    height: 20px;
+    width: 20px;
+    background: #e63a27;
+    color: #fff;
+    display: inline-block;
+    line-height: 18px;
+    font-size: 19px;
+    border-radius: 50%;
+    margin-right: 10px;
+}
+
+.choose-us-info {
+    display: inline-flex;
+}
+
+.choose-us-icon {
+    margin-left: 32px;
+}
+
+.choose-us-icon i {
+    width: 60px;
+    height: 60px;
+    border-radius: 32px;
+    line-height: 60px;
+    text-align: center;
+    font-size: 24px;
+    color: #e63a27;
+    background: rgba(245,161,139,0.322);
+    display: inline-block;
+}
+
+.choose-us-phone h5 {
+    font-size: 18px;
+    line-height: 24px;
+    color: #1c1632;
+    font-weight: 400;
+}
+
+.choose-us-phone {
+    margin-left: 30px;
+}
+
+.choose-us-phone h5 {
+    font-size: 18px;
+    line-height: 24px;
+    color: #1c1632;
+    font-weight: 400;
+    margin: 0;
+}
+
+.choose-us-phone h5 span {
+    display: block;
+    line-height: 42px;
+    font-weight: 500;
+}
+
+
+
+/* choose form box */
+
+.choose-contact-box {
+    background: #e63a27;
+    padding: 26px 82px 42px;
+    border-radius: 3px;
+}
+
+.choose-contact-title h4 {
+    font-size: 32px;
+    line-height: 40px;
+    color: #ffffff;
+    font-weight: 600;
+    margin-bottom: 37px;
+}
+
+.form-box {
+    position: relative;
+}
+
+.form-box input {
+    width: 100%;
+    height: 50px;
+    padding-left: 30px;
+    background: #ffffff;
+    border: 0;
+    outline: 0;
+    border-radius: 3px;
+    color: #3e3e3f;
+    /* margin-bottom: 23px; */
+}
+
+.contact-form-1 .form_error{
+    color: #fff;
+
+}
+.form_error{
+    color: red;
+}
+
+
+.form_box input::placeholder {
+    color: #6d6d6d;
+}
+
+.form-box select {
+    width: 100%;
+    height: 50px;
+    padding-left: 30px;
+    background: #ffffff;
+    border-radius: 3px;
+    border: 0;
+    outline: 0;
+    color: #3e3e3f;
+    margin-bottom: 23px;
+}
+
+
+.form-box textarea {
+    width: 100%;
+    height: 100px;
+    padding-left: 30px;
+    background: #ffffff;
+    border-radius: 3px;
+    color: #3e3e3f;
+    border: 0;
+    outline: 0;
+    /* margin-bottom: 23px; */
+}
+
+.form-box textarea::placeholder {
+    padding: 8px 0px 0;
+}
+
+
+.form-box i {
+    position: absolute;
+    right: 30px;
+    top: 11px;
+    color: #e63a27;
+}
+
+.form-box-button button {
+    width: 270px;
+    height: 60px;
+    border-radius: 3px;
+    background-color: #1c1632;
+    border: 0;
+    outline: 0;
+    font-size: 19px;
+    font-weight: 500;
+    color: #fff;
+    position: relative;
+    z-index: 1;
+    transition: .5s;
+}
+.form-box-button button:hover{
+    color:#e63a27 ;
+}
+
+.form-box-button button::before {
+    position: absolute;
+    content: "";
+    height: 100%;
+    width: 100%;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    transform: scale(0.0, 1);
+    opacity: 0;
+    border-radius: 3px;
+    z-index: -1;
+    transition: .5s;
+}
+
+.form-box-button button:hover::before{
+    background: #ffffff;
+    opacity: 1;
+    transform: scale(1,1);
+}
+
+/* Solar Panel choose us section style two */
+
+.choose-us-section.style-two {
+    padding: 0 0 110px;
+}
+
+/*==================================================
+ <-- Solar Panel  Protfolio Section Css-->
+===================================================*/
+
+.protfolio-section {
+    background: #1c1632;
+    padding: 106px 0 108px;
+}
+
+.protfolio-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-top: 1px solid #282828;
+    padding: 35px 0 0;
+}
+
+.protfolio-item-content {
+    display: flex;
+    align-items: center;
+}
+
+.protfolio-item-numbar {
+    margin-right: 22px;
+}
+
+.protfolio-item-numbar span {
+    opacity: 0.800;
+    font-size: 24px;
+    line-height: 36px;
+    color: #e2e2e2;
+    font-weight: 500;
+    transition: .5s;
+}
+
+.protfolio-item:hover .protfolio-item-numbar span{
+    color: #e63a27;
+}
+
+.protfolio-item-title h3 {
+    font-size: 24px;
+    line-height: 21px;
+    color: #e2e2e2;
+    font-weight: 500;
+}
+
+.protfolio-item-title h3 a {
+    text-decoration: none;
+    color: #e2e2e2;
+    transition: .5s;
+}
+
+.protfolio-item:hover .protfolio-item-title h3 a{
+    color: #e63a27;
+}
+
+.protfolio-itme-hover {
+    margin-top: -24px;
+    opacity: 0;
+    transition: .5s;
+}
+
+.protfolio-item:hover .protfolio-itme-hover{
+    opacity: 1;
+}
+
+.protfolio-item-icon i {
+    color: #fff;
+    font-size: 30px;
+    transition: .5s;
+}
+
+.protfolio-item:hover .protfolio-item-icon i {
+    color: #e63a27;
+}
+
+/* protfolio item style two */
+
+.protfolio-item.style-two {
+    border-bottom: 1px solid #282828;
+    padding: 35px 0 20px;
+}
+
+
+/*==================================================
+ <-- Solar Panel  Offer Section Css-->
+===================================================*/
+
+.offer-section {
+    padding: 108px 0 118px;
+}
+
+.offer-items-box {
+    background: url(../images/resource/offer-item.png);
+    background-repeat: no-repeat;
+    background-size: cover;
+    padding: 40px 20px 18px;
+    border-radius: 3px;
+    position: relative;
+    z-index: 1;
+    overflow: hidden;
+    margin-bottom: 30px;
+}
+
+.offer-items-box::before {
+    position: absolute;
+    content: "";
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: url(../images/resource/offer-hover.png);
+    width: 0;
+    transform: translateY(100%);
+    z-index: -1;
+    transition: .5s;
+    border-radius: 3px;
+}
+
+.offer-items-box:hover::before{
+    width: 100%;
+    transform: translateY(0);
+}
+
+.offer-icon-thumb img{
+    transition: .5s;
+}
+
+.offer-items-box:hover .offer-icon-thumb img{
+    filter: brightness(0)invert(1);
+}
+
+.offer-content h4 {
+    font-size: 24px;
+    line-height: 24px;
+    color: #1c1632;
+    font-weight: 500;
+    padding: 10px 0 16px;
+    transition: .5s;
+}
+
+.offer-items-box:hover .offer-content h4{
+    color: #ffffff;
+}
+.offer-content p {
+    font-size: 16px;
+    line-height: 24px;
+    color: #434141;
+    font-weight: 400;
+    transition: .5s;
+}
+
+.offer-items-box:hover .offer-content p{
+    color: #ffffff;
+}
+
+.offer-thumb {
+    margin-left: -100px;
+    margin-top: 60px;
+}
+
+.offer-thumb img {
+    width: 100%;
+}
+
+
+/* progressbar css */
+
+.process-ber-plugin {
+    padding: 36px 0 0;
+}
+
+span.process-bar {
+    font-size: 20px;
+    color: #1c1632;
+    font-weight: 500;
+    position: relative;
+}
+
+.barfiller {
+    width: 562px;
+    height: 10px;
+    position: relative;
+    margin-bottom: 25px;
+    margin-top: 11px;
+    border-radius: 3px;
+    background-color: #c9ccd2;
+}
+
+.barfiller .fill {
+    display: block;
+    position: relative;
+    width: 0px;
+    height: 100%;
+    z-index: 1;
+}
+
+.barfiller .tipWrap {
+    display: none;
+}
+
+.barfiller .tip {
+    font-size: 18px;
+    color: #1c1632;
+    font-weight: 500;
+    top: -37px;
+    padding: 1px 6px;
+    left: 500px;
+    position: absolute;
+}
+
+.stat-bar:nth-of-type(1) .stat-bar-rating {
+    animation-delay: 0.25s;
+    -webkit-animation-delay: 0.25s;
+}
+
+span.fill {
+    background: #e63a27!important;
+    border-radius: 3px;
+}
+
+
+/* offer section style two */
+
+.offer-section.style-two {
+    padding: 0 0 120px;
+}
+
+/*==================================================
+ <-- Solar Panel  Team Section Css-->
+===================================================*/
+
+.team-section {
+    padding: 106px 0 286px;
+    background: #f6f6f6;
+    margin-bottom: -200px;
+}
+
+.team-items-box {
+    margin-bottom: 127px;
+}
+
+.team-thumb {
+    position: relative;
+}
+
+.team-thumb img {
+    width: 100%;
+}
+
+.team-icon {
+    position: absolute;
+    top: 44px;
+    right: 10px;
+    transform: translate(-50%, 50%);
+    transition: .5s;
+    opacity: 0;
+}
+
+.team-items-box:hover .team-icon {
+    top: -48px;
+    opacity: 1;
+}
+
+.team-icon ul {
+    list-style: none;
+}
+
+.team-icon ul li {
+    display: block;
+    margin-top: 8px;
+}
+
+.team-icon ul li a i {
+    height: 32px;
+    width: 32px;
+    background: #fff;
+    text-align: center;
+    line-height: 32px;
+    color: #e63a27;
+    border-radius: 5px;
+    position: relative;
+    z-index: 1;
+    transition: .5s;
+}
+
+.team-icon ul li a:hover i{
+    color: #ffffff;
+}
+
+.team-icon ul li a i::after {
+    position: absolute;
+    content: "";
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: #e63a27;
+    transform: scale(0);
+    border-radius: 5px;
+    z-index: -1;
+    transition: .5s;
+}
+
+.team-icon ul li a i:hover::after{
+    transform: scale(1);
+}
+
+.team-main-icon {
+    position: absolute;
+    bottom: 7px;
+    left: 0;
+    right: 44px;
+    margin: auto;
+    transform: translateX(50%);
+    z-index: 999;
+}
+
+.team-main-icon a {
+    height: 40px;
+    width: 40px;
+    background: #e63a27;
+    display: inline-block;
+    text-align: center;
+    line-height: 35px;
+    border-radius: 50%;
+    color: #fff;
+    font-size: 30px;
+     position: relative;
+    z-index: 1;
+}
+
+.team-main-icon a::before{
+     position: absolute;
+    content: "";
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: #ffffff;
+    transform: scale(0);
+    border-radius: 50%;
+    z-index: -1;
+    transition: .5s;
+}
+
+.team-items-box:hover .team-main-icon a::before{
+    transform: scale(1);
+}
+
+.team-main-icon a i{
+    transition: .5s;
+}
+
+.team-items-box:hover .team-main-icon a i{
+    color: #e63a27;
+}
+
+.team-content {
+    text-align: center;
+    background: #1c1632;
+    position: absolute;
+    bottom: -94px;
+    left: 0;
+    right: 0;
+    margin: auto;
+    width: 100%;
+    padding: 30px 0 18px;
+    border-bottom: 2px solid #e63a27;
+    z-index: 1;
+}
+
+.team-content::before {
+    position: absolute;
+    content: "";
+    top: 0;
+    left: 0;
+    right: 0;
+    width: 0;
+    height: 100%;
+    margin: auto;
+    background: #e63a27;
+    transition: .5s;
+    z-index: -1;
+}
+
+.team-items-box:hover .team-content::before{
+    width: 100%;
+}
+
+.team-content h4 a {
+    font-size: 25px;
+    line-height: 30px;
+    color: #e2e2e2;
+    font-weight: 500;
+    text-decoration: none;
+}
+
+.team-content span {
+    font-size: 16px;
+    line-height: 32px;
+    color: #9a9898;
+    font-weight: 400;
+    transition: .5s;
+}
+
+.team-items-box:hover .team-content span{
+    color: #e2e2e2;
+}
+
+
+/* home page two team section css */
+
+.team-icon.style-two {
+    right: 40%;
+}
+
+.team-items-box:hover .team-icon.style-two{
+    top: 8px;
+}
+
+.team-main-icon.style-twoa i {
+    position: relative;
+}
+
+.team-main-icon.style-two a i::after {
+    position: absolute;
+    content: "";
+    height: 14px;
+    width: 2px;
+    background: #ffffff;
+    left: 0;
+    right: 0;
+    margin: auto;
+    bottom: 15px;
+    opacity: 0;
+    transition: .5s;
+}
+
+.team-items-box:hover .team-main-icon.style-two a i::after{
+    background: #e63a27;
+    opacity: 1;
+}
+
+/* team style two css */
+
+.team-section.style-two {
+    padding: 102px 0 286px;
+}
+
+
+/*==================================================
+ <-- Solar Panel  Appointment Section Css-->
+===================================================*/
+
+.row.appointment {
+    background: #ffffff;
+    filter: drop-shadow(0px 1px 25.5px rgba(0,0,0,0.15));
+    padding: 88px 85px 87px;
+}
+
+.choose-us-icon.appointment {
+    margin-left: 0;
+}
+
+/* appointment form box css */
+
+.choose-contact-box.appointment {
+    padding: 46px 54px 44px;
+}
+
+.form-box.appointment input {
+    height: 56px;
+    margin-bottom: 14px;
+}
+
+.form-box-button.appointment button {
+    width: 190px;
+    height: 56px;
+    font-size: 18px;
+    font-weight: 400;
+}
+
+
+/*==================================================
+ <-- Solar Panel  Blog Section Css-->
+===================================================*/
+
+.blog-section {
+    padding: 104px 0 120px;
+}
+
+.blog-items-box {
+    border: 1px solid #fbe0dd;
+    padding: 0 0 26px;
+    border-radius: 3px;
+    position: relative;
+}
+
+.blog-thumb {
+    margin-top: -62px;
+}
+
+.blog-date {
+    position: absolute;
+    top: 136px;
+    right: -57px;
+    transform: rotate(-90deg);
+}
+
+.blog-date span {
+    font-size: 20px;
+    color: #1c1632;
+    font-weight: 500;
+}
+
+.blog-date span i {
+    color: #e63a27;
+    font-size: 16px;
+    margin-right: 6px;
+}
+
+.blog-content {
+    padding: 0 29px 0;
+}
+
+.blog-meta {
+    margin: 16px 0 -3px;
+}
+
+.blog-meta span {
+    font-size: 16px;
+    line-height: 34px;
+    color: #1c1632;
+    font-weight: 400;
+    padding-right: 50px;
+}
+
+.blog-meta span i {
+    color: #e63a27;
+    font-size: 18px;
+    margin-right: 6px;
+}
+
+.blog-title {
+    margin-bottom: 12px;
+}
+
+.blog-title h4 a {
+    font-size: 24px;
+    line-height: 34px;
+    text-decoration: underline;
+    color: #1c1632;
+    font-weight: 500;
+    transition: .5s;
+}
+
+.blog-items-box:hover .blog-title h4 a {
+    color: #e63a27;
+}
+
+.blog-bottom-shape {
+    display: inline-block;
+    margin-right: 15px;
+}
+
+.blog-bottom-title {
+    display: inline-block;
+    margin-right: 44px;
+}
+
+.blog-bottom-title h5 {
+    font-size: 16px;
+    line-height: 34px;
+    color: #1c1632;
+    font-weight: 400;
+}
+
+.blog-btn {
+    display: inline-block;
+}
+
+.blog-btn a {
+    font-size: 18px;
+    line-height: 34px;
+    text-decoration: underline;
+    color: #1c1632;
+    font-weight: 500;
+}
+
+.blog-items-box:hover .blog-btn a{
+    color: #e63a27;
+}
+
+.blog-btn a i {
+    margin-left: 8px;
+}
+
+/* blog section style two  */
+
+.blog-section.style-two {
+    padding: 120px 0 118px;
+}
+
+/* blog section style three */
+
+.blog-section.style-three {
+    padding: 118px 0 50px;
+}
+
+/*==================================================
+ <-- Solar Panel  Subscribe Section Css-->
+===================================================*/
+
+.subscribe-section {
+    background: #e63a27;
+    padding: 70px 0 41px;
+}
+
+/* subscribe form */
+
+.form-box.Subscribe input {
+    width: 88%;
+    height: 60px;
+    margin-bottom: 14px;
+}
+
+.form-box.Subscribe i {
+    position: absolute;
+    width: 60px;
+    height: 60px;
+    background: #1c1632;
+    top: 0;
+    right: 18px;
+    text-align: center;
+    line-height: 60px;
+    color: #fff;
+    border-radius: 3px;
+    font-size: 20px;
+}
+
+.checkbox-box label {
+    font-size: 16px;
+    color: #ffffff;
+    font-weight: 400;
+}
+
+.checkbox-box label a{
+    color: #ffffff;
+}
+
+
+/*==================================================
+ <-- Solar Panel  Footer Section Css-->
+===================================================*/
+
+.footer-section {
+    background: #1c1632;
+    padding: 120px 0 27px;
+}
+
+.footer-wiget-text p {
+    font-size: 16px;
+    line-height: 28px;
+    color: #e2e2e2;
+    font-weight: 400;
+    margin: 21px 0 21px;
+}
+
+.footer-wiget-social ul {
+    list-style: none;
+}
+
+.footer-wiget-social ul li {
+    display: inline-block;
+    margin-right: 14px;
+}
+
+.footer-wiget-social ul li a i {
+    color: #e63a27;
+    font-size: 20px;
+    transition: .5s;
+}
+
+.footer-wiget-social ul li a:hover i{
+    color: #ffffff;
+}
+
+.footer-wiget-title h4 {
+    font-size: 22px;
+    line-height: 26px;
+    color: #e2e2e2;
+    font-weight: 600;
+    padding: 0 0 15px;
+    transition: .5s;
+}
+
+.footer-wiget-title h4:hover{
+    color: #e63a27;
+}
+
+.footer-wiget-menu ul {
+    list-style: none;
+}
+
+.footer-wiget-menu ul li {
+    list-style: none;
+    margin-top: 6px;
+}
+
+.footer-wiget-menu ul li a {
+    display: inline-block;
+    font-size: 18px;
+    color: #e2e2e2;
+    font-weight: 400;
+    text-decoration: none;
+    transition: .5s;
+}
+
+.footer-wiget-menu ul li a:hover{
+    color:#e63a27 ;
+}
+
+.footer-wiget-contact-menu ul {
+    list-style: none;
+}
+
+.footer-wiget-contact-menu ul li {
+    display: block;
+    opacity: 0.710;
+    font-size: 18px;
+    line-height: 32px;
+    color: #e2e2e2;
+    font-weight: 400;
+    margin: 5px 0 12px;
+    transition: .5s;
+}
+
+.footer-wiget-contact-menu ul li:hover{
+    color: #e63a27 ;
+}
+
+.footer-wiget-contact-menu ul li a{
+    display: inline-block;
+    color: #e63a27;
+    text-decoration: none;
+    transition: .5s;
+}
+
+.footer-wiget-contact-menu ul li a:hover{
+    color: #ffffff;
+}
+
+/* footer thumb */
+
+.footer-thumb {
+    margin: -120px 127px -199px;
+    position: relative;
+}
+
+/* copyrightext css */
+
+.row.footer-line {
+    border-top: 1px solid rgba(111,111,111,0.271);
+    padding: 45px 0 0;
+    margin: 83px 0 0;
+}
+
+.copyright-text p {
+    opacity: 0.800;
+    font-size: 16px;
+    line-height: 27px;
+    color: #e2e2e2;
+    font-weight: 400;
+}
+
+.copyright-text p a {
+    color: #e63a27;
+    font-size: 16px;
+    font-weight: 400;
+    transition: .5s;
+}
+
+.copyright-text p a:hover{
+    color: #ffffff;
+}
+
+.footer-condition ul {
+    list-style: none;
+}
+
+.footer-condition ul li{
+    display: inline-block;
+}
+
+.footer-condition ul li a {
+    display: inline-block;
+    margin-right: 50px;
+    font-size: 18px;
+    line-height: 34px;
+    color: #ffffff;
+    font-weight: 400;
+    transition: .5s;
+    text-decoration: none;
+}
+
+.footer-condition ul li a:hover{
+    color: #e63a27;
+}
+
+
+
+/*==================================================
+ <-- Solar Panel  Home Pages Two  Css-->
+===================================================*/
+
+/* testimonial section css */
+
+.testimonial-section {
+    padding: 0 0 114px;
+}
+
+.testi-item-box {
+    text-align: center;
+    background-color: #ffffff;
+    border-radius: 0px 0px 4px 4px;
+    box-shadow: 0 5px 10px rgb(0 0 0 / 10%);
+    padding: 44px 37px 40px;
+    border-top: 3px solid rgba(230,58,39,0.800);
+    position: relative;
+    margin: 0 10px 3px;
+}
+
+.testi-item-box::before {
+    position: absolute;
+    content: "";
+    height: 3px;
+    width: 0%;
+    background: #1c1632;
+    top: -3px;
+    left: 0;
+    right: 0;
+    margin: auto;
+    transition: .5s;
+}
+
+.testi-item-box:hover::before{
+    width: 100%;
+}
+
+.testi-title h4 {
+    font-size: 24px;
+    line-height: 44px;
+    color: #1c1632;
+    font-weight: 500;
+}
+
+.testi-title span {
+    font-size: 20px;
+    line-height: 26px;
+    color: #e63a27;
+    font-weight: 500;
+}
+
+.testi-discription p {
+    font-size: 16px;
+    line-height: 28px;
+    color: #434141;
+    font-weight: 400;
+    margin: 10px 0 5px;
+}
+
+.testi-icon i {
+    color: #e63a27;
+    margin: 0 2px 0;
+    font-size: 14px;
+    opacity: 0.800;
+}
+
+
+/* owlcarousel css */
+
+.testimonial-section .owl-carousel .owl-dots.disabled, .owl-carousel .owl-nav.disabled {
+    display: none;
+}
+
+.testimonial-section .owl-carousel .owl-item img {
+    display: inline-block;
+}
+
+
+.testimonial-section .owl-dots {
+    text-align: center;
+    margin-top: 31px;
+}
+
+
+.testimonial-section .owl-dot {
+    margin-right: 9px;
+    height: 14px;
+    width: 14px;
+    border: 2px solid #e63a27;
+    border-radius: 50%;
+    display: inline-block;
+}
+ 
+
+.testimonial-section .owl-dot.active {
+    height: 14px;
+    width: 14px;
+    background: #e63a27;
+    border-radius:50%;
+}
+
+
+/*==================================================
+ <-- Solar Panel  Home Pages Two Call Back  Css-->
+===================================================*/
+
+.call-back-section {
+    background: url(../images/resource/call-back-bg.jpg);
+    background-size: cover;
+    background-repeat: no-repeat;
+    padding: 100px 0 100px;
+}
+
+.call-back-content {
+    background: #1c1632;
+    padding: 63px 0 77px;
+}
+
+.call-back-numbar h3 {
+    font-size: 42px;
+    line-height: 44px;
+    color: #ffffff;
+    font-weight: 600;
+}
+
+.call-back-discription p {
+    font-size: 16px;
+    line-height: 28px;
+    color: #ffffff;
+    font-weight: 400;
+    padding: 20px 0 23px;
+    width: 84%;
+    margin: auto;
+}
+
+
+
+/*==================================================
+ <-- Solar Panel  Breatcame  Css-->
+===================================================*/
+.breatcome-section {
+    background: url(../images/resource/breatcame-bg.jpg);
+    background-size: cover;
+    background-repeat: no-repeat;
+    padding: 130px 0;
+}
+
+.breatcome-content {
+    position: relative;
+}
+
+.breatcome-title h1 {
+    color: #fff;
+    font-size: 60px;
+    font-weight: 700;
+    margin-bottom: 19px;
+}
+
+.bratcome-text {
+    position: absolute;
+    right: 0;
+    bottom: -149px;
+    background: #f4fbff;
+    padding: 23px 35px;
+    border-radius: 5px 5px 0 0;
+}
+
+.bratcome-text ul {
+    list-style: none;
+}
+
+.bratcome-text ul li {
+    display: inline-block;
+    margin-right: 15px;
+    font-size: 16px;
+    line-height: 27px;
+    color: #434141;
+    font-weight: 500;
+}
+
+.bratcome-text ul li a {
+    display: inline-block;
+    font-size: 16px;
+    color: #434141;
+    font-weight: 500;
+    text-decoration: none;
+    position: relative;
+    transition: .5s;
+}
+
+.bratcome-text ul li a:hover{
+    color: #e63a27;
+}
+
+.bratcome-text ul li a::before {
+    position: absolute;
+    content: "/";
+    left: 50px;
+}
+
+
+/*==================================================
+ <-- Solar Panel  Blog  Css-->
+===================================================*/
+
+.blog-items-box.style-two {
+    border: none;
+    margin-bottom: 10px;
+}
+
+.blog-thumb.style-two {
+    margin: 0;
+}
+
+.blog-thumb.style-two img {
+    width: 100%;
+}
+
+.blog-content.style-two {
+    background-color: #ffffff;
+    filter: drop-shadow(0px 3px 12.5px rgba(0,0,0,0.1));
+    padding: 27px 29px 34px;
+    border-radius: 0px 0px 6px 6px;
+}
+
+.blog-meta.style-two {
+    margin: 0;
+}
+
+.blog-disctiption p {
+    font-size: 16px;
+    line-height: 28px;
+    color: #434141;
+    font-weight: 400;
+}
+
+/* pagination css */
+
+.as-pagination {
+    margin-top: 18px;
+}
+
+.as-pagination ul {
+    list-style: none;
+}
+
+.as-pagination ul li {
+    display: inline-block;
+}
+
+.as-pagination ul li a {
+    display: inline-block;
+    font-size: 16px;
+    color: #292930;
+    font-weight: 500;
+    border: 1px solid #dddddd;
+    height: 38px;
+    width: 40px;
+    line-height: 38px;
+    text-align: center;
+    border-radius: 3px;
+    margin-left: 5px;
+    transition: .5s;
+    text-decoration: none;
+    position: relative;
+    transition: .5s;
+}
+
+.as-pagination ul li a:hover{
+    color: #ffffff;
+}
+
+.as-pagination ul li a::before{
+    position: absolute;
+    content: "";
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: #e63a27;
+    transform: scale(0);
+    border-radius: 3px;
+    z-index: -1;
+    transition: .5s;
+}
+
+.as-pagination ul li a:hover::before{
+    transform: scale(1);
+}
+
+
+/* sidebar css */
+
+.widget_search form {
+    position: relative;
+}
+
+.widget_search input {
+    border-radius: 4px;
+    padding-left: 20px;
+    height: 60px;
+    width: 100%;
+    position: relative;
+    color: #606060;
+    font-weight: 400;
+    border: 0;
+    border: 1px solid #dddddd;
+    outline: 0;
+}
+
+button.icons {
+    border: 0;
+    font-size: 18px;
+    color: #fff;
+    padding: 1px 15px;
+    position: absolute;
+    right: 0;
+    top: 0;
+    height: 60px;
+    width: 60px;
+    background: #e63a27;
+    border-radius: 0 3px 3px 0;
+}
+
+.categories-title h4 {
+    font-size: 24px;
+    margin-bottom: 25px;
+}
+
+.widget-categories-menu {
+    margin-bottom: 45px;
+}
+
+.widget-categories-menu ul li {
+    list-style: none;
+    border-bottom: 1px solid #ddd;
+    padding-bottom: 4px;
+    position: relative;
+    margin-bottom: 10px;
+}
+
+.widget-categories-menu ul li::after{
+    position: absolute;
+    right: 0;
+    bottom: -1px;
+    width: 0;
+    height: 1px;
+    transition: all 0.5s linear 0s;
+    background-color:#e63a27;
+    content: "";
+}
+
+.widget-categories-menu ul li:hover::after{
+    width: 100%;
+    right: auto;
+    left: 0;
+}
+
+.widget-categories-menu ul li a {
+    display: block;
+    overflow: hidden;
+    text-decoration: none;
+    transition: .5s;
+    font-weight: 500;
+}
+
+.widget-categories-menu ul li a:hover{
+    color:#e63a27 ;
+}
+.widget-categories-menu ul li a span {
+    float: right;
+}
+
+.sidber-widget-recent-post {
+    margin: 44px 0 62px;
+}
+
+.recent-widget-thumb {
+    float: left;
+    margin-right: 16px;
+    margin-top: -15px;
+    transition: .5s;
+}
+
+.recent-widget-content a {
+    font-size: 20px;
+    line-height: 26px;
+    color: #292930;
+    font-weight: 600;
+    display: block;
+    text-decoration: none;
+    margin-bottom: 6px;
+    transition: .5s;
+}
+
+.recent-widget-content a:hover{
+    color:#e63a27 ;
+}
+.recent-widget-content span {
+    font-size: 16px;
+    line-height: 26px;
+    color: #434141;
+    font-weight: 400;
+}
+
+.recent-widget-content span i {
+    font-size: 13px;
+    margin-right: 4px;
+}
+
+.widget-tags a {
+    display: inline-block;
+    text-decoration: none;
+    border: 1px solid #dddddd;
+    padding: 3px 14px;
+    margin: 11px 5px;
+    border-radius: 2px;
+    font-size: 16px;
+    color: #434141;
+    font-weight: 400;
+    position: relative;
+    transition: .5s;
+    z-index: 1;
+}
+
+.widget-tags a:hover {
+    color: #fff;
+}
+
+.widget-tags a:before {
+    position: absolute;
+    content: "";
+    left: -2px;
+    top: 0px;
+    height: 102%;
+    width: 0%;
+    background: #e63a27 ;
+    z-index: -1;
+    border-radius: 3px;
+    transition: .5s;
+}
+
+.widget-tags a:hover:before {
+    width: 104%;
+}
+
+.ba-blog-widget-title {
+    font-size: 24px;
+    margin: 27px 0 22px;
+}
+
+.ba-blog-widget-subscribe-form form {
+    position: relative;
+}
+
+.ba-blog-widget-subscribe-form input {
+    border: 0;
+    width: 100%;
+    padding-right: 30px;
+    outline: 0;
+    border-bottom: 1px solid #DDD;
+    color: #434141;
+    padding-bottom: 3px;
+    transition: all 0.3s linear 0s;
+}
+
+.ba-blog-widget-subscribe-form input:focus {
+    border-color: #e63a27;
+}
+
+.ba-blog-widget-subscribe-form button[type=submit] {
+    padding: 0;
+    position: absolute;
+    right: 0;
+    bottom: 2px;
+    background: transparent;
+    border: 0;
+    color: #e63a27 ;
+}
+
+
+/*==================================================
+ <-- Solar Panel  Blog Details Css-->
+===================================================*/
+
+.blog-content.style-two.inner {
+    background: none;
+}
+
+.blog-disctiption.inner {
+    margin-bottom: 32px;
+}
+
+.blog-details-thumb img {
+    width: 100%;
+}
+
+.blog-details-list {
+    margin-bottom: 32px;
+}
+
+.blog-details-list ul li {
+    list-style: none;
+    margin-bottom: 12px;
+    font-size: 18px;
+    color: #292930;
+    font-weight: 600;
+}
+
+.blog-details-list ul li i {
+    font-size: 22px;
+    padding-right: 8px;
+}
+
+.blog-details-list ul li.active{
+    color: #e63a27;
+}
+
+.blog-details-title h5 {
+    font-size: 24px;
+    line-height: 26px;
+    color: #292930;
+    font-weight: 600;
+    margin-bottom: 15px;
+}
+
+blockquote {
+    filter: drop-shadow(0 0 45px rgba(0,0,0,0.1));
+    background-color: #ffffff;
+    padding: 25px 34px 30px;
+    text-align: center;
+}
+
+.blog-details-social-box {
+    border-top: 1px solid #ddd;
+    border-bottom: 1px solid #ddd;
+    padding: 4px 0;
+    padding-bottom: 9px;
+}
+
+.ba-blog-details-social-icons h6 {
+    display: inline-block;
+    margin-right: 15px;
+    color: #e6004a;
+}
+
+.ba-blog-details-social-icons a {
+    margin-right: 10px;
+    vertical-align: middle;
+    text-decoration: none;
+}
+
+.ba-blog-details-social-icons a:hover {
+    color: #e63a27;
+}
+
+.ba-blog-details-social-icons a i{
+    font-size: 20px;
+    color: #292930;
+    font-weight: 600;
+}
+
+.text-sm-end {
+    text-align: right!important;
+}
+
+.ba-blog-details-comment-count i {
+    font-size: 15px;
+    color: #e63a27;
+}
+
+.ba-blog-details-comment-count span {
+    display: inline-block;
+    margin-left: 10px;
+}
+
+.ba-section-title-2 {
+    position: relative;
+    padding-bottom: 16px;
+}
+
+.ba-section-title-2::after {
+    position: absolute;
+    bottom: 0;
+    height: 2px;
+    width: 90px;
+    background: #e63a27;
+    content: "";
+    left: 0;
+}
+
+.ba-blog-comment-list ul {
+    list-style: none;
+}
+
+.ba-blog-comment-list ul li .ba-blog-comment-box {
+    border-bottom: 1px solid #DDD;
+    padding-bottom: 38px;
+}
+
+.ba-blog-comment-list ul li .ba-blog-comment-box.inner-2 {
+    border-bottom: none;
+}
+
+.ba-blog-comment-list ul li .ba-blog-comment-box.inner {
+    margin: 25px 67px 28px;
+}
+
+.ba-blog-comment-list ul li .image {
+    float: left;
+    margin-right: 30px;
+}
+
+.ba-blog-comment-list ul li .content {
+    overflow: hidden;
+}
+
+.ba-blog-comment-list .title {
+    margin-bottom: 5px;
+}
+
+.text-sm-end {
+    text-align: right!important;
+}
+
+.ba-blog-comment-list ul li .replay-link {
+    text-decoration: none;
+}
+
+
+/* comment box css */
+
+.choose-contact-box.inner {
+    background: 0;
+    padding: 0;
+}
+
+.choose-contact-title.inner h4 {
+    font-size: 24px;
+    color: #292930;
+    position: relative;
+    margin-bottom: 50px;
+}
+
+.choose-contact-title.inner h4::before {
+    position: absolute;
+    content: "";
+    height: 2px;
+    width: 90px;
+    background: #e6004a;
+    bottom: -10px;
+}
+
+.form-box.inner textarea {
+    width: 100%;
+    height: 220px;
+}
+
+.form-box-button.inner button {
+    width: 196px;
+    height: 55px;
+    border-radius: 5px;
+    background-color: #e63a27;
+}
+
+
+/*==================================================
+ <-- Solar Panel  Service Innerp Page Css-->
+===================================================*/
+
+.service-section.style-two {
+    padding: 106px 0 78px;
+}
+
+.service-box.style-two {
+    margin-bottom: 40px;
+}
+
+
+/*==================================================
+ <-- Solar Panel  Project Grid Innerp Page Css-->
+===================================================*/
+
+.project-grid-section {
+    padding: 118px 0 88px;
+}
+
+.protfolio-menu ul {
+    list-style: none;
+}
+
+.protfolio-menu ul li {
+    display: inline-block;
+    padding: 12px 33px;
+    font-size: 18px;
+    color: #ffffff;
+    background: #1c1632;
+    font-weight: 500;
+    margin: 0px 13px 50px;
+    border-radius: 5px;
+    cursor: pointer;
+}
+
+.protfolio-menu ul li.current_menu_item {
+    position: relative;
+    color: #ffffff;
+    z-index: 1;
+}
+.protfolio-menu ul li.active{
+    background: #e63a27;
+}
+
+.protfolio-menu ul li.current_menu_item::before {
+    position: absolute;
+    content: "";
+    background: #e63a27;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    right: 0;
+    transform: scale(0);
+    border-radius: 5px;
+    z-index: -1;
+    transition: .5s;
+}
+
+.protfolio-menu ul li.current_menu_item:hover::before{
+    transform: scale(1);
+}
+
+/* project grid box */
+
+.project-thumb img {
+    width: 100%;
+}
+
+.project-content {
+    background: #1c1632;
+    padding: 22px 42px 30px;
+    border-radius: 5px;
+    position: relative;
+    z-index: 1;
+}
+
+.project-content::before{
+    position: absolute;
+    content: "";
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: #e63a27;
+    border-radius: 5px;
+    transform: scale(0);
+    z-index: -1;
+    transition: .5s;
+}
+
+.project-grid-box:hover .project-content::before{
+    transform: scale(1);
+}
+
+.project-content h4 {
+    font-size: 24px;
+    line-height: 30px;
+    color: #e2e2e2;
+    font-weight: 500;
+    margin-bottom: 14px;
+}
+
+.project-content span {
+    font-size: 16px;
+    line-height: 30px;
+    color: #dddddd;
+    font-weight: 400;
+}
+
+
+/*==================================================
+ <-- Solar Panel  Error Innerp Page Css-->
+===================================================*/
+
+.error-section {
+    padding: 118px 0 120px;
+}
+
+/*==================================================
+ <-- Solar Panel  Contact Us Innerp Page Css-->
+===================================================*/
+
+.contact-section {
+    padding: 118px 0 120px;
+    background: #eaeaea;
+}
+
+.contact-sub-title h4 {
+    font-size: 17px;
+    color: #e63a27;
+    font-weight: 400;
+}
+
+.contact-main-title h2 {
+    font-size: 40px;
+    color: #0d1c37;
+    font-weight: 700;
+}
+
+.contact-discription p {
+    font-size: 15px;
+    line-height: 46px;
+    color: #383737;
+    font-weight: 400;
+    margin-bottom: 37px;
+}
+
+/* contact box item */
+
+.contact-box-item {
+    margin-bottom: 30px;
+}
+
+.contact-icon {
+    float: left;
+    margin-right: 22px;
+    margin-top: -4px;
+}
+
+.contact-icon i {
+    height: 60px;
+    width: 60px;
+    background: #292930;
+    display: inline-block;
+    line-height: 60px;
+    text-align: center;
+    border-radius: 50%;
+    color: #fff;
+    font-size: 23px;
+    position: relative;
+    z-index: 1;
+}
+
+.contact-icon i::after{
+    position: absolute;
+    content: "";
+    top: 0;
+    left: 0;
+    right:0;
+    bottom: 0;
+    background: #e63a27;
+    border-radius: 50%;
+    transform: scale(0);
+    transition: .5s;
+    z-index: -1;
+}
+
+.contact-icon:hover i::after{
+    transform: scale(1);
+}
+
+.contact-adress h5 {
+    font-size: 24px;
+    color: #0d1c37;
+    font-weight: 500;
+}
+
+.contact-adress span {
+    font-size: 15px;
+    line-height: 29px;
+    color: #383737;
+    font-weight: 400;
+}
+
+/* contact-box */
+
+.choose-contact-box.contact-inner {
+    background: none;
+    padding: 0;
+}
+
+.form-box.contact-inner select {
+    width: 100%;
+}
+
+.form-box.contact-inner textarea {
+    width: 100%;
+    height: 186px;
+}
+
+.form-box-button.contact-inner button {
+    width: 165px;
+    height: 50px;
+    border-radius: 4px;
+}
+
+
+/*==================================================
+ <-- Solar Panel  Faq Innerp Page Css-->
+===================================================*/
+
+.faq-section {
+    padding: 108px 0 94px;
+}
+
+.faq-discription p {
+    font-size: 16px;
+    line-height: 28px;
+    color: #434141;
+    font-weight: 400;
+    margin-bottom: 33px;
+}
+
+/* faq contact css */
+
+.choose-contact-box.faq {
+    background: #f8f8f8;
+    padding: 46px 82px 60px;
+}
+.choose-contact-title.faq h4 {
+    font-size: 30px;
+    line-height: 34px;
+    color: #292930;
+    font-weight: 600;
+    margin-bottom: 47px;
+}
+
+.form-box.faq input {
+    height: 62px;
+    background-color: #f2f2f2;
+    border: 1px solid rgba(0,0,0,0.1);
+    margin-bottom: 13px;
+}
+
+.form-box.faq textarea {
+    width: 100%;
+    height: 118px;
+    border-radius: 5px;
+    background-color: #f2f2f2;
+    border: 1px solid rgba(0,0,0,0.1);
+    margin-bottom: 45px;
+}
+.form-box-button.faq button {
+    width: 216px;
+    height: 62px;
+    border-radius: 5px;
+    background-color: #e63a27;
+}
+
+
+/*==================================================
+ <-- Solar Panel  Service Details Innerp Page Css-->
+===================================================*/
+
+.service-details-section {
+    padding: 120px 0 77px;
+}
+
+.service-details-thumb img {
+    width: 100%;
+}
+
+.service-details-thumb-two img{
+    width: 100%;
+}
+
+.service-details-title h4 {
+    font-size: 26px;
+    color: #0d1c37;
+    font-weight: 700;
+    padding: 13px 0;
+}
+
+.service-details-discription p {
+    font-size: 16px;
+    color: #434141;
+    font-weight: 400;
+    font-family: "Jost";
+    padding: 4px 0 31px 0;
+    margin: 0;
+}
+
+.widget_search.box {
+    padding: 29px 22px 30px;
+    border-radius: 4px;
+    margin-bottom: 30px;
+    background: #f5f5f5;
+}
+.widget-categories-box.two {
+    padding: 47px 22px 5px;
+    border-radius: 4px;
+    margin-bottom: 30px;
+    background: #f5f5f5;
+}
+
+.widget-categories-menu ul li {
+    list-style: none;
+    padding: 13px;
+    position: relative;
+    margin-bottom: 10px;
+    background: #fff;
+    position: relative;
+    z-index: 1;
+    transition: .5s;
+}
+
+.widget-categories-menu.asd ul li::after {
+    position: absolute;
+    left: 0;
+    bottom: -1px;
+    width: 2px;
+    height: 53px;
+    transition: all 0.5s linear 0s;
+    background-color: #e63a27;
+    content: "";
+     z-index: -1;
+}
+
+.widget-categories-menu.asd ul li:hover::after {
+    width: 100%;
+   
+}
+
+.widget-categories-menu.asd ul li a{
+    transition: .5s;
+}
+
+.widget-categories-menu.asd ul li:hover a {
+    color: #fff!important;
+}
+
+.widget-content {
+    padding: 0 21px 31px;
+    border-radius: 4px;
+    margin-bottom: 30px;
+    background: #fff;
+    box-shadow: 0 3px 10px rgb(0 0 0 / 0.2);
+}
+
+.widget-content h4 {
+    padding: 28px 0 15px;
+    font-size: 24px;
+    color: #292930;
+    font-weight: 600;
+}
+
+.widget-content p {
+    font-size: 16px;
+    color: #434141;
+    font-weight: 400;
+    margin: 0;
+}
+
+.widget-info-social-link ul li {
+    list-style: none;
+    padding: 21px 0 0;
+}
+
+.widget-info-social-link ul li a {
+    text-decoration: none;
+
+}
+
+.widget-info-social-link ul li span {
+    font-size: 17px;
+    color: #292930;
+    font-weight: 500;
+    transition:.3s;
+}
+
+.widget-info-social-link ul li a i {
+    font-size: 24px;
+    color: #e63a27;
+    font-weight: 400;
+    padding-right: 9px;
+}
+
+.widget-info-social-link ul li span:hover {
+    color: #e63a27;
+}
+
+/* service style three */
+
+.service-section.style-three {
+    padding: 15px 0 75px;
+    background: none;
+    margin-bottom: 0;
+}
+
+
+
+/*==================================================
+ <-- Solar Panel  Team Details Innerp Page Css-->
+===================================================*/
+
+.team-details-section {
+    padding: 118px 0 118px;
+}
+
+.ba-team-details-author-skill-area {
+    margin-bottom: 30px;
+}
+
+.team-details-author-img img {
+    width: 100%;
+}
+
+.team-details-author-name {
+    margin-bottom: 14px;
+}
+
+.team-details-author-name h4 {
+    font-size: 24px;
+    line-height: 60px;
+    color: #292930;
+    font-weight: 600;
+}
+
+.team-details-author-name span {
+    font-size: 16px;
+    line-height: 36px;
+    color: #434141;
+    font-weight: 400;
+}
+
+.team-details-author-experience ul li {
+    list-style: none;
+    margin-bottom: 12px;
+}
+
+.team-details-author-experience ul li .label {
+    min-width: 152px;
+    float: left;
+    font-size: 16px;
+    color: #434141;
+    font-weight: 500;
+}
+
+.team-details-author-experience ul li .value {
+    overflow: hidden;
+    display: block;
+}
+
+.team-details-author-experience ul li .value {
+    overflow: hidden;
+    display: block;
+    text-decoration: none;
+    font-size: 16px;
+    color: #434141;
+}
+
+.team-card-box-social a {
+    display: inline-block;
+    margin-right: 15px;
+    height: 40px;
+    width: 40px;
+    background: #f3f3f3;
+    line-height: 40px;
+    text-align: center;
+    border-radius: 50%;
+    position: relative;
+    z-index: 1;
+}
+
+.team-card-box-social a::before{
+    position: absolute;
+    content: "";
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: #e63a27;
+    border-radius: 50%;
+    transform: scale(0);
+    transition: .5s;
+    z-index: -1;
+}
+
+.team-card-box-social a:hover::before{
+    transform: scale(1);
+}
+
+.team-card-box-social a i{
+    transition: .5s;
+}
+
+.team-card-box-social a:hover i{
+    color: #ffffff;
+}
+
+/* progress bar css */
+
+span.process-bar.style-two {
+    font-size: 16px;
+}
+
+.barfiller.style-two {
+    width: 100%;
+}
+
+.team-details-title h4 {
+    font-size: 24px;
+    line-height: 60px;
+    color: #292930;
+    font-weight: 600;
+}
+
+
+/* form box css */
+
+.choose-contact-title.inner.team h4::before {
+    display: none;
+}
+
+.choose-contact-title.inner.team h4 {
+    border-bottom: 1px solid  #dddddd;
+    padding: 0px 0 13px;
+    margin-bottom: 28px;
+}
+
+.form-box.inner.team input {
+    border: 1px solid #dddddd;
+    margin-bottom: 16px;
+}
+
+.form-box.inner.team textarea {
+    border: 1px solid #dddddd;
+    height: 135px;
+}
+
+.form-box-button.inner.team button:hover::before {
+    background: #1c1632;
+}
+
+
+/*==================================================
+ <-- Solar Panel  Project Details Inner Page Css-->
+===================================================*/
+
+.project-details-section {
+    padding: 118px 0 120px;
+}
+
+.project-details-section .info-area {
+    padding-left: 60px;
+}
+
+.project-details-section .sub-title h5 {
+    font-size: 25px;
+    font-weight: 700;
+    text-transform: capitalize;
+}
+
+.project-details-section .info li {
+    display: flex;
+    border-bottom: 1px solid #ddd;
+    padding: 15px 0;
+}
+
+.project-details-section .info li h6 {
+    font-weight: 700;
+    text-transform: capitalize;
+    width: 50%;
+}
+
+.project-details-section .info li p {
+    width: 50%;
+    text-transform: capitalize;
+}
+
+.project-details-section .info li ul li {
+    border: 0;
+    padding: 0;
+    padding-right: 15px;
+}
+
+.project-details-section .title h4 {
+    font-size: 29px;
+    line-height: 44px;
+    text-transform: capitalize;
+    font-weight: 700;
+}
+
+.project-details-section .list-part {
+    padding-top: 10px;
+}
+
+.project-details-section .desc-list {
+    padding-top: 20px;
+}
+
+.project-details-section .desc-list li {
+    position: relative;
+    padding: 5px 0 5px 30px;
+    list-style: none;
+}
+
+.project-details-section .desc-list li:before {
+    content: '';
+    position: absolute;
+    top: 10px;
+    left: 0;
+    height: 15px;
+    width: 15px;
+    border-radius: 50%;
+    -webkit-border-radius: 50%;
+    -moz-border-radius: 50%;
+    -ms-border-radius: 50%;
+    -o-border-radius: 50%;
+    background: #e63a27;
+}
+
+
+
+
+/*** 
+====================================================================
+    Search Popup
+====================================================================
+***/
+.search-popup{
+    position: fixed;
+    left: 0;
+    top: 0;
+    height: 100vh;
+    width: 100%;
+    z-index: 99999;
+    margin-top: -540px;
+    transform: translateY(-100%);
+    background-color: rgba(0,0,0,0.90);
+    -webkit-transition: all 500ms cubic-bezier(0.860, 0.000, 0.070, 1.000);
+    -moz-transition: all 500ms cubic-bezier(0.860, 0.000, 0.070, 1.000);
+    -o-transition: all 500ms cubic-bezier(0.860, 0.000, 0.070, 1.000);
+    transition: all 1500ms cubic-bezier(0.860, 0.000, 0.070, 1.000); /* easeInOutQuint */
+    -webkit-transition-timing-function: cubic-bezier(0.860, 0.000, 0.070, 1.000);
+    -moz-transition-timing-function: cubic-bezier(0.860, 0.000, 0.070, 1.000);
+    -o-transition-timing-function: cubic-bezier(0.860, 0.000, 0.070, 1.000);
+    transition-timing-function: cubic-bezier(0.860, 0.000, 0.070, 1.000); /* easeInOutQuint */
+}
+.search-popup{
+    width: 100%;
+}
+.search-active .search-popup{
+    transform: translateY(0%);
+    margin-top: 0;
+}
+.search-popup .close-search {
+    position: absolute;
+    left: 0;
+    right: 0;
+    margin: 0 auto;
+    margin-top: -200px;
+    border-radius: 50%;
+    text-align: center;
+    background-color:#e63a27;
+    width: 70px;
+    cursor: pointer;
+    box-shadow: 0 0 10px rgba(0,0,0,0.05);
+    border-bottom: 3px solid #ffffff;
+    -webkit-transition: all 500ms ease;
+    height: 70px;
+    line-height: 70px;
+    text-align: center;
+}
+.search-active .search-popup .close-search{
+    visibility: visible;
+    opacity: 1;
+    top: 50%;
+    -webkit-transition-delay: 1500ms;
+    -moz-transition-delay: 1500ms;
+    -ms-transition-delay: 1500ms;
+    -o-transition-delay: 1500ms;
+    transition-delay: 1500ms;
+}
+.search-popup form{
+    position: absolute;
+    max-width: 700px;
+    top: 50%;
+    left: 15px;
+    right: 15px;
+    margin:-35px auto 0;
+    transform: scaleX(0);
+    transform-origin: center;
+    background-color: #111111;
+    -webkit-transition: all 300ms ease;
+    -moz-transition: all 300ms ease;
+    -ms-transition: all 300ms ease;
+    -o-transition: all 300ms ease;
+    transition: all 300ms ease;
+}
+.search-active .search-popup form{
+    transform: scaleX(1);
+    -webkit-transition-delay: 1200ms;
+    -moz-transition-delay: 1200ms;
+    -ms-transition-delay: 1200ms;
+    -o-transition-delay: 1200ms;
+    transition-delay: 1200ms;
+}
+.search-popup .form-group{
+    position:relative;
+    margin:0px; 
+    overflow: hidden;
+}
+.search-popup .form-group input[type="text"],
+.search-popup .form-group input[type="search"]{
+    position:relative;
+    display:block;
+    font-size:18px;
+    line-height: 50px;
+    color:#000000;
+    height:70px;
+    width:100%;
+    padding: 10px 30px;
+    background-color: #ffffff;
+    -webkit-transition:all 500ms ease;
+    -moz-transition:all 500ms ease;
+    -ms-transition:all 500ms ease;
+    -o-transition:all 500ms ease;
+    transition:all 500ms ease;
+    font-weight:500;
+    text-transform:capitalize;
+}
+.search-popup .form-group input[type="submit"], .search-popup .form-group button {
+    position: absolute;
+    right: 30px;
+    top: 0px;
+    height: 70px;
+    line-height: 70px;
+    background: transparent;
+    text-align: center;
+    font-size: 24px;
+    color: #e63a27;
+    padding: 0;
+    cursor: pointer;
+    -webkit-transition: all 500ms ease;
+    border: none;
+}
+.search-popup .form-group input[type="submit"]:hover,
+.search-popup .form-group button:hover{
+    color: #000000;
+}
+
+.search-popup input::placeholder,
+.search-popup textarea::placeholder{
+    color:#000000;
+}
+.search-popup .close-search.style-two{
+    position: absolute;
+    right: 25px;
+    left: auto;
+    color:#ffffff;
+    width:auto;
+    height:auto;
+    top:25px;
+    margin:0px;
+    border:none;
+    background:none !important;
+    box-shadow:none !important;
+    -webkit-transition:all 500ms ease;
+    -moz-transition:all 500ms ease;
+    -ms-transition:all 500ms ease;
+    -o-transition:all 500ms ease;
+    transition:all 500ms ease;
+}
+
+.flaticon-multiply:before {
+    content: inherit;
+}
+button.close-search i {
+    font-size: 25px;
+    color: #fff;
+    display: inline-block;
+}
+span.flaticon-multiply i {
+    display: inline-block;
+    color: #e63a27;
+}
+
+
+
+
+/*
+<!-- ============================================================== -->
+<!-- Solar Panel  Scrollup Section -->
+<!-- ============================================================== -->*/
+.scroll-area {
+    position: relative;
+    z-index: 999;
+}
+
+.scroll-area .go-top {
+    position: fixed;
+    cursor: pointer;
+    top: 0;
+    right: 30px;
+    color: #ffffff;
+    background-image: -moz-linear-gradient(0deg, #d1651a 0%, #c1282a 100%);
+    background-image: -webkit-linear-gradient(0deg, #d1651a 0%, #c1282a 100%);
+    z-index: 9999;
+    width: 45px;
+    text-align: center;
+    height: 45px;
+    line-height: 42px;
+    opacity: 0;
+    visibility: hidden;
+    -webkit-transition: all 0.9s ease-out 0s;
+    -moz-transition: all 0.9s ease-out 0s;
+    transition: all 0.9s ease-out 0s;
+    border-radius: 10px;
+}
+
+.scroll-area .go-top i {
+    position: absolute;
+    top: 50%;
+    left: -4px;
+    right: 0;
+    margin: 0 auto;
+    font-size: 15px;
+    -o-transform: translateY(-50%);
+    transform: translateY(-50%);
+    -webkit-transition: all 0.5s ease-out 0s;
+    -moz-transition: all 0.5s ease-out 0s;
+    transition: all 0.5s ease-out 0s;
+}
+
+.scroll-area .go-top i:last-child {
+    opacity: 0;
+    visibility: hidden;
+    top: 60%;
+}
+
+.scroll-area .go-top::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: -1;
+    background-image: linear-gradient(to right, #00132b 0%, #00132b 100%);
+    background-image: -ms-linear-gradient(0deg, #d1651a 0%, #c1282a 100%);
+    opacity: 0;
+    visibility: hidden;
+    -webkit-transition: all 0.5s ease-out 0s;
+    -moz-transition: all 0.5s ease-out 0s;
+    transition: all 0.5s ease-out 0s;
+    ;
+    border-radius: 100%;
+}
+
+.scroll-area .go-top:focus,
+.scroll-area .go-top:hover {
+    color: #fff;
+}
+
+.scroll-area .go-top:focus::before,
+.scroll-area .go-top:hover::before {
+    opacity: 1;
+    visibility: visible;
+}
+
+.scroll-area .go-top:focus i:first-child,
+.scroll-area .go-top:hover i:first-child {
+    opacity: 0;
+    top: 0;
+    visibility: hidden;
+}
+
+.scroll-area .go-top:focus i:last-child,
+.scroll-area .go-top:hover i:last-child {
+    opacity: 1;
+    visibility: visible;
+    top: 50%;
+}
+
+.scroll-area .go-top.active {
+    top: 95%;
+    -webkit-transform: translateY(-98%);
+    -moz-transform: translateY(-98%);
+    transform: translateY(-98%);
+    opacity: 1;
+    visibility: visible;
+    border-radius: 0;
+    right: 30px;
+    border-radius: 100%;
+}
+
+.top-wrap {
+    position: relative;
+}
+
+.top-wrap .go-top-button {
+    display: inline-block;
+    width: 50px;
+    height: 50px;
+    line-height: 40px;
+    text-align: center;
+    color: #fff;
+    top: 3px;
+    z-index: 1;
+    background: #FF3C00;
+}
+
+.top-wrap .go-top-button i {
+    font-size: 20px;
+    font-weight: 700;
+    padding-left: 4px;
+    color: #fff;
+}
+
+.top-wrap .go-top-button::after {
+    z-index: -1;
+    content: "";
+    position: absolute;
+    left: 3px;
+    top: 3px;
+    width: 45px;
+    height: 45px;
+    -webkit-animation: ripple 1.6s ease-out infinite;
+    -moz-animation: ripple 1.6s ease-out infinite;
+    animation: ripple 1.6s ease-out infinite;
+    opacity: 0;
+    background-image: -moz-linear-gradient(0deg, #69DDCC 0%, #69DDCC 100%);
+    background-image: -webkit-linear-gradient(0deg, #fb8a42 0%, #fb8a42 100%);
+    border-radius: 100%;
+}
+
+.top-wrap .go-top-button:hover {
+    background-color: #222;
+    color: #fff;
+}
+
+@-webkit-keyframes ripple-blue {
+    0% {
+        -webkit-box-shadow: 0 0 0 0 rgba(255,255,255, 0.3), 0 0 0 10px rgba(255,255,255, 0.3), 0 0 0 20px rgba(255,255,255, 0.3);
+        box-shadow: 0 0 0 0 rgba(255,255,255, 0.3), 0 0 0 10px rgba(255, 255, 255, 0.3), 0 0 0 20px rgba(255,255,255, 0.3)
+    }
+    100% {
+        -webkit-box-shadow: 0 0 0 10px rgba(255,255,255, 0.3), 0 0 0 20px rgba(255, 255, 255, 0.3), 0 0 0 30px rgba(255, 255, 255, 0);
+        box-shadow: 0 0 0 10px rgba(255, 255, 255, 0.3), 0 0 0 20px rgba(255, 255, 255, 0.3), 0 0 0 30px rgba(255, 255, 255, 0)
+    }
+}
+
+@keyframes ripple-blue {
+    0% {
+        -webkit-box-shadow: 0 0 0 0 rgba(255,255,255, 0.3), 0 0 0 10px rgba(255,255,255, 0.3), 0 0 0 20px rgba(255,255,255, 0.3);
+        box-shadow: 0 0 0 0 rgba(255,255,255, 0.3), 0 0 0 10px rgba(255,255,255, 0.3), 0 0 0 20px rgba(255,255,255, 0.3)
+    }
+    100% {
+        -webkit-box-shadow: 0 0 0 10px rgba(255,255,255, 0.3), 0 0 0 20px rgba(255,255,255, 0.3), 0 0 0 30px rgba(255,255,255, 0);
+        box-shadow: 0 0 0 10px rgba(255,255,255, 0.3), 0 0 0 20px rgba(255,255,255, 0.3), 0 0 0 30px rgba(255,255,255, 0)
+    }
+}
+
+/*
+<!-- ============================================================== -->
+<!-- Solar Panel  Bounce Animation Css -->
+<!-- ============================================================== -->*/
+/* bounce-animate */
+.bounce-animate {
+    animation-name: float-bob;
+    animation-duration: 2s;
+    animation-iteration-count: infinite;
+    animation-timing-function: linear;
+    -moz-animation-name: float-bob;
+    -moz-animation-duration: 2s;
+    -moz-animation-iteration-count: infinite;
+    -moz-animation-timing-function: linear;
+    -ms-animation-name: float-bob;
+    -ms-animation-duration: 2s;
+    -ms-animation-iteration-count: infinite;
+    -ms-animation-timing-function: linear;
+    -o-animation-name: float-bob;
+    -o-animation-duration: 2s;
+    -o-animation-iteration-count: infinite;
+    -o-animation-timing-function: linear;
+}
+
+.bounce-animate2 {
+    animation-name: float-bob2;
+    animation-duration: 3s;
+    animation-iteration-count: infinite;
+    animation-timing-function: linear;
+    -moz-animation-name: float-bob2;
+    -moz-animation-duration: 3s;
+    -moz-animation-iteration-count: infinite;
+    -moz-animation-timing-function: linear;
+    -ms-animation-name: float-bob2;
+    -ms-animation-duration: 3s;
+    -ms-animation-iteration-count: infinite;
+    -ms-animation-timing-function: linear;
+    -o-animation-name: float-bob2;
+    -o-animation-duration: 3s;
+    -o-animation-iteration-count: infinite;
+    -o-animation-timing-function: linear;
+}
+
+.bounce-animate3 {
+    animation-name: float-bob3;
+    animation-duration: 3s;
+    animation-iteration-count: infinite;
+    animation-timing-function: linear;
+    -moz-animation-name: float-bob3;
+    -moz-animation-duration: 3s;
+    -moz-animation-iteration-count: infinite;
+    -moz-animation-timing-function: linear;
+    -ms-animation-name: float-bob3;
+    -ms-animation-duration: 3s;
+    -ms-animation-iteration-count: infinite;
+    -ms-animation-timing-function: linear;
+    -o-animation-name: float-bob3;
+    -o-animation-duration: 3s;
+    -o-animation-iteration-count: infinite;
+    -o-animation-timing-function: linear;
+}
+
+.bounce-animate4 {
+    animation-name: float-bob4;
+    animation-duration: 5s;
+    animation-iteration-count: infinite;
+    animation-timing-function: linear;
+    -moz-animation-name: float-bob4;
+    -moz-animation-duration: 5s;
+    -moz-animation-iteration-count: infinite;
+    -moz-animation-timing-function: linear;
+    -ms-animation-name: float-bob4;
+    -ms-animation-duration: 5s;
+    -ms-animation-iteration-count: infinite;
+    -ms-animation-timing-function: linear;
+    -o-animation-name: float-bob4;
+    -o-animation-duration: 5s;
+    -o-animation-iteration-count: infinite;
+    -o-animation-timing-function: linear;
+}
+
+.bounce-animate5 {
+    animation-name: float-bob5;
+    animation-duration: 6s;
+    animation-iteration-count: infinite;
+    animation-timing-function: linear;
+    -moz-animation-name: float-bob5;
+    -moz-animation-duration: 6s;
+    -moz-animation-iteration-count: infinite;
+    -moz-animation-timing-function: linear;
+    -ms-animation-name: float-bob5;
+    -ms-animation-duration: 6s;
+    -ms-animation-iteration-count: infinite;
+    -ms-animation-timing-function: linear;
+    -o-animation-name: float-bob5;
+    -o-animation-duration: 6s;
+    -o-animation-iteration-count: infinite;
+    -o-animation-timing-function: linear;
+}
+
+.bounce-animate-slow {
+    animation-name: float-bob5;
+    animation-duration: 15s;
+    animation-iteration-count: infinite;
+    animation-timing-function: linear;
+    -moz-animation-name: float-bob5;
+    -moz-animation-duration: 15s;
+    -moz-animation-iteration-count: infinite;
+    -moz-animation-timing-function: linear;
+    -ms-animation-name: float-bob5;
+    -ms-animation-duration: 15s;
+    -ms-animation-iteration-count: infinite;
+    -ms-animation-timing-function: linear;
+    -o-animation-name: float-bob5;
+    -o-animation-duration: 15s;
+    -o-animation-iteration-count: infinite;
+    -o-animation-timing-function: linear;
+}
+
+.bounce-animate-3 {
+    animation-name: float-bob6;
+    animation-duration: 6s;
+    animation-iteration-count: infinite;
+    animation-timing-function: linear;
+    -moz-animation-name: float-bob6;
+    -moz-animation-duration: 6s;
+    -moz-animation-iteration-count: infinite;
+    -moz-animation-timing-function: linear;
+    -ms-animation-name: float-bob6;
+    -ms-animation-duration: 6s;
+    -ms-animation-iteration-count: infinite;
+    -ms-animation-timing-function: linear;
+    -o-animation-name: float-bob6;
+    -o-animation-duration: 6s;
+    -o-animation-iteration-count: infinite;
+    -o-animation-timing-function: linear;
+}
+
+@keyframes float-bob {
+    0% {
+        -webkit-transform: translateY(-30px);
+        transform: translateY(-30px);
+    }
+
+    50% {
+        -webkit-transform: translateY(-15px);
+        transform: translateY(-15px);
+    }
+
+    100% {
+        -webkit-transform: translateY(-30px);
+        transform: translateY(-30px);
+    }
+}
+
+@keyframes float-bob2 {
+    0% {
+        -webkit-transform: translateY(-60px);
+        transform: translateY(-60px);
+    }
+
+    50% {
+        -webkit-transform: translateY(-30px);
+        transform: translateY(-30px);
+    }
+
+    100% {
+        -webkit-transform: translateY(-60px);
+        transform: translateY(-60px);
+    }
+}
+
+@keyframes float-bob3 {
+    0% {
+        -webkit-transform: translateY(-50px);
+        transform: translateY(-50px);
+    }
+
+    50% {
+        -webkit-transform: translateY(-20px);
+        transform: translateY(-20px);
+    }
+
+    100% {
+        -webkit-transform: translateY(-50px);
+        transform: translateY(-50px);
+    }
+}
+
+@keyframes float-bob4 {
+    0% {
+        -webkit-transform: translateY(-50px);
+        transform: translateY(-50px);
+    }
+
+    50% {
+        -webkit-transform: translateY(-15px);
+        transform: translateY(-15px);
+    }
+
+    100% {
+        -webkit-transform: translateY(-50px);
+        transform: translateY(-50px);
+    }
+}
+
+@keyframes float-bob5 {
+    0% {
+        -webkit-transform: translateY(-50px);
+        transform: translateY(-50px);
+    }
+
+    50% {
+        -webkit-transform: translateY(-10px);
+        transform: translateY(-10px);
+    }
+
+    100% {
+        -webkit-transform: translateY(-50px);
+        transform: translateY(-50px);
+    }
+}
+
+@keyframes float-bob6 {
+    0% {
+        -webkit-transform: translateY(-40px);
+        transform: translateY(-40px);
+    }
+
+    50% {
+        -webkit-transform: translateY(-20px);
+        transform: translateY(-20px);
+    }
+
+    100% {
+        -webkit-transform: translateY(-40px);
+        transform: translateY(-40px);
+    }
+}
+
+@keyframes movebounce {
+    0% {
+        -webkit-transform: translateY(0px);
+        transform: translateY(0px);
+    }
+
+    50% {
+        -webkit-transform: translateY(20px);
+        transform: translateY(20px);
+    }
+
+    100% {
+        -webkit-transform: translateY(0px);
+        transform: translateY(0px);
+    }
+}
+
+
+@keyframes moveleftbounce {
+    0% {
+        -webkit-transform: translateX(0px);
+        transform: translateX(0px);
+    }
+
+    50% {
+        -webkit-transform: translateX(20px);
+        transform: translateX(20px);
+    }
+
+    100% {
+        -webkit-transform: translateX(0px);
+        transform: translateX(0px);
+    }
+}
+
+
+
+/*--==============================================->
+  <!-- Solar Panel  Animation Dance -->
+ ==================================================-*/
+/**/
+.dance3 {
+    -webkit-animation: dance3 8s alternate infinite;
+    animation: dance3 8s alternate infinite;
+}
+
+@keyframes dance3 {
+    0% {
+        -webkit-transform: scale(0.5);
+    }
+
+    100% {
+        -webkit-transform: scale(1);
+    }
+}
+
+.dance {
+    -webkit-animation: dance 2s alternate infinite;
+    animation: dance 2s alternate infinite;
+}
+
+@keyframes dance {
+    0% {
+        -webkit-transform: scale(0.5);
+    }
+
+    100% {
+        -webkit-transform: scale(1.2);
+    }
+}
+
+.dance2 {
+    -webkit-animation: dance2 4s alternate infinite;
+    animation: dance2 4s alternate infinite;
+}
+
+@keyframes dance2 {
+    0% {
+        -webkit-transform: translate3d(0, 0, 0);
+    }
+
+    50% {
+        -webkit-transform: translate3d(25px, -25px, 0);
+    }
+
+    100% {
+        -webkit-transform: translate3d(0, -25px, 25px);
+    }
+}
+
+.watermark-animate {
+    -webkit-animation: watermark-animate 8s infinite;
+    animation: watermark-animate 8s infinite;
+    animation-direction: alternate-reverse;
+    -webkit-animation-timing-function: linear;
+    animation-timing-function: linear;
+}
+
+@keyframes watermark-animate {
+    0% {
+        left: 0;
+    }
+
+    100% {
+        left: 100%;
+    }
+}
+
+
+
+
+/*===========================
+<-- Solar Panel  Loader Css -->
+=============================*/
+.loader-wrapper {
+    position: fixed;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    width: 100%;
+    height: 100%;
+    transition: 0.8s 1s ease;
+    z-index: 666;
+}
+
+.loader {
+    position: relative;
+    display: block;
+    z-index: 201;
+    top: 50%;
+    left: 50%;
+    width: 100px;
+    height: 100px;
+    margin: -50px 0 0 -50px;
+    border-radius: 50%;
+    transition: all 1s 1s ease;
+    border: 3px solid transparent;
+    border-top-color: #e63a27;
+    -webkit-animation: spin 1.5s linear infinite;
+    -moz-animation: spin 1.5s linear infinite;
+    -o-animation: spin 1.5s linear infinite;
+    animation: spin 1.5s linear infinite;
+}
+
+.loader:before {
+    position: absolute;
+    content: '';
+    top: 6px;
+    left: 6px;
+    right: 6px;
+    bottom: 6px;
+    border-radius: 50%;
+    border: 3px solid transparent;
+    border-left-color: #1c1632;
+    -webkit-animation: spin 2s linear infinite;
+    -moz-animation: spin 2s linear infinite;
+    -o-animation: spin 2s linear infinite;
+    animation: spin 2s linear infinite;
+}
+
+.loader:after {
+    position: absolute;
+    content: '';
+    top: 15px;
+    left: 15px;
+    right: 15px;
+    bottom: 15px;
+    border-radius: 50%;
+    border: 3px solid transparent;
+    border-right-color: #fff;
+    -webkit-animation: spin 2.5s linear infinite;
+    -moz-animation: spin 2.5s linear infinite;
+    -o-animation: spin 2.5s linear infinite;
+    animation: spin 2.5s linear infinite;
+}
+
+/*/ Here the Magic /*/
+
+@-webkit-keyframes spin {
+    0% {
+        -webkit-transform: rotate(0deg);
+        -moz-transform: rotate(0deg);
+        -o-transform: rotate(0deg);
+        transform: rotate(0deg);
+    }
+
+    100% {
+        -webkit-transform: rotate(360deg);
+        -moz-transform: rotate(360deg);
+        -o-transform: rotate(360deg);
+        transform: rotate(360deg);
+    }
+}
+
+@-moz-keyframes spin {
+    0% {
+        -webkit-transform: rotate(0deg);
+        -moz-transform: rotate(0deg);
+        -o-transform: rotate(0deg);
+        transform: rotate(0deg);
+    }
+
+    100% {
+        -webkit-transform: rotate(360deg);
+        -moz-transform: rotate(360deg);
+        -o-transform: rotate(360deg);
+        transform: rotate(360deg);
+    }
+}
+
+@keyframes spin {
+    0% {
+        -webkit-transform: rotate(0deg);
+        -moz-transform: rotate(0deg);
+        -o-transform: rotate(0deg);
+        transform: rotate(0deg);
+    }
+
+    100% {
+        -webkit-transform: rotate(360deg);
+        -moz-transform: rotate(360deg);
+        -o-transform: rotate(360deg);
+        transform: rotate(360deg);
+    }
+}
+
+.loader-wrapper .loder-section {
+    position: fixed;
+    top: 0;
+    width: 50%;
+    height: 100%;
+    background: #111;
+    z-index: 2;
+}
+
+.loader-wrapper .loder-section.left-section {
+    left: 0;
+    transition: 1s 1.4s ease;
+}
+
+.loader-wrapper .loder-section.right-section {
+    right: 0;
+    transition: 1s 1.4s ease;
+}
+
+/*/ When page loaded /*/
+.loaded .loder-section.left-section {
+    left: -100%;
+}
+
+.loaded .loder-section.right-section {
+    right: -100%;
+}
+
+.loaded .loader-wrapper {
+    visibility: hidden;
+}
+
+.loaded .loader {
+    top: -100%;
+    opacity: 0;
+} 
+
+ol, ul{
+    padding-left: 0 !important;
+}
+
+
+
+
