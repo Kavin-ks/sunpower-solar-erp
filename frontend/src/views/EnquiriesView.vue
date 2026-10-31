@@ -331,23 +331,12 @@ const fetchTechnicians = async () => {
 };
 
 const openScheduleSurveyModal = async (enq: Enquiry) => {
-  if (!enq.assignedTo) {
-    const claim = confirm(`Enquiry ${enq.enquiryNumber || enq.id} has no assigned Lead Owner. Would you like to claim it as yours now to schedule the survey?`);
-    if (claim) {
-      await handleAssignToMe(enq);
-    } else {
-      return;
-    }
-  }
-
-  const assignedUser = enq.assignedTo?.fullName || enq.assignedTo?.username || authStore.user?.fullName || 'Assigned Sales Agent';
-
   scheduleForm.value = {
     enquiryId: enq.id,
     enquiryNumber: enq.enquiryNumber || `ENQ-${enq.id}`,
     customerId: enq.customer?.id || (enq as any).customerId,
     customerName: enq.customer?.fullName || (enq as any).customerName,
-    assignedToName: assignedUser,
+    assignedToName: '',
     technicianId: '',
     scheduledDate: new Date().toISOString().split('T')[0],
     surveyNotes: `Site physical inspection for ${enq.requestedCapacityKw || 3} kW system (${enq.systemType === 'OFF_GRID' ? 'Off-Grid' : 'On-Grid'}).`,
@@ -445,16 +434,6 @@ onBeforeUnmount(() => {
           <Plus class="w-4 h-4" />
           <span>+ Log Phone / WhatsApp Lead</span>
         </button>
-
-        <a
-          href="/enquiry"
-          target="_blank"
-          rel="noopener noreferrer"
-          class="flex items-center space-x-1.5 px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-semibold border border-slate-200 transition"
-        >
-          <ExternalLink class="w-3.5 h-3.5" />
-          <span>Customer Web Portal</span>
-        </a>
       </div>
     </div>
 
@@ -502,7 +481,6 @@ onBeforeUnmount(() => {
               <th class="py-3 px-4">System Req</th>
               <th class="py-3 px-4">Bill & Smart Sizing</th>
               <th class="py-3 px-4">Roof Feasibility</th>
-              <th class="py-3 px-4">Lead Owner</th>
               <th class="py-3 px-4">Status</th>
               <th class="py-3 px-4 text-right">Actions</th>
             </tr>
@@ -563,22 +541,6 @@ onBeforeUnmount(() => {
                 </span>
               </td>
               <td class="py-3 px-4">
-                <div v-if="enq.assignedTo" class="flex items-center space-x-1 font-semibold text-slate-800">
-                  <UserIcon class="w-3 h-3 text-slate-400" />
-                  <span>{{ enq.assignedTo.fullName }}</span>
-                </div>
-                <button
-                  v-else-if="isSales"
-                  type="button"
-                  @click.stop="handleAssignToMe(enq)"
-                  class="px-2 py-0.5 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded text-[11px] font-semibold inline-flex items-center space-x-1 cursor-pointer"
-                >
-                  <UserCheck class="w-3 h-3" />
-                  <span>Claim Lead</span>
-                </button>
-                <span v-else class="text-slate-400 text-[11px] italic">Unassigned</span>
-              </td>
-              <td class="py-3 px-4">
                 <StatusBadge :status="enq.status" />
               </td>
               <td class="py-3 px-4 text-right space-x-2 whitespace-nowrap">
@@ -590,27 +552,15 @@ onBeforeUnmount(() => {
                   View & Qualify
                 </button>
 
-                <template v-if="enq.status === 'QUALIFIED' && isSales">
-                  <button
-                    v-if="!enq.assignedTo"
-                    type="button"
-                    @click.stop="handleAssignAndSchedule(enq)"
-                    class="px-2.5 py-1 text-amber-700 bg-amber-50 hover:bg-amber-100 border border-amber-200 rounded text-xs font-semibold cursor-pointer inline-flex items-center space-x-1"
-                    title="Claim lead first to schedule a survey"
-                  >
-                    <UserCheck class="w-3 h-3" />
-                    <span>Claim & Schedule</span>
-                  </button>
-                  <button
-                    v-else
-                    type="button"
-                    @click="goToScheduleSurvey(enq)"
-                    class="px-2.5 py-1 text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded text-xs font-semibold cursor-pointer inline-flex items-center space-x-1"
-                  >
-                    <Calendar class="w-3 h-3" />
-                    <span>Schedule Survey</span>
-                  </button>
-                </template>
+                <button
+                  v-if="enq.status === 'QUALIFIED' && isSales"
+                  type="button"
+                  @click="goToScheduleSurvey(enq)"
+                  class="px-2.5 py-1 text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded text-xs font-semibold cursor-pointer inline-flex items-center space-x-1"
+                >
+                  <Calendar class="w-3 h-3" />
+                  <span>Schedule Survey</span>
+                </button>
 
                 <button
                   v-if="enq.status === 'SURVEY_SCHEDULED'"
@@ -619,7 +569,7 @@ onBeforeUnmount(() => {
                   class="px-2.5 py-1 text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded text-xs font-semibold cursor-pointer inline-flex items-center space-x-1"
                 >
                   <Calendar class="w-3 h-3" />
-                  <span>📅 Survey Scheduled</span>
+                  <span>View Survey</span>
                 </button>
 
                 <button
@@ -657,42 +607,12 @@ onBeforeUnmount(() => {
         </div>
 
         <div class="space-y-4 text-xs">
-          <!-- Warning if Lead is unassigned -->
-          <div v-if="!selectedEnquiry.assignedTo && isSales" class="bg-amber-50 border border-amber-200 text-amber-800 p-3 rounded-xl flex items-center justify-between">
-            <div class="flex items-center gap-2">
-              <span class="text-base">⚠️</span>
-              <div>
-                <p class="font-semibold text-xs">Unassigned Lead</p>
-                <p class="text-[11px] text-amber-700">Claim ownership of this enquiry before scheduling a site survey or quotation.</p>
-              </div>
-            </div>
-            <button
-              type="button"
-              @click="handleAssignToMe(selectedEnquiry)"
-              class="px-3 py-1 bg-amber-600 hover:bg-amber-700 text-white font-semibold rounded-lg text-xs transition cursor-pointer flex items-center gap-1 shrink-0"
-            >
-              <UserCheck class="w-3 h-3" />
-              <span>Claim Lead</span>
-            </button>
-          </div>
-
           <!-- Current Lead Stage & Actions -->
           <div class="bg-slate-50 p-3 rounded-xl border border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
               <span class="font-semibold text-slate-600">Current Lead Stage:</span>
               <div class="mt-1 flex items-center gap-2">
                 <StatusBadge :status="selectedEnquiry.status" />
-                <span v-if="selectedEnquiry.assignedTo" class="text-[11px] text-slate-500">
-                  (Owner: <strong>{{ selectedEnquiry.assignedTo.fullName }}</strong>)
-                </span>
-                <button
-                  v-else-if="isSales"
-                  type="button"
-                  @click="handleAssignToMe(selectedEnquiry)"
-                  class="px-2 py-0.5 bg-blue-50 text-blue-700 rounded border border-blue-200 text-[10px] font-bold cursor-pointer"
-                >
-                  Claim Lead
-                </button>
               </div>
             </div>
 
@@ -946,26 +866,15 @@ onBeforeUnmount(() => {
           <!-- Modal Footer Actions -->
           <div class="flex justify-between items-center pt-3 border-t border-slate-100">
             <div class="space-x-2">
-              <template v-if="selectedEnquiry.status === 'QUALIFIED' && isSales">
-                <button
-                  v-if="!selectedEnquiry.assignedTo"
-                  type="button"
-                  @click="handleAssignAndSchedule(selectedEnquiry)"
-                  class="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-xl font-semibold inline-flex items-center space-x-1 cursor-pointer"
-                >
-                  <UserCheck class="w-3.5 h-3.5" />
-                  <span>Claim Lead & Schedule Survey</span>
-                </button>
-                <button
-                  v-else
-                  type="button"
-                  @click="goToScheduleSurvey(selectedEnquiry)"
-                  class="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-semibold inline-flex items-center space-x-1 cursor-pointer"
-                >
-                  <Calendar class="w-3.5 h-3.5" />
-                  <span>Proceed to Schedule Survey</span>
-                </button>
-              </template>
+              <button
+                v-if="selectedEnquiry.status === 'QUALIFIED' && isSales"
+                type="button"
+                @click="goToScheduleSurvey(selectedEnquiry)"
+                class="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-semibold inline-flex items-center space-x-1 cursor-pointer"
+              >
+                <Calendar class="w-3.5 h-3.5" />
+                <span>Proceed to Schedule Survey</span>
+              </button>
 
               <button
                 v-if="selectedEnquiry.status === 'SURVEY_SCHEDULED'"
@@ -974,7 +883,7 @@ onBeforeUnmount(() => {
                 class="px-3 py-1.5 bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200 rounded-xl font-semibold inline-flex items-center space-x-1 cursor-pointer"
               >
                 <Calendar class="w-3.5 h-3.5" />
-                <span>📅 View Scheduled Survey</span>
+                <span>View Scheduled Survey</span>
               </button>
 
               <button
@@ -1221,9 +1130,6 @@ onBeforeUnmount(() => {
               <div class="text-xs font-bold text-slate-900 mt-0.5">{{ scheduleForm.customerName }}</div>
               <div class="text-[11px] text-slate-500 font-mono mt-0.5">
                 Enquiry ID: {{ scheduleForm.enquiryNumber }}
-                <span v-if="scheduleForm.assignedToName" class="text-emerald-700 font-sans ml-2">
-                  • Lead Owner: <strong>{{ scheduleForm.assignedToName }}</strong>
-                </span>
               </div>
             </div>
             <span class="px-2.5 py-1 bg-white text-emerald-700 font-bold text-[11px] rounded-lg border border-emerald-200 shadow-2xs">

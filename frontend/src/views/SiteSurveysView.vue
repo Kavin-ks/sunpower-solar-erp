@@ -359,7 +359,6 @@ onMounted(() => {
                 <div v-if="surv.enquiry" class="mt-1">
                   <span class="font-mono text-[10px] text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded border border-blue-200 inline-flex items-center gap-1">
                     <span>Enquiry: {{ surv.enquiry.enquiryNumber }}</span>
-                    <span v-if="surv.enquiry.assignedTo" class="text-blue-500 font-normal">({{ surv.enquiry.assignedTo.fullName || surv.enquiry.assignedTo.username }})</span>
                   </span>
                 </div>
               </td>
