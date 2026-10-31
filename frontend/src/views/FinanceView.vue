@@ -16,6 +16,12 @@ import type {
   PaymentMethod,
   PaymentType,
   FinanceDashboard,
+  SupplierPayment,
+  PurchaseItem,
+  ProfitAndLossReport,
+  CashFlowReport,
+  GstReport,
+  PaymentReceipt,
 } from '../types';
 import StatusBadge from '../components/ui/StatusBadge.vue';
 import { useAuthStore } from '../stores/auth';
@@ -36,9 +42,13 @@ import {
   RotateCcw,
   ChevronRight,
   AlertCircle,
+  Truck,
+  BarChart3,
+  CheckCircle2,
+  XCircle,
 } from 'lucide-vue-next';
 
-const activeTab = ref<'dashboard' | 'payments' | 'profitability' | 'invoices' | 'payouts' | 'subsidies' | 'expenses'>('dashboard');
+const activeTab = ref<'dashboard' | 'payments' | 'profitability' | 'invoices' | 'payouts' | 'subsidies' | 'expenses' | 'suppliers' | 'reports'>('dashboard');
 
 const dashboardData = ref<FinanceDashboard | null>(null);
 const profitability = ref<JobProfitability[]>([]);
@@ -60,6 +70,25 @@ const isPayoutModalOpen = ref(false);
 const isSubsidyModalOpen = ref(false);
 const isPaymentModalOpen = ref(false);
 const isCancelInvoiceModalOpen = ref(false);
+const supplierPurchases = ref<PurchaseItem[]>([]);
+const supplierPayments = ref<SupplierPayment[]>([]);
+const pnlReport = ref<ProfitAndLossReport | null>(null);
+const cashFlowReport = ref<CashFlowReport | null>(null);
+const gstReport = ref<GstReport | null>(null);
+const selectedReceipt = ref<PaymentReceipt | null>(null);
+const isReceiptModalOpen = ref(false);
+const isSupplierPaymentModalOpen = ref(false);
+const selectedPurchaseForPayment = ref<PurchaseItem | null>(null);
+const reportsActiveTab = ref<'pnl' | 'cashflow' | 'gst'>('pnl');
+
+const supplierPaymentForm = ref({
+  purchaseId: 0,
+  amount: '',
+  paymentDate: new Date().toISOString().slice(0, 10),
+  paymentMethod: 'Bank Transfer',
+  referenceNumber: '',
+  notes: '',
+});
 const selectedInvoice = ref<Invoice | null>(null);
 const selectedInvoiceForCancel = ref<Invoice | null>(null);
 const selectedSubsidy = ref<SubsidyApplication | null>(null);
@@ -132,6 +161,19 @@ const fetchData = async () => {
   try {
     loading.value = true;
     error.value = null;
+    let supPurchasesRes: any = { data: [] };
+    let supPaymentsRes: any = { data: [] };
+    try {
+      const [spRes, spayRes] = await Promise.all([
+        api.get('/finance/suppliers/purchases'),
+        api.get('/finance/suppliers/payments'),
+      ]);
+      supPurchasesRes = spRes;
+      supPaymentsRes = spayRes;
+    } catch (e) {
+      console.warn('Supplier payments not yet loaded', e);
+    }
+
     const [dashRes, profRes, invRes, expRes, subRes, payRes, payoRes, ordRes, techRes, instRes] = await Promise.all([
       api.get(`/finance/dashboard?period=${period.value}`),
       api.get('/finance/job-profitability'),
@@ -155,6 +197,9 @@ const fetchData = async () => {
     orders.value = ordRes.data;
     technicians.value = techRes.data;
     installations.value = instRes.data;
+    supplierPurchases.value = supPurchasesRes.data || [];
+    supplierPayments.value = supPaymentsRes.data || [];
+    fetchReports();
   } catch (err: any) {
     console.error('Failed to load financial data', err);
     error.value = err.response?.data?.message || err.message || 'Failed to connect to Financial Service';
@@ -346,6 +391,100 @@ const downloadProfitabilityCsv = async () => {
 
 const printCurrentInvoice = () => {
   window.print();
+};
+
+const fetchReports = async () => {
+  try {
+    const [pnlRes, cfRes, gstRes] = await Promise.all([
+      api.get(`/finance/reports/profit-and-loss?period=${period.value}`),
+      api.get(`/finance/reports/cash-flow?period=${period.value}`),
+      api.get(`/finance/reports/gst?period=${period.value}`),
+    ]);
+    pnlReport.value = pnlRes.data;
+    cashFlowReport.value = cfRes.data;
+    gstReport.value = gstRes.data;
+  } catch (e) {
+    console.warn('Reports failed to load', e);
+  }
+};
+
+const handleApproveExpense = async (expenseId: number) => {
+  try {
+    await api.patch(`/finance/expenses/${expenseId}/approve`);
+    fetchData();
+  } catch (err: any) {
+    alert(err.response?.data?.message || 'Failed to approve expense');
+  }
+};
+
+const handleRejectExpense = async (expenseId: number) => {
+  const reason = prompt('Please provide reason for rejecting this expense:');
+  if (!reason || !reason.trim()) return;
+  try {
+    await api.patch(`/finance/expenses/${expenseId}/reject`, {
+      reason: reason.trim(),
+      approvedBy: authStore.user?.username || 'Finance Controller',
+    });
+    fetchData();
+  } catch (err: any) {
+    alert(err.response?.data?.message || 'Failed to reject expense');
+  }
+};
+
+const openSupplierPaymentModal = (purchase: PurchaseItem) => {
+  selectedPurchaseForPayment.value = purchase;
+  supplierPaymentForm.value = {
+    purchaseId: purchase.id,
+    amount: purchase.remainingBalance > 0 ? purchase.remainingBalance.toString() : '',
+    paymentDate: new Date().toISOString().slice(0, 10),
+    paymentMethod: 'Bank Transfer',
+    referenceNumber: '',
+    notes: '',
+  };
+  isSupplierPaymentModalOpen.value = true;
+};
+
+const handleSupplierPaymentSubmit = async () => {
+  if (!selectedPurchaseForPayment.value) return;
+  try {
+    await api.post('/finance/suppliers/payments', {
+      purchaseId: selectedPurchaseForPayment.value.id,
+      amount: parseFloat(supplierPaymentForm.value.amount),
+      paymentDate: supplierPaymentForm.value.paymentDate,
+      paymentMethod: supplierPaymentForm.value.paymentMethod,
+      referenceNumber: supplierPaymentForm.value.referenceNumber.trim(),
+      notes: supplierPaymentForm.value.notes,
+    });
+    isSupplierPaymentModalOpen.value = false;
+    fetchData();
+  } catch (err: any) {
+    alert(err.response?.data?.message || 'Failed to record supplier payment');
+  }
+};
+
+const openReceiptModal = async (paymentId: number) => {
+  try {
+    const res = await api.get(`/payments/${paymentId}/receipt`);
+    selectedReceipt.value = res.data;
+    isReceiptModalOpen.value = true;
+  } catch (err: any) {
+    alert('Failed to load payment receipt');
+  }
+};
+
+const exportCsvFile = async (endpoint: string, filename: string) => {
+  try {
+    const res = await api.get(endpoint, { responseType: 'blob' });
+    const url = window.URL.createObjectURL(new Blob([res.data]));
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', `${filename}_${new Date().toISOString().slice(0, 10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  } catch (err: any) {
+    alert('Failed to export CSV: ' + (err.response?.data?.message || err.message));
+  }
 };
 
 // ---------------- CHART COMPUTATIONS ----------------
@@ -647,6 +786,34 @@ onMounted(() => {
       >
         <Receipt class="w-4 h-4" />
         <span>Direct Expenses ({{ expenses.length }})</span>
+      </button>
+
+      <button
+        type="button"
+        @click="activeTab = 'suppliers'"
+        :class="[
+          'pb-3 flex items-center gap-2 border-b-2 whitespace-nowrap transition cursor-pointer',
+          activeTab === 'suppliers'
+            ? 'border-emerald-600 text-emerald-700 font-bold'
+            : 'border-transparent text-slate-500 hover:text-slate-800',
+        ]"
+      >
+        <Truck class="w-4 h-4" />
+        <span>Supplier Invoices ({{ supplierPurchases.length }})</span>
+      </button>
+
+      <button
+        type="button"
+        @click="activeTab = 'reports'"
+        :class="[
+          'pb-3 flex items-center gap-2 border-b-2 whitespace-nowrap transition cursor-pointer',
+          activeTab === 'reports'
+            ? 'border-emerald-600 text-emerald-700 font-bold'
+            : 'border-transparent text-slate-500 hover:text-slate-800',
+        ]"
+      >
+        <BarChart3 class="w-4 h-4" />
+        <span>Financial Statements</span>
       </button>
     </div>
 
@@ -981,6 +1148,58 @@ onMounted(() => {
           </table>
         </div>
       </div>
+
+      <!-- Recent Unified Financial Transactions Feed -->
+      <div v-if="dashboardData?.recentTransactions && dashboardData.recentTransactions.length > 0" class="bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden">
+        <div class="p-4 border-b border-slate-200 flex justify-between items-center">
+          <div>
+            <h3 class="text-sm font-bold text-slate-900">Unified Financial Activity Feed</h3>
+            <p class="text-xs text-slate-500">Chronological live transactions across customer collections, labor payouts, supplier orders, and expenses</p>
+          </div>
+          <span class="text-xs text-slate-400 font-mono">Live ERP Feed</span>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-xs text-slate-600">
+            <thead class="bg-slate-50 text-slate-700 uppercase font-semibold text-[10px] tracking-wider border-b border-slate-200">
+              <tr>
+                <th class="py-2.5 px-4">Date</th>
+                <th class="py-2.5 px-4">Type</th>
+                <th class="py-2.5 px-4">Reference</th>
+                <th class="py-2.5 px-4">Description</th>
+                <th class="py-2.5 px-4 text-right">Amount</th>
+                <th class="py-2.5 px-4 text-center">Cash Impact</th>
+                <th class="py-2.5 px-4 text-right">Status</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100">
+              <tr v-for="(tx, idx) in dashboardData.recentTransactions" :key="idx" class="hover:bg-slate-50 transition">
+                <td class="py-2.5 px-4 whitespace-nowrap font-medium text-slate-700">{{ tx.date }}</td>
+                <td class="py-2.5 px-4">
+                  <span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-slate-100 text-slate-700">
+                    {{ tx.type?.replace('_', ' ') }}
+                  </span>
+                </td>
+                <td class="py-2.5 px-4 font-mono font-bold text-slate-900">{{ tx.reference }}</td>
+                <td class="py-2.5 px-4 text-slate-700">{{ tx.description }}</td>
+                <td class="py-2.5 px-4 text-right font-mono font-bold" :class="tx.flow === 'INFLOW' ? 'text-emerald-700' : 'text-slate-900'">
+                  ₹{{ formatNumber(tx.amount) }}
+                </td>
+                <td class="py-2.5 px-4 text-center">
+                  <span
+                    :class="[
+                      'px-2 py-0.5 rounded text-[10px] font-bold uppercase',
+                      tx.flow === 'INFLOW' ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'
+                    ]"
+                  >
+                    {{ tx.flow === 'INFLOW' ? '+ Inflow' : '- Outflow' }}
+                  </span>
+                </td>
+                <td class="py-2.5 px-4 text-right font-semibold text-slate-600">{{ tx.status }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
     </div>
 
     <!-- ================= TAB 2: CUSTOMER PAYMENTS ================= -->
@@ -1033,16 +1252,26 @@ onMounted(() => {
                 <StatusBadge :status="pay.status" />
               </td>
               <td class="py-3 px-4 text-right">
-                <button
-                  v-if="pay.status === 'SUCCESS'"
-                  type="button"
-                  @click="handleReversePayment(pay.id)"
-                  class="text-[11px] text-rose-600 hover:text-rose-800 font-semibold cursor-pointer"
-                  title="Reverse payment & restore customer balance"
-                >
-                  Reverse
-                </button>
-                <span v-else class="text-slate-400 text-[11px]">-</span>
+                <div class="flex items-center justify-end gap-2">
+                  <button
+                    type="button"
+                    @click="openReceiptModal(pay.id)"
+                    class="text-[11px] text-emerald-700 hover:text-emerald-900 font-semibold cursor-pointer"
+                    title="View & Print Payment Receipt"
+                  >
+                    Receipt
+                  </button>
+                  <button
+                    v-if="pay.status === 'SUCCESS'"
+                    type="button"
+                    @click="handleReversePayment(pay.id)"
+                    class="text-[11px] text-rose-600 hover:text-rose-800 font-semibold cursor-pointer"
+                    title="Reverse payment & restore customer balance"
+                  >
+                    Reverse
+                  </button>
+                  <span v-else class="text-slate-400 text-[11px]">-</span>
+                </div>
               </td>
             </tr>
             <tr v-if="payments.length === 0">
@@ -1285,6 +1514,8 @@ onMounted(() => {
               <th class="py-3 px-4 text-right">Amount</th>
               <th class="py-3 px-4">Paid To</th>
               <th class="py-3 px-4">Date</th>
+              <th class="py-3 px-4">Status</th>
+              <th class="py-3 px-4 text-right">Actions</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-slate-100">
@@ -1302,12 +1533,452 @@ onMounted(() => {
               <td class="py-3 px-4 text-right font-bold text-rose-700">₹{{ formatNumber(exp.amount) }}</td>
               <td class="py-3 px-4 text-slate-700">{{ exp.paidTo }}</td>
               <td class="py-3 px-4 whitespace-nowrap">{{ exp.expenseDate }}</td>
+              <td class="py-3 px-4">
+                <span
+                  :class="[
+                    'px-2 py-0.5 rounded text-[10px] font-bold uppercase',
+                    exp.status === 'APPROVED' ? 'bg-emerald-100 text-emerald-800' :
+                    exp.status === 'REJECTED' ? 'bg-rose-100 text-rose-800' :
+                    exp.status === 'PAID' ? 'bg-blue-100 text-blue-800' :
+                    'bg-amber-100 text-amber-800'
+                  ]"
+                >
+                  {{ exp.status || 'APPROVED' }}
+                </span>
+              </td>
+              <td class="py-3 px-4 text-right">
+                <div v-if="exp.status === 'PENDING'" class="flex items-center justify-end gap-1.5">
+                  <button
+                    type="button"
+                    @click="handleApproveExpense(exp.id)"
+                    class="px-2 py-0.5 rounded bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-[10px] cursor-pointer"
+                  >
+                    Approve
+                  </button>
+                  <button
+                    type="button"
+                    @click="handleRejectExpense(exp.id)"
+                    class="px-2 py-0.5 rounded bg-rose-600 hover:bg-rose-700 text-white font-semibold text-[10px] cursor-pointer"
+                  >
+                    Reject
+                  </button>
+                </div>
+                <span v-else class="text-slate-400 text-[11px]">{{ exp.approvedBy || '-' }}</span>
+              </td>
             </tr>
             <tr v-if="expenses.length === 0">
               <td colspan="6" class="py-8 text-center text-slate-400">No operational expenses recorded yet.</td>
             </tr>
           </tbody>
         </table>
+      </div>
+    </div>
+
+        <!-- ================= TAB 8: SUPPLIER INVOICES & PAYMENTS ================= -->
+    <div v-if="activeTab === 'suppliers'" class="space-y-6">
+      <!-- Supplier Balance KPI Cards -->
+      <div class="grid grid-cols-1 sm:grid-cols-4 gap-4">
+        <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-xs">
+          <span class="text-[11px] uppercase font-bold text-slate-400 block">Total Purchases</span>
+          <div class="text-xl font-bold text-slate-900 font-mono mt-0.5">
+            ₹{{ formatNumber(supplierPurchases.reduce((s, p) => s + (p.totalAmount || 0), 0)) }}
+          </div>
+          <span class="text-xs text-slate-500">Hardware & material procurements</span>
+        </div>
+        <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-xs">
+          <span class="text-[11px] uppercase font-bold text-slate-400 block">Total Disbursed</span>
+          <div class="text-xl font-bold text-emerald-700 font-mono mt-0.5">
+            ₹{{ formatNumber(supplierPurchases.reduce((s, p) => s + (p.paidAmount || 0), 0)) }}
+          </div>
+          <span class="text-xs text-slate-500">Verified vendor disbursements</span>
+        </div>
+        <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-xs">
+          <span class="text-[11px] uppercase font-bold text-slate-400 block">Outstanding Payables</span>
+          <div class="text-xl font-bold text-rose-700 font-mono mt-0.5">
+            ₹{{ formatNumber(dashboardData?.outstandingSupplierPayments || supplierPurchases.reduce((s, p) => s + (p.remainingBalance || 0), 0)) }}
+          </div>
+          <span class="text-xs text-slate-500">Pending supplier settle balances</span>
+        </div>
+        <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-xs flex items-center justify-between">
+          <div>
+            <span class="text-[11px] uppercase font-bold text-slate-400 block">Export Ledger</span>
+            <span class="text-xs text-slate-500 block mt-1">Download complete supplier POs</span>
+          </div>
+          <button
+            type="button"
+            @click="exportCsvFile('/finance/export/suppliers', 'SunPower_Supplier_Purchases')"
+            class="px-3 py-1.5 rounded-lg border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 font-medium text-xs shadow-xs flex items-center gap-1 cursor-pointer"
+          >
+            <Download class="w-3.5 h-3.5" />
+            <span>CSV</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Supplier Purchases Table -->
+      <div class="bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden">
+        <div class="p-4 border-b border-slate-200 flex justify-between items-center">
+          <div>
+            <h3 class="text-sm font-bold text-slate-900">Supplier Purchase Orders & Invoices</h3>
+            <p class="text-xs text-slate-500">BOM hardware procurements, panel shipments, and inverter deliveries</p>
+          </div>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-xs text-slate-600">
+            <thead class="bg-slate-50 text-slate-700 uppercase font-semibold text-[10px] tracking-wider border-b border-slate-200">
+              <tr>
+                <th class="py-3 px-4">PO / Purchase #</th>
+                <th class="py-3 px-4">Supplier Name</th>
+                <th class="py-3 px-4 text-right">PO Total</th>
+                <th class="py-3 px-4 text-right">Paid</th>
+                <th class="py-3 px-4 text-right">Remaining Balance</th>
+                <th class="py-3 px-4">Due Date</th>
+                <th class="py-3 px-4">Status</th>
+                <th class="py-3 px-4 text-right">Action</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100">
+              <tr v-for="p in supplierPurchases" :key="p.id" class="hover:bg-slate-50 transition">
+                <td class="py-3 px-4 font-mono font-bold text-slate-900">{{ p.purchaseNumber }}</td>
+                <td class="py-3 px-4 font-semibold text-slate-800">{{ p.supplierName }}</td>
+                <td class="py-3 px-4 text-right font-bold text-slate-900">₹{{ formatNumber(p.totalAmount) }}</td>
+                <td class="py-3 px-4 text-right font-medium text-emerald-700">₹{{ formatNumber(p.paidAmount) }}</td>
+                <td class="py-3 px-4 text-right font-bold text-rose-700">₹{{ formatNumber(p.remainingBalance) }}</td>
+                <td class="py-3 px-4 whitespace-nowrap">{{ p.dueDate || '-' }}</td>
+                <td class="py-3 px-4">
+                  <span
+                    :class="[
+                      'px-2 py-0.5 rounded text-[10px] font-bold uppercase',
+                      p.paymentStatus === 'PAID' ? 'bg-emerald-100 text-emerald-800' :
+                      p.paymentStatus === 'PARTIALLY_PAID' ? 'bg-blue-100 text-blue-800' :
+                      p.paymentStatus === 'OVERDUE' ? 'bg-rose-100 text-rose-800' :
+                      'bg-amber-100 text-amber-800'
+                    ]"
+                  >
+                    {{ p.paymentStatus || 'UNPAID' }}
+                  </span>
+                </td>
+                <td class="py-3 px-4 text-right">
+                  <button
+                    v-if="p.paymentStatus !== 'PAID'"
+                    type="button"
+                    @click="openSupplierPaymentModal(p)"
+                    class="px-2.5 py-1 rounded bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-[11px] cursor-pointer"
+                  >
+                    Record Payment
+                  </button>
+                  <span v-else class="text-slate-400 text-[11px]">Settled</span>
+                </td>
+              </tr>
+              <tr v-if="supplierPurchases.length === 0">
+                <td colspan="8" class="py-8 text-center text-slate-400">No supplier purchases found in the database.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Supplier Payments Disbursement History -->
+      <div class="bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden">
+        <div class="p-4 border-b border-slate-200">
+          <h3 class="text-sm font-bold text-slate-900">Supplier Disbursement History</h3>
+          <p class="text-xs text-slate-500">Verified bank transfers and payments executed to equipment manufacturers</p>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-xs text-slate-600">
+            <thead class="bg-slate-50 text-slate-700 uppercase font-semibold text-[10px] tracking-wider border-b border-slate-200">
+              <tr>
+                <th class="py-3 px-4">Disbursement #</th>
+                <th class="py-3 px-4">Supplier</th>
+                <th class="py-3 px-4 text-right">Amount</th>
+                <th class="py-3 px-4">Method</th>
+                <th class="py-3 px-4">Reference / UTR</th>
+                <th class="py-3 px-4">Date</th>
+                <th class="py-3 px-4">Status</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100">
+              <tr v-for="sp in supplierPayments" :key="sp.id" class="hover:bg-slate-50">
+                <td class="py-3 px-4 font-mono font-bold text-slate-900">{{ sp.paymentNumber }}</td>
+                <td class="py-3 px-4 font-semibold text-slate-800">{{ sp.supplierName }}</td>
+                <td class="py-3 px-4 text-right font-bold text-slate-900">₹{{ formatNumber(sp.amount) }}</td>
+                <td class="py-3 px-4">{{ sp.paymentMethod }}</td>
+                <td class="py-3 px-4 font-mono text-slate-600">{{ sp.referenceNumber || '-' }}</td>
+                <td class="py-3 px-4 whitespace-nowrap">{{ sp.paymentDate }}</td>
+                <td class="py-3 px-4">
+                  <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800 uppercase">
+                    {{ sp.status }}
+                  </span>
+                </td>
+              </tr>
+              <tr v-if="supplierPayments.length === 0">
+                <td colspan="7" class="py-8 text-center text-slate-400">No supplier payments disbursed yet.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ================= TAB 9: FINANCIAL STATEMENTS & REPORTS ================= -->
+    <div v-if="activeTab === 'reports'" class="space-y-6">
+      <!-- Sub-navigation & Export Actions -->
+      <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white p-4 rounded-xl border border-slate-200 shadow-xs">
+        <div class="flex items-center gap-2">
+          <button
+            type="button"
+            @click="reportsActiveTab = 'pnl'"
+            :class="[
+              'px-3 py-1.5 rounded-lg text-xs font-semibold cursor-pointer transition',
+              reportsActiveTab === 'pnl' ? 'bg-emerald-600 text-white shadow-xs' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+            ]"
+          >
+            Profit &amp; Loss
+          </button>
+          <button
+            type="button"
+            @click="reportsActiveTab = 'cashflow'"
+            :class="[
+              'px-3 py-1.5 rounded-lg text-xs font-semibold cursor-pointer transition',
+              reportsActiveTab === 'cashflow' ? 'bg-emerald-600 text-white shadow-xs' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+            ]"
+          >
+            Cash Flow Statement
+          </button>
+          <button
+            type="button"
+            @click="reportsActiveTab = 'gst'"
+            :class="[
+              'px-3 py-1.5 rounded-lg text-xs font-semibold cursor-pointer transition',
+              reportsActiveTab === 'gst' ? 'bg-emerald-600 text-white shadow-xs' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+            ]"
+          >
+            GST Liability &amp; ITC
+          </button>
+        </div>
+
+        <div class="flex items-center gap-2">
+          <button
+            type="button"
+            @click="exportCsvFile('/finance/export/job-profitability', 'SunPower_Job_Profitability')"
+            class="px-2.5 py-1.5 rounded-lg border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 text-xs font-medium shadow-xs flex items-center gap-1 cursor-pointer"
+          >
+            <Download class="w-3.5 h-3.5" />
+            <span>P&amp;L CSV</span>
+          </button>
+          <button
+            type="button"
+            @click="exportCsvFile('/finance/export/invoices', 'SunPower_GST_Invoices')"
+            class="px-2.5 py-1.5 rounded-lg border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 text-xs font-medium shadow-xs flex items-center gap-1 cursor-pointer"
+          >
+            <Download class="w-3.5 h-3.5" />
+            <span>GST CSV</span>
+          </button>
+          <button
+            type="button"
+            @click="exportCsvFile('/finance/export/expenses', 'SunPower_Expenses')"
+            class="px-2.5 py-1.5 rounded-lg border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 text-xs font-medium shadow-xs flex items-center gap-1 cursor-pointer"
+          >
+            <Download class="w-3.5 h-3.5" />
+            <span>Expenses CSV</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Report View 1: Profit and Loss Statement -->
+      <div v-if="reportsActiveTab === 'pnl'" class="bg-white rounded-xl border border-slate-200 shadow-xs p-6 max-w-4xl mx-auto space-y-6">
+        <div class="border-b border-slate-200 pb-4 flex justify-between items-start">
+          <div>
+            <h3 class="text-lg font-bold text-slate-900">Statement of Profit &amp; Loss</h3>
+            <p class="text-xs text-slate-500">Period: {{ period }} | Currency: INR (₹) | Standard Accrual Basis</p>
+          </div>
+          <span class="text-xs font-mono font-bold bg-emerald-50 text-emerald-800 px-2.5 py-1 rounded border border-emerald-200">
+            Official GAAP Compliant
+          </span>
+        </div>
+
+        <div class="space-y-4 text-sm">
+          <!-- Revenue Section -->
+          <div>
+            <h4 class="font-bold text-slate-900 text-xs uppercase tracking-wider text-slate-500 mb-2">1. Operating Revenue</h4>
+            <div class="space-y-1.5 pl-4 border-l-2 border-emerald-500">
+              <div class="flex justify-between py-1">
+                <span class="text-slate-600">Total Invoiced Billing (Gross incl. GST)</span>
+                <span class="font-mono text-slate-700">₹{{ formatNumber(pnlReport?.totalRevenue) }}</span>
+              </div>
+              <div class="flex justify-between py-1 font-semibold text-slate-900 border-t border-slate-100">
+                <span>Recognized Accounting Revenue (Excl. GST Tax)</span>
+                <span class="font-mono text-emerald-700">₹{{ formatNumber(pnlReport?.gstExcludedRevenue) }}</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Cost of Goods Sold Section -->
+          <div>
+            <h4 class="font-bold text-slate-900 text-xs uppercase tracking-wider text-slate-500 mb-2">2. Cost of Goods Sold (COGS)</h4>
+            <div class="space-y-1.5 pl-4 border-l-2 border-amber-500">
+              <div class="flex justify-between py-1 text-slate-600">
+                <span>Solar Equipment &amp; Hardware BOM</span>
+                <span class="font-mono">₹{{ formatNumber(pnlReport?.hardwareCogs) }}</span>
+              </div>
+              <div class="flex justify-between py-1 text-slate-600">
+                <span>Direct Installation Labor &amp; Technician Payouts</span>
+                <span class="font-mono">₹{{ formatNumber(pnlReport?.installationLaborCogs) }}</span>
+              </div>
+              <div class="flex justify-between py-1 font-semibold text-slate-900 border-t border-slate-100">
+                <span>Total Cost of Goods Sold</span>
+                <span class="font-mono text-amber-700">₹{{ formatNumber(pnlReport?.totalCogs) }}</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Gross Profit Row -->
+          <div class="p-3 bg-emerald-50/70 border border-emerald-200 rounded-lg flex justify-between items-center font-bold">
+            <div>
+              <span class="text-emerald-900 text-base">Gross Profit (Revenue − COGS)</span>
+              <span class="text-xs text-emerald-700 block font-normal">Gross Margin: {{ pnlReport?.grossMarginPercentage?.toFixed(1) || 0 }}%</span>
+            </div>
+            <span class="font-mono text-lg text-emerald-800">₹{{ formatNumber(pnlReport?.grossProfit) }}</span>
+          </div>
+
+          <!-- Operating Expenses Section -->
+          <div>
+            <h4 class="font-bold text-slate-900 text-xs uppercase tracking-wider text-slate-500 mb-2">3. Operating Expenses</h4>
+            <div class="space-y-1.5 pl-4 border-l-2 border-slate-400">
+              <div v-for="cat in pnlReport?.operatingExpensesBreakdown" :key="cat.category" class="flex justify-between py-1 text-slate-600">
+                <span class="capitalize">{{ cat.category.toLowerCase().replace('_', ' ') }}</span>
+                <span class="font-mono">₹{{ formatNumber(cat.amount) }}</span>
+              </div>
+              <div class="flex justify-between py-1 font-semibold text-slate-900 border-t border-slate-100">
+                <span>Total Operating Expenses</span>
+                <span class="font-mono text-slate-800">₹{{ formatNumber(pnlReport?.totalOperatingExpenses) }}</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Net Profit Row -->
+          <div class="p-4 bg-slate-900 text-white rounded-xl flex justify-between items-center font-bold shadow-lg">
+            <div>
+              <span class="text-lg">Net Operating Profit</span>
+              <span class="text-xs text-slate-300 block font-normal">Net Profit Margin: {{ pnlReport?.netMarginPercentage?.toFixed(1) || 0 }}%</span>
+            </div>
+            <span class="font-mono text-2xl text-emerald-400">₹{{ formatNumber(pnlReport?.netProfit) }}</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Report View 2: Cash Flow Statement -->
+      <div v-if="reportsActiveTab === 'cashflow'" class="bg-white rounded-xl border border-slate-200 shadow-xs p-6 max-w-4xl mx-auto space-y-6">
+        <div class="border-b border-slate-200 pb-4">
+          <h3 class="text-lg font-bold text-slate-900">Statement of Cash Flows</h3>
+          <p class="text-xs text-slate-500">Period: {{ period }} | Actual Bank &amp; Cash Movements | Direct Method</p>
+        </div>
+
+        <div class="space-y-4 text-sm">
+          <div class="flex justify-between py-2 border-b border-slate-100">
+            <span class="font-semibold text-slate-700">Opening Cash &amp; Bank Balance</span>
+            <span class="font-mono font-bold text-slate-900">₹{{ formatNumber(cashFlowReport?.openingBalance) }}</span>
+          </div>
+
+          <!-- Operating Inflows -->
+          <div>
+            <h4 class="font-bold text-xs uppercase tracking-wider text-emerald-700 mb-2">Operating Cash Inflows</h4>
+            <div class="space-y-1.5 pl-4 border-l-2 border-emerald-500">
+              <div class="flex justify-between py-1 text-slate-600">
+                <span>Customer Stage Collections Received</span>
+                <span class="font-mono text-emerald-700 font-semibold">+₹{{ formatNumber(cashFlowReport?.customerReceipts) }}</span>
+              </div>
+              <div class="flex justify-between py-1 text-slate-600">
+                <span>PM Surya Ghar Subsidies Disbursed to Bank</span>
+                <span class="font-mono text-emerald-700 font-semibold">+₹{{ formatNumber(cashFlowReport?.subsidyReceipts) }}</span>
+              </div>
+              <div class="flex justify-between py-1 font-semibold text-slate-900 border-t border-slate-100">
+                <span>Total Operating Inflows</span>
+                <span class="font-mono text-emerald-700 font-bold">+₹{{ formatNumber(cashFlowReport?.totalOperatingInflows) }}</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Operating Outflows -->
+          <div>
+            <h4 class="font-bold text-xs uppercase tracking-wider text-rose-700 mb-2">Operating Cash Outflows</h4>
+            <div class="space-y-1.5 pl-4 border-l-2 border-rose-500">
+              <div class="flex justify-between py-1 text-slate-600">
+                <span>Supplier Material Payments Disbursed</span>
+                <span class="font-mono text-rose-700 font-semibold">-₹{{ formatNumber(cashFlowReport?.supplierPayments) }}</span>
+              </div>
+              <div class="flex justify-between py-1 text-slate-600">
+                <span>Technician &amp; Labor Field Disbursements</span>
+                <span class="font-mono text-rose-700 font-semibold">-₹{{ formatNumber(cashFlowReport?.technicianPayouts) }}</span>
+              </div>
+              <div class="flex justify-between py-1 text-slate-600">
+                <span>Direct Operating &amp; Site Expenses</span>
+                <span class="font-mono text-rose-700 font-semibold">-₹{{ formatNumber(cashFlowReport?.directOperatingExpenses) }}</span>
+              </div>
+              <div class="flex justify-between py-1 font-semibold text-slate-900 border-t border-slate-100">
+                <span>Total Operating Outflows</span>
+                <span class="font-mono text-rose-700 font-bold">-₹{{ formatNumber(cashFlowReport?.totalOperatingOutflows) }}</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Net Cash Flow -->
+          <div class="p-3 bg-blue-50/80 border border-blue-200 rounded-lg flex justify-between items-center font-bold">
+            <span class="text-blue-900">Net Operating Cash Flow</span>
+            <span class="font-mono text-lg" :class="Number(cashFlowReport?.netOperatingCashFlow) >= 0 ? 'text-emerald-700' : 'text-rose-700'">
+              {{ Number(cashFlowReport?.netOperatingCashFlow) >= 0 ? '+' : '' }}₹{{ formatNumber(cashFlowReport?.netOperatingCashFlow) }}
+            </span>
+          </div>
+
+          <!-- Closing Balance -->
+          <div class="p-4 bg-slate-900 text-white rounded-xl flex justify-between items-center font-bold">
+            <span class="text-lg">Closing Cash &amp; Bank Balance</span>
+            <span class="font-mono text-2xl text-emerald-400">₹{{ formatNumber(cashFlowReport?.closingBalance) }}</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Report View 3: GST Liability Report -->
+      <div v-if="reportsActiveTab === 'gst'" class="bg-white rounded-xl border border-slate-200 shadow-xs p-6 max-w-4xl mx-auto space-y-6">
+        <div class="border-b border-slate-200 pb-4">
+          <h3 class="text-lg font-bold text-slate-900">GST Tax Liability &amp; Input Tax Credit (ITC)</h3>
+          <p class="text-xs text-slate-500">HSN 85414011 / SAC 995465 | Solar Composite Scheme 13.80%</p>
+        </div>
+
+        <div class="space-y-4 text-sm">
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div class="p-4 bg-slate-50 rounded-xl border border-slate-200">
+              <span class="text-xs text-slate-500 uppercase font-bold block">Output CGST (Central)</span>
+              <span class="font-mono font-bold text-lg text-slate-900 mt-1 block">₹{{ formatNumber(gstReport?.outputCgst) }}</span>
+            </div>
+            <div class="p-4 bg-slate-50 rounded-xl border border-slate-200">
+              <span class="text-xs text-slate-500 uppercase font-bold block">Output SGST (State)</span>
+              <span class="font-mono font-bold text-lg text-slate-900 mt-1 block">₹{{ formatNumber(gstReport?.outputSgst) }}</span>
+            </div>
+            <div class="p-4 bg-slate-50 rounded-xl border border-slate-200">
+              <span class="text-xs text-slate-500 uppercase font-bold block">Output IGST (Interstate)</span>
+              <span class="font-mono font-bold text-lg text-slate-900 mt-1 block">₹{{ formatNumber(gstReport?.outputIgst) }}</span>
+            </div>
+          </div>
+
+          <div class="space-y-2 pt-2">
+            <div class="flex justify-between py-2 border-b border-slate-100">
+              <span class="text-slate-700 font-semibold">Total Output GST Collected on Sales Invoices</span>
+              <span class="font-mono font-bold text-slate-900">₹{{ formatNumber(gstReport?.totalOutputGst) }}</span>
+            </div>
+            <div class="flex justify-between py-2 border-b border-slate-100">
+              <span class="text-slate-700 font-semibold">Less: Eligible Input Tax Credit (ITC on Hardware Purchases)</span>
+              <span class="font-mono font-bold text-emerald-700">-₹{{ formatNumber(gstReport?.inputGst) }}</span>
+            </div>
+            <div class="p-4 bg-emerald-50 border border-emerald-200 rounded-xl flex justify-between items-center font-bold">
+              <div>
+                <span class="text-emerald-900 text-base">Net GST Liability Payable to Government</span>
+                <span class="text-xs text-emerald-700 block font-normal">GSTR-3B Monthly Return Filing</span>
+              </div>
+              <span class="font-mono text-2xl text-emerald-800">₹{{ formatNumber(gstReport?.netGstPayable) }}</span>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -1711,4 +2382,196 @@ onMounted(() => {
       </div>
     </div>
   </div>
+    <!-- Modal: Record Supplier Payment -->
+    <div v-if="isSupplierPaymentModalOpen && selectedPurchaseForPayment" class="fixed inset-0 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center z-50 p-4">
+      <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl">
+        <div class="flex justify-between items-center mb-4">
+          <div>
+            <h2 class="text-lg font-bold text-slate-900">Disburse Supplier Payment</h2>
+            <p class="text-xs text-slate-500">{{ selectedPurchaseForPayment.supplierName }} ({{ selectedPurchaseForPayment.purchaseNumber }})</p>
+          </div>
+          <button type="button" @click="isSupplierPaymentModalOpen = false" class="text-slate-400 hover:text-slate-600 cursor-pointer">
+            <X class="w-5 h-5" />
+          </button>
+        </div>
+
+        <form @submit.prevent="handleSupplierPaymentSubmit" class="space-y-4">
+          <div class="p-3 bg-slate-50 border border-slate-200 rounded-lg text-xs space-y-1">
+            <div class="flex justify-between text-slate-600">
+              <span>PO Total:</span>
+              <span class="font-mono font-semibold">₹{{ formatNumber(selectedPurchaseForPayment.totalAmount) }}</span>
+            </div>
+            <div class="flex justify-between text-slate-600">
+              <span>Paid So Far:</span>
+              <span class="font-mono font-semibold text-emerald-700">₹{{ formatNumber(selectedPurchaseForPayment.paidAmount) }}</span>
+            </div>
+            <div class="flex justify-between font-bold text-rose-700 pt-1 border-t border-slate-200">
+              <span>Outstanding Balance:</span>
+              <span class="font-mono">₹{{ formatNumber(selectedPurchaseForPayment.remainingBalance) }}</span>
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">Disbursement Amount (₹) *</label>
+            <input
+              type="number"
+              v-model="supplierPaymentForm.amount"
+              step="0.01"
+              :max="selectedPurchaseForPayment.remainingBalance"
+              required
+              class="w-full text-sm border border-slate-300 rounded-lg px-3 py-2 font-mono font-bold focus:ring-emerald-500 focus:border-emerald-500"
+            />
+          </div>
+
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block text-xs font-semibold text-slate-700 mb-1">Payment Method</label>
+              <select
+                v-model="supplierPaymentForm.paymentMethod"
+                class="w-full text-xs border border-slate-300 rounded-lg px-2.5 py-2 bg-white"
+              >
+                <option value="Bank Transfer">Bank Transfer (NEFT/RTGS)</option>
+                <option value="Cheque">Cheque</option>
+                <option value="UPI">UPI</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-700 mb-1">Payment Date</label>
+              <input
+                type="date"
+                v-model="supplierPaymentForm.paymentDate"
+                required
+                class="w-full text-xs border border-slate-300 rounded-lg px-2.5 py-2"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">Bank Reference / UTR Number *</label>
+            <input
+              type="text"
+              v-model="supplierPaymentForm.referenceNumber"
+              required
+              placeholder="e.g. UTR-HDFC-998877"
+              class="w-full text-xs border border-slate-300 rounded-lg px-3 py-2 font-mono"
+            />
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">Internal Notes</label>
+            <textarea
+              v-model="supplierPaymentForm.notes"
+              rows="2"
+              placeholder="Invoice verification, GRN confirmation notes..."
+              class="w-full text-xs border border-slate-300 rounded-lg px-3 py-2"
+            ></textarea>
+          </div>
+
+          <div class="flex justify-end gap-2 pt-2">
+            <button
+              type="button"
+              @click="isSupplierPaymentModalOpen = false"
+              class="px-3 py-1.5 rounded-lg border border-slate-300 text-slate-700 text-xs font-medium cursor-pointer"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              class="px-4 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-xs cursor-pointer"
+            >
+              Confirm Disbursement
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Modal: Payment Receipt View & Print -->
+    <div v-if="isReceiptModalOpen && selectedReceipt" class="fixed inset-0 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center z-50 p-4">
+      <div class="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl space-y-4">
+        <div class="flex justify-between items-center border-b border-slate-200 pb-3">
+          <div class="flex items-center gap-2">
+            <div class="w-7 h-7 bg-emerald-600 text-white rounded-lg flex items-center justify-center font-bold text-xs">
+              SP
+            </div>
+            <div>
+              <h2 class="text-sm font-bold text-slate-900">Official Payment Receipt</h2>
+              <span class="text-[11px] font-mono text-slate-500">{{ selectedReceipt.receiptNumber }}</span>
+            </div>
+          </div>
+          <div class="flex items-center gap-2">
+            <button
+              type="button"
+              @click="printCurrentInvoice"
+              class="p-1.5 rounded-lg border border-slate-200 hover:bg-slate-50 text-slate-600 cursor-pointer"
+              title="Print Receipt"
+            >
+              <Printer class="w-4 h-4" />
+            </button>
+            <button
+              type="button"
+              @click="isReceiptModalOpen = false"
+              class="text-slate-400 hover:text-slate-600 cursor-pointer"
+            >
+              <X class="w-5 h-5" />
+            </button>
+          </div>
+        </div>
+
+        <div class="space-y-3 text-xs text-slate-700">
+          <div class="grid grid-cols-2 gap-3 p-3 bg-slate-50 rounded-lg">
+            <div>
+              <span class="text-slate-400 block text-[10px] uppercase font-semibold">Received From</span>
+              <span class="font-bold text-slate-900">{{ selectedReceipt.customerName }}</span>
+              <span class="text-slate-500 block text-[11px]">{{ selectedReceipt.customerPhone }}</span>
+            </div>
+            <div>
+              <span class="text-slate-400 block text-[10px] uppercase font-semibold">Payment Details</span>
+              <span class="font-mono font-semibold">{{ selectedReceipt.paymentNumber }}</span>
+              <span class="text-slate-500 block text-[11px]">{{ selectedReceipt.paymentDate }}</span>
+            </div>
+          </div>
+
+          <div class="p-3 bg-emerald-50 border border-emerald-200 rounded-lg flex justify-between items-center">
+            <div>
+              <span class="text-emerald-800 text-[11px] uppercase font-bold block">Amount Received</span>
+              <span class="text-[11px] text-emerald-700 font-medium">Via {{ selectedReceipt.paymentMethod }} ({{ selectedReceipt.paymentType }})</span>
+            </div>
+            <span class="font-mono text-xl font-bold text-emerald-900">₹{{ formatNumber(selectedReceipt.amount) }}</span>
+          </div>
+
+          <div class="space-y-1.5 pt-1 text-slate-600">
+            <div class="flex justify-between">
+              <span>Sales Order Reference:</span>
+              <span class="font-mono font-semibold text-slate-800">{{ selectedReceipt.salesOrderNumber }}</span>
+            </div>
+            <div class="flex justify-between">
+              <span>Tax Invoice Reference:</span>
+              <span class="font-mono font-semibold text-slate-800">{{ selectedReceipt.invoiceNumber }}</span>
+            </div>
+            <div class="flex justify-between">
+              <span>Bank Reference / UTR:</span>
+              <span class="font-mono font-semibold text-slate-800">{{ selectedReceipt.referenceNumber }}</span>
+            </div>
+            <div class="flex justify-between border-t border-slate-100 pt-1.5">
+              <span>Order Contract Value:</span>
+              <span class="font-mono">₹{{ formatNumber(selectedReceipt.orderTotalAmount) }}</span>
+            </div>
+            <div class="flex justify-between">
+              <span>Total Paid to Date:</span>
+              <span class="font-mono text-emerald-700 font-semibold">₹{{ formatNumber(selectedReceipt.totalPaidToDate) }}</span>
+            </div>
+            <div class="flex justify-between font-bold text-slate-900 border-t border-slate-200 pt-1">
+              <span>Remaining Balance:</span>
+              <span class="font-mono text-rose-700">₹{{ formatNumber(selectedReceipt.remainingBalance) }}</span>
+            </div>
+          </div>
+
+          <div class="text-[10px] text-slate-400 pt-2 border-t border-slate-100 text-center">
+            Authorized Signature: {{ selectedReceipt.receivedBy }} | SunPower Solutions Financial Accounts
+          </div>
+        </div>
+      </div>
+    </div>
+
 </template>

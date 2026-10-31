@@ -403,6 +403,10 @@ export interface Expense {
   paidTo: string;
   paymentMethod: string;
   salesOrder?: SalesOrder;
+  status?: 'PENDING' | 'APPROVED' | 'REJECTED' | 'PAID';
+  approvedBy?: string;
+  approvedAt?: string;
+  rejectionReason?: string;
 }
 
 export interface Invoice {
@@ -536,6 +540,21 @@ export interface FinanceDashboard {
   expenseCategoryBreakdown: { category: string; amount: number }[];
   paymentStatusDistribution: { status: string; count: number; amount: number }[];
   subsidyStatusDistribution: { status: string; count: number; amount: number }[];
+  grossProfit?: number;
+  netProfit?: number;
+  cogs?: number;
+  overdueInvoicesCount?: number;
+  overdueInvoicesAmount?: number;
+  outstandingSupplierPayments?: number;
+  recentTransactions?: {
+    date: string;
+    type: string;
+    reference: string;
+    description: string;
+    amount: number;
+    flow: 'INFLOW' | 'OUTFLOW';
+    status: string;
+  }[];
   aging0To30Days?: number;
   aging31To60Days?: number;
   aging61To90Days?: number;
@@ -651,4 +670,92 @@ export interface FinanceDashboardData {
   subsidyAppliedCount: number;
   subsidyApprovedCount: number;
   subsidyApprovedAmount: number;
+}
+
+export interface SupplierPayment {
+  id: number;
+  paymentNumber: string;
+  purchaseId: number;
+  supplierName: string;
+  amount: number;
+  paymentDate: string;
+  paymentMethod: string;
+  referenceNumber?: string;
+  status: string;
+  notes?: string;
+  createdAt?: string;
+}
+
+export interface PurchaseItem {
+  id: number;
+  purchaseNumber: string;
+  supplierName: string;
+  totalAmount: number;
+  paidAmount: number;
+  remainingBalance: number;
+  dueDate?: string;
+  paymentStatus: string;
+  status: string;
+  purchaseDate: string;
+}
+
+export interface ProfitAndLossReport {
+  period: string;
+  totalRevenue: number;
+  gstExcludedRevenue: number;
+  hardwareCogs: number;
+  installationLaborCogs: number;
+  totalCogs: number;
+  grossProfit: number;
+  grossMarginPercentage: number;
+  operatingExpensesBreakdown: { category: string; amount: number }[];
+  totalOperatingExpenses: number;
+  netProfit: number;
+  netMarginPercentage: number;
+}
+
+export interface CashFlowReport {
+  period: string;
+  openingBalance: number;
+  customerReceipts: number;
+  subsidyReceipts: number;
+  totalOperatingInflows: number;
+  supplierPayments: number;
+  technicianPayouts: number;
+  directOperatingExpenses: number;
+  totalOperatingOutflows: number;
+  netOperatingCashFlow: number;
+  closingBalance: number;
+}
+
+export interface GstReport {
+  period: string;
+  outputCgst: number;
+  outputSgst: number;
+  outputIgst: number;
+  totalOutputGst: number;
+  inputGst: number;
+  netGstPayable: number;
+}
+
+export interface PaymentReceipt {
+  receiptNumber: string;
+  paymentNumber: string;
+  paymentDate: string;
+  amount: number;
+  paymentMethod: string;
+  paymentType: string;
+  referenceNumber: string;
+  customerName: string;
+  customerPhone: string;
+  customerEmail: string;
+  customerAddress: string;
+  customerGstin: string;
+  salesOrderNumber: string;
+  invoiceNumber: string;
+  orderTotalAmount: number;
+  totalPaidToDate: number;
+  remainingBalance: number;
+  receivedBy: string;
+  notes: string;
 }

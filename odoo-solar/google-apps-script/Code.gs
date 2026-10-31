@@ -1,41 +1,29 @@
-/**
+﻿/**
  * =========================================================================
- * GOOGLE APPS SCRIPT: Solar Web Enquiry Email Dispatcher (Bulletproof v2)
+ * SUNPOWER SOLAR ERP — GOOGLE APPS SCRIPT
+ * Authentication OTP Dispatcher & Solar Enquiry Mailer
  * =========================================================================
  * 
- * 1. Receives form submissions from the Solar Web enquiry form.
- * 2. Dynamically reads TO and CC email addresses from the payload (sent from .env).
- * 3. Formats an enterprise-grade HTML email template.
- * 4. Dispatches the email to:
- *    - TO: arivuchezhiyan000@gmail.com
- *    - CC: kavinsoorya2470049@ssn.edu.in, ashwathram2470063@ssn.edu.in, naveenkumar2470051@ssn.edu.in
+ * Capabilities:
+ * 1. action: "SEND_OTP"   -> Generates 6-digit OTP, caches it for 10 minutes,
+ *                            and sends a professional HTML email to the user.
+ * 2. action: "VERIFY_OTP" -> Verifies the submitted OTP against the cache.
+ * 3. Default (Enquiries)  -> Emails new rooftop solar enquiry notifications to team.
+ * 
+ * Deployment Instructions:
+ * 1. Open Google Apps Script (https://script.google.com).
+ * 2. Paste this entire code into Code.gs.
+ * 3. Click "Deploy" -> "New deployment".
+ * 4. Select type: "Web app".
+ * 5. Description: "SunPower Auth OTP & Enquiry WebApp".
+ * 6. Execute as: "Me (your email)".
+ * 7. Who has access: "Anyone".
+ * 8. Click "Deploy" and copy the Web App URL.
  */
 
+var SCRIPT_CACHE_MINUTES = 10; // OTP valid for 10 minutes
 var DEFAULT_TO_EMAIL = "arivuchezhiyan000@gmail.com";
 var DEFAULT_CC_EMAILS = "kavinsoorya2470049@ssn.edu.in,ashwathram2470063@ssn.edu.in,naveenkumar2470051@ssn.edu.in";
-
-/**
- * Quick Test Function:
- * Click "Run" on this function in Google Apps Script to test email delivery immediately!
- */
-function testSendEmail() {
-  var testEvent = {
-    postData: {
-      contents: JSON.stringify({
-        Fullname: "Test Solar Customer",
-        email: "customer.test@example.com",
-        phone: "7010818264",
-        solarSystem: "3 kW",
-        systemType: "On-Grid",
-        message: "150 sq.ft available shadow-free south roof. Ready for site appointment.",
-        toEmail: DEFAULT_TO_EMAIL,
-        ccEmails: DEFAULT_CC_EMAILS
-      })
-    }
-  };
-  var res = doPost(testEvent);
-  Logger.log("Test Result: " + res.getContent());
-}
 
 /**
  * Handle GET request (Health Check)
@@ -43,19 +31,19 @@ function testSendEmail() {
 function doGet(e) {
   return ContentService.createTextOutput(JSON.stringify({
     status: "online",
-    message: "Solar Web Enquiry Apps Script is active and ready.",
+    service: "SunPower Solar ERP Auth & Enquiry API",
+    actionsSupported: ["SEND_OTP", "VERIFY_OTP", "ENQUIRY"],
     timestamp: new Date().toISOString()
   })).setMimeType(ContentService.MimeType.JSON);
 }
 
 /**
- * Handle POST request (Form Submission)
+ * Handle POST request
  */
 function doPost(e) {
   try {
     var data = {};
 
-    // 1. Safe parsing of incoming payload
     if (e && e.postData && e.postData.contents) {
       try {
         data = JSON.parse(e.postData.contents);
@@ -66,109 +54,199 @@ function doPost(e) {
       data = e.parameter;
     }
 
-    // 2. Extract Fields safely
-    var fullName = data.Fullname || data.fullname || data.name || "Customer";
+    var action = (data.action || "").toUpperCase();
+
+    // -------------------------------------------------------------
+    // 1. ACTION: SEND_OTP
+    // -------------------------------------------------------------
+    if (action === "SEND_OTP") {
+      var recipientEmail = (data.email || "").trim().toLowerCase();
+      var recipientName = data.name || data.Fullname || "Valued User";
+
+      if (!recipientEmail || recipientEmail.indexOf("@") === -1) {
+        return respondJSON({ success: false, message: "Valid email address is required to dispatch OTP." });
+      }
+
+      // Generate secure 6-digit numeric OTP
+      var otpCode = Math.floor(100000 + Math.random() * 900000).toString();
+
+      // Store in Google Apps Script Cache with 10-minute TTL
+      var cache = CacheService.getScriptCache();
+      cache.put("OTP_" + recipientEmail, otpCode, SCRIPT_CACHE_MINUTES * 60);
+
+      // Send formatted HTML Email
+      var emailSubject = "Your SunPower Solar ERP Verification Code: " + otpCode;
+      var htmlBody = buildOtpEmailHtml(recipientName, otpCode, SCRIPT_CACHE_MINUTES);
+
+      MailApp.sendEmail({
+        to: recipientEmail,
+        subject: emailSubject,
+        htmlBody: htmlBody
+      });
+
+      return respondJSON({
+        success: true,
+        status: "success",
+        action: "SEND_OTP",
+        message: "OTP sent successfully to " + recipientEmail,
+        expiresInMinutes: SCRIPT_CACHE_MINUTES
+      });
+    }
+
+    // -------------------------------------------------------------
+    // 2. ACTION: VERIFY_OTP
+    // -------------------------------------------------------------
+    if (action === "VERIFY_OTP") {
+      var recipientEmail = (data.email || "").trim().toLowerCase();
+      var submittedOtp = (data.otp || "").toString().trim();
+
+      if (!recipientEmail || !submittedOtp) {
+        return respondJSON({ success: false, message: "Both email and OTP are required for verification." });
+      }
+
+      var cache = CacheService.getScriptCache();
+      var cachedOtp = cache.get("OTP_" + recipientEmail);
+
+      if (!cachedOtp) {
+        return respondJSON({
+          success: false,
+          verified: false,
+          message: "OTP has expired or was not requested. Please request a new code."
+        });
+      }
+
+      if (cachedOtp === submittedOtp) {
+        // Clear used OTP to prevent replay
+        cache.remove("OTP_" + recipientEmail);
+        return respondJSON({
+          success: true,
+          verified: true,
+          message: "Email address verified successfully!"
+        });
+      } else {
+        return respondJSON({
+          success: false,
+          verified: false,
+          message: "Invalid OTP code. Please check your email and try again."
+        });
+      }
+    }
+
+    // -------------------------------------------------------------
+    // 3. DEFAULT: SOLAR WEB ENQUIRY NOTIFICATION
+    // -------------------------------------------------------------
+    var fullName = data.Fullname || data.fullname || data.name || "Anonymous Customer";
     var email = data.email || "Not Provided";
     var phone = data.phone || "Not Provided";
     var solarSystem = data.solarSystem || data.capacity || "Not Specified";
     var systemType = data.systemType || "On-Grid";
-    var message = data.message || data.questions || data.sources || "None provided";
+    var address = data.address || "Not Provided";
+    var city = data.city || "Not Provided";
+    var state = data.state || "Tamil Nadu";
+    var pincode = data.pincode || "Not Provided";
+    var subsidyRequired = data.subsidyRequired ? "Yes (PM Surya Ghar Scheme)" : "No";
+    var message = data.message || "None provided";
 
-    // 3. Dynamic TO and CC recipients from .env
-    var toEmail = data.toEmail || data.to || DEFAULT_TO_EMAIL;
-    var ccEmails = data.ccEmails || data.cc || DEFAULT_CC_EMAILS;
+    var toEmail = data.toEmail || DEFAULT_TO_EMAIL;
+    var ccEmails = data.ccEmails || DEFAULT_CC_EMAILS;
 
-    // 4. Safe Date Formatting (No unquoted text)
-    var timestampStr = "";
-    try {
-      timestampStr = Utilities.formatDate(new Date(), "Asia/Kolkata", "yyyy-MM-dd HH:mm:ss") + " IST";
-    } catch (dateErr) {
-      timestampStr = new Date().toISOString();
-    }
+    var enquirySubject = "New Solar Rooftop Enquiry from " + fullName + " (" + solarSystem + " " + systemType + ")";
+    var enquiryHtml = buildEnquiryEmailHtml({
+      fullName: fullName,
+      email: email,
+      phone: phone,
+      solarSystem: solarSystem,
+      systemType: systemType,
+      address: address,
+      city: city,
+      state: state,
+      pincode: pincode,
+      subsidyRequired: subsidyRequired,
+      message: message
+    });
 
-    // 5. Email Subject
-    var subject = "⚡ New Solar Enquiry: " + fullName + " [" + solarSystem + " " + systemType + "]";
-
-    // 6. Styled HTML Email Body
-    var htmlBody = ""
-      + "<div style='font-family: Arial, sans-serif; max-width: 650px; margin: 0 auto; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden;'>"
-      + "  <div style='background: #19142d; padding: 25px; text-align: center; color: #ffffff;'>"
-      + "    <h2 style='margin: 0; font-size: 22px; color: #ffffff; font-weight: bold;'>Odoo Solar Power Company</h2>"
-      + "    <p style='margin: 6px 0 0; color: #f59e0b; font-size: 14px; font-weight: 600;'>New Solar Site Survey & Package Enquiry</p>"
-      + "  </div>"
-      + "  <div style='padding: 25px; background: #ffffff;'>"
-      + "    <p style='font-size: 15px; color: #334155;'>A new customer has submitted an enquiry form on the website:</p>"
-      + "    <table style='width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 14px;'>"
-      + "      <tr style='background: #f8fafc;'>"
-      + "        <td style='padding: 12px 15px; font-weight: bold; color: #475569; width: 35%; border: 1px solid #e2e8f0;'>Customer Name</td>"
-      + "        <td style='padding: 12px 15px; color: #0f172a; font-weight: 600; border: 1px solid #e2e8f0;'>" + escapeHtml(fullName) + "</td>"
-      + "      </tr>"
-      + "      <tr>"
-      + "        <td style='padding: 12px 15px; font-weight: bold; color: #475569; border: 1px solid #e2e8f0;'>Email Address</td>"
-      + "        <td style='padding: 12px 15px; border: 1px solid #e2e8f0;'><a href='mailto:" + escapeHtml(email) + "' style='color: #0284c7; text-decoration: none; font-weight: 600;'>" + escapeHtml(email) + "</a></td>"
-      + "      </tr>"
-      + "      <tr style='background: #f8fafc;'>"
-      + "        <td style='padding: 12px 15px; font-weight: bold; color: #475569; border: 1px solid #e2e8f0;'>Phone Number</td>"
-      + "        <td style='padding: 12px 15px; border: 1px solid #e2e8f0;'><a href='tel:" + escapeHtml(phone) + "' style='color: #10b981; font-weight: bold; text-decoration: none;'>" + escapeHtml(phone) + "</a></td>"
-      + "      </tr>"
-      + "      <tr>"
-      + "        <td style='padding: 12px 15px; font-weight: bold; color: #475569; border: 1px solid #e2e8f0;'>Solar System Capacity</td>"
-      + "        <td style='padding: 12px 15px; color: #e63a27; font-weight: bold; border: 1px solid #e2e8f0;'>" + escapeHtml(solarSystem) + "</td>"
-      + "      </tr>"
-      + "      <tr style='background: #f8fafc;'>"
-      + "        <td style='padding: 12px 15px; font-weight: bold; color: #475569; border: 1px solid #e2e8f0;'>System Type</td>"
-      + "        <td style='padding: 12px 15px; color: #0f172a; font-weight: 600; border: 1px solid #e2e8f0;'>" + escapeHtml(systemType) + "</td>"
-      + "      </tr>"
-      + "      <tr>"
-      + "        <td style='padding: 12px 15px; font-weight: bold; color: #475569; border: 1px solid #e2e8f0;'>Available Area & Questions</td>"
-      + "        <td style='padding: 12px 15px; color: #334155; line-height: 1.5; border: 1px solid #e2e8f0;'>" + escapeHtml(message).replace(/\n/g, '<br/>') + "</td>"
-      + "      </tr>"
-      + "      <tr style='background: #f8fafc;'>"
-      + "        <td style='padding: 12px 15px; font-weight: bold; color: #475569; border: 1px solid #e2e8f0;'>Submitted At</td>"
-      + "        <td style='padding: 12px 15px; color: #64748b; font-size: 13px; border: 1px solid #e2e8f0;'>" + escapeHtml(timestampStr) + "</td>"
-      + "      </tr>"
-      + "    </table>"
-      + "    <div style='margin-top: 25px; padding: 15px; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; color: #166534; font-size: 13px;'>"
-      + "      ✓ <strong>Action Required:</strong> Contact customer within 24 hours to schedule rooftop shadow-free survey & estimate subsidy."
-      + "    </div>"
-      + "  </div>"
-      + "  <div style='background: #f8fafc; border-top: 1px solid #e2e8f0; padding: 15px 25px; font-size: 12px; color: #94a3b8; text-align: center;'>"
-      + "    Automated Solar Web CRM Notification &bull; Odoo Solar System, Geethanjali College of Engineering, Hyderabad"
-      + "  </div>"
-      + "</div>";
-
-    // 7. Dispatch Email via MailApp
     MailApp.sendEmail({
       to: toEmail,
       cc: ccEmails,
-      subject: subject,
-      htmlBody: htmlBody,
-      replyTo: (email && email.indexOf('@') !== -1) ? email : toEmail
+      subject: enquirySubject,
+      htmlBody: enquiryHtml
     });
 
-    return ContentService.createTextOutput(JSON.stringify({
+    return respondJSON({
       status: "success",
-      message: "Enquiry successfully emailed to " + toEmail + " with CC to " + ccEmails,
+      success: true,
+      message: "Enquiry successfully emailed to " + toEmail,
       timestamp: new Date().toISOString()
-    })).setMimeType(ContentService.MimeType.JSON);
+    });
 
   } catch (err) {
-    return ContentService.createTextOutput(JSON.stringify({
+    return respondJSON({
       status: "error",
+      success: false,
       message: err.toString()
-    })).setMimeType(ContentService.MimeType.JSON);
+    });
   }
 }
 
 /**
- * Helper to escape HTML characters
+ * Helper to build JSON responses with CORS headers
  */
-function escapeHtml(text) {
-  if (!text) return "";
-  return String(text)
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#039;");
+function respondJSON(obj) {
+  return ContentService.createTextOutput(JSON.stringify(obj))
+    .setMimeType(ContentService.MimeType.JSON);
+}
+
+/**
+ * Email Template: Professional Verification OTP
+ */
+function buildOtpEmailHtml(name, otp, minutes) {
+  return `
+    <div style="font-family: 'Segoe UI', Arial, sans-serif; max-width: 580px; margin: 0 auto; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.05);">
+      <div style="background-color: #141422; padding: 24px; text-align: center; border-bottom: 3px solid #e63a27;">
+        <h1 style="color: #ffffff; margin: 0; font-size: 22px; letter-spacing: 0.05em; font-weight: 800;">SUNPOWER SOLAR ERP</h1>
+        <p style="color: #94a3b8; margin: 4px 0 0; font-size: 12px; text-transform: uppercase; letter-spacing: 0.1em;">Customer Account Security Verification</p>
+      </div>
+      <div style="padding: 32px 28px;">
+        <h2 style="color: #0f172a; font-size: 20px; margin-top: 0;">Email Verification Code</h2>
+        <p style="color: #475569; font-size: 15px; line-height: 1.6;">Hello <strong>${name}</strong>,</p>
+        <p style="color: #475569; font-size: 15px; line-height: 1.6;">Thank you for registering with SunPower Solar ERP. Please use the following 6-digit verification code to complete your account setup:</p>
+        
+        <div style="background-color: #f8fafc; border: 2px dashed #cbd5e1; border-radius: 10px; padding: 20px; text-align: center; margin: 24px 0;">
+          <div style="font-size: 36px; font-weight: 800; letter-spacing: 0.25em; color: #e63a27; font-family: 'Consolas', 'Monaco', monospace;">${otp}</div>
+          <div style="color: #64748b; font-size: 12px; margin-top: 8px; text-transform: uppercase; font-weight: 600;">Valid for ${minutes} minutes</div>
+        </div>
+
+        <p style="color: #64748b; font-size: 13.5px; line-height: 1.5;">If you did not request this verification code, please ignore this email or contact our support team immediately.</p>
+        
+        <div style="margin-top: 28px; padding-top: 20px; border-top: 1px solid #f1f5f9; color: #94a3b8; font-size: 12px; text-align: center;">
+          SunPower Solutions • Geethanjali College of Engineering, Hyderabad<br/>
+          Priority Desk: +91 7010818264 • Odoo@gmail.com
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+/**
+ * Email Template: Solar Rooftop Enquiry Notification
+ */
+function buildEnquiryEmailHtml(e) {
+  return `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden;">
+      <div style="background: #141422; color: #fff; padding: 18px 20px; border-bottom: 3px solid #e63a27;">
+        <h2 style="margin: 0; font-size: 18px;">☀️ New Solar Rooftop Enquiry</h2>
+        <div style="font-size: 12px; color: #94a3b8; margin-top: 4px;">SunPower Solar ERP Omnichannel Intake</div>
+      </div>
+      <div style="padding: 20px; color: #334155; font-size: 14px; line-height: 1.6;">
+        <p><strong>Customer Name:</strong> ${e.fullName}</p>
+        <p><strong>Email Address:</strong> ${e.email}</p>
+        <p><strong>Mobile Phone:</strong> ${e.phone}</p>
+        <p><strong>Solar System Capacity:</strong> ${e.solarSystem}</p>
+        <p><strong>System Configuration:</strong> ${e.systemType}</p>
+        <p><strong>Site Address:</strong> ${e.address}, ${e.city}, ${e.state} - ${e.pincode}</p>
+        <p><strong>Subsidy Application:</strong> ${e.subsidyRequired}</p>
+        <p><strong>Requirements / Remarks:</strong> ${e.message}</p>
+      </div>
+    </div>
+  `;
 }

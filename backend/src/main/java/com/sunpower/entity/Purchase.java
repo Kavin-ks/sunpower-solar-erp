@@ -22,12 +22,22 @@ public class Purchase {
     private String supplierName;
 
     private LocalDate purchaseDate;
+    private LocalDate dueDate;
 
     @Column(nullable = false, precision = 10, scale = 2)
     private BigDecimal totalAmount = BigDecimal.ZERO;
 
+    @Column(nullable = false, precision = 10, scale = 2)
+    private BigDecimal paidAmount = BigDecimal.ZERO;
+
+    @Column(nullable = false, precision = 10, scale = 2)
+    private BigDecimal remainingBalance = BigDecimal.ZERO;
+
     @Column(nullable = false, length = 30)
     private String status = "RECEIVED"; // ORDERED, RECEIVED, CANCELLED
+
+    @Column(nullable = false, length = 30)
+    private String paymentStatus = "UNPAID"; // UNPAID, PARTIALLY_PAID, PAID, OVERDUE
 
     @Column(columnDefinition = "TEXT")
     private String notes;
@@ -43,8 +53,43 @@ public class Purchase {
         if (purchaseDate == null) {
             purchaseDate = LocalDate.now();
         }
+        if (dueDate == null) {
+            dueDate = purchaseDate.plusDays(30);
+        }
         if (purchaseNumber == null && id != null) {
             purchaseNumber = "PO-" + String.format("%05d", id);
+        }
+        if (paidAmount == null) {
+            paidAmount = BigDecimal.ZERO;
+        }
+        if (totalAmount != null) {
+            remainingBalance = totalAmount.subtract(paidAmount);
+        }
+        updatePaymentStatus();
+    }
+
+    @PreUpdate
+    protected void onUpdate() {
+        if (paidAmount == null) {
+            paidAmount = BigDecimal.ZERO;
+        }
+        if (totalAmount != null) {
+            remainingBalance = totalAmount.subtract(paidAmount);
+        }
+        updatePaymentStatus();
+    }
+
+    public void updatePaymentStatus() {
+        if (totalAmount == null || totalAmount.compareTo(BigDecimal.ZERO) == 0) {
+            paymentStatus = "PAID";
+        } else if (remainingBalance.compareTo(BigDecimal.ZERO) <= 0) {
+            paymentStatus = "PAID";
+        } else if (paidAmount.compareTo(BigDecimal.ZERO) > 0) {
+            paymentStatus = "PARTIALLY_PAID";
+        } else if (dueDate != null && dueDate.isBefore(LocalDate.now())) {
+            paymentStatus = "OVERDUE";
+        } else {
+            paymentStatus = "UNPAID";
         }
     }
 
@@ -58,10 +103,18 @@ public class Purchase {
     public void setSupplierName(String supplierName) { this.supplierName = supplierName; }
     public LocalDate getPurchaseDate() { return purchaseDate; }
     public void setPurchaseDate(LocalDate purchaseDate) { this.purchaseDate = purchaseDate; }
+    public LocalDate getDueDate() { return dueDate; }
+    public void setDueDate(LocalDate dueDate) { this.dueDate = dueDate; }
     public BigDecimal getTotalAmount() { return totalAmount; }
     public void setTotalAmount(BigDecimal totalAmount) { this.totalAmount = totalAmount; }
+    public BigDecimal getPaidAmount() { return paidAmount; }
+    public void setPaidAmount(BigDecimal paidAmount) { this.paidAmount = paidAmount; }
+    public BigDecimal getRemainingBalance() { return remainingBalance; }
+    public void setRemainingBalance(BigDecimal remainingBalance) { this.remainingBalance = remainingBalance; }
     public String getStatus() { return status; }
     public void setStatus(String status) { this.status = status; }
+    public String getPaymentStatus() { return paymentStatus; }
+    public void setPaymentStatus(String paymentStatus) { this.paymentStatus = paymentStatus; }
     public String getNotes() { return notes; }
     public void setNotes(String notes) { this.notes = notes; }
     public List<PurchaseItem> getItems() { return items; }

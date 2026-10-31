@@ -3,10 +3,12 @@ package com.sunpower.service;
 import com.sunpower.dto.FinanceDTOs.*;
 import com.sunpower.entity.*;
 import com.sunpower.entity.enums.Enums.ExpenseCategory;
+import com.sunpower.entity.enums.Enums.ExpenseStatus;
 import com.sunpower.entity.enums.Enums.SubsidyStatus;
 import com.sunpower.entity.enums.Enums.TechnicianPayoutStatus;
 import com.sunpower.repository.*;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -43,9 +45,16 @@ public class FinanceService {
     private InstallationRepository installationRepository;
 
     @Autowired
-private TechnicianRepository technicianRepository;
+    private TechnicianRepository technicianRepository;
+
     @Autowired
     private ServiceTicketRepository serviceTicketRepository;
+
+    @Autowired
+    private PurchaseRepository purchaseRepository;
+
+    @Autowired
+    private SupplierPaymentRepository supplierPaymentRepository;
 
     public List<Expense> getAllExpenses() {
         return expenseRepository.findAllByOrderByExpenseDateDesc();
@@ -68,6 +77,14 @@ private TechnicianRepository technicianRepository;
         return technicianPaymentRepository.findAllByOrderByPaymentDateDesc();
     }
 
+    public List<Purchase> getAllSupplierPurchases() {
+        return purchaseRepository.findAllByOrderByPurchaseDateDesc();
+    }
+
+    public List<SupplierPayment> getAllSupplierPayments() {
+        return supplierPaymentRepository.findAll(Sort.by(Sort.Direction.DESC, "paymentDate"));
+    }
+
     @Transactional
     public Expense createExpense(ExpenseCreateRequest request) {
         if (request.getAmount() == null || request.getAmount().compareTo(BigDecimal.ZERO) <= 0) {
@@ -84,6 +101,7 @@ private TechnicianRepository technicianRepository;
 
         Expense expense = new Expense();
         expense.setCategory(request.getCategory());
+        expense.setStatus(ExpenseStatus.APPROVED);
         expense.setAmount(request.getAmount());
         expense.setExpenseDate(expDate);
         expense.setTitle(request.getTitle().trim());
@@ -113,6 +131,90 @@ private TechnicianRepository technicianRepository;
     }
 
     @Transactional
+    public Expense approveExpense(Long expenseId, String approvedBy) {
+        Expense expense = expenseRepository.findById(expenseId)
+                .orElseThrow(() -> new IllegalArgumentException("Expense not found with id: " + expenseId));
+
+        if (expense.getStatus() == ExpenseStatus.REJECTED) {
+            throw new IllegalStateException("Cannot approve a previously rejected expense: " + expense.getExpenseNumber());
+        }
+
+        expense.setStatus(ExpenseStatus.APPROVED);
+        expense.setApprovedBy(approvedBy != null ? approvedBy : "Finance Controller");
+        expense.setApprovedAt(LocalDateTime.now());
+        expense.setRejectionReason(null);
+        return expenseRepository.save(expense);
+    }
+
+    @Transactional
+    public Expense rejectExpense(Long expenseId, String rejectionReason, String rejectedBy) {
+        Expense expense = expenseRepository.findById(expenseId)
+                .orElseThrow(() -> new IllegalArgumentException("Expense not found with id: " + expenseId));
+
+        if (rejectionReason == null || rejectionReason.trim().isEmpty()) {
+            throw new IllegalArgumentException("Rejection reason is required when rejecting an expense.");
+        }
+
+        expense.setStatus(ExpenseStatus.REJECTED);
+        expense.setRejectionReason(rejectionReason.trim());
+        expense.setApprovedBy(rejectedBy != null ? rejectedBy : "Finance Controller");
+        expense.setApprovedAt(LocalDateTime.now());
+        return expenseRepository.save(expense);
+    }
+
+    @Transactional
+    public SupplierPayment recordSupplierPayment(SupplierPaymentRequest request) {
+        Purchase purchase = purchaseRepository.findById(request.getPurchaseId())
+                .orElseThrow(() -> new IllegalArgumentException("Purchase order not found with id: " + request.getPurchaseId()));
+
+        if ("CANCELLED".equalsIgnoreCase(purchase.getStatus())) {
+            throw new IllegalStateException("Cannot record payment against a cancelled purchase: " + purchase.getPurchaseNumber());
+        }
+
+        if (request.getAmount() == null || request.getAmount().compareTo(BigDecimal.ZERO) <= 0) {
+            throw new IllegalArgumentException("Payment amount must be greater than zero.");
+        }
+
+        if (request.getAmount().compareTo(purchase.getRemainingBalance()) > 0) {
+            throw new IllegalArgumentException("Overpayment error: Payment amount (₹" + request.getAmount() +
+                    ") exceeds remaining balance (₹" + purchase.getRemainingBalance() + ")");
+        }
+
+        if (request.getReferenceNumber() != null && !request.getReferenceNumber().trim().isEmpty()) {
+            String ref = request.getReferenceNumber().trim();
+            if (supplierPaymentRepository.existsByReferenceNumberAndStatus(ref, "SUCCESS")) {
+                throw new IllegalArgumentException("Duplicate reference error: A supplier payment with reference '" +
+                        ref + "' has already been recorded.");
+            }
+        }
+
+        SupplierPayment payment = new SupplierPayment();
+        payment.setPurchase(purchase);
+        payment.setSupplierName(purchase.getSupplierName());
+        payment.setAmount(request.getAmount());
+        payment.setPaymentDate(request.getPaymentDate() != null ? request.getPaymentDate() : LocalDate.now());
+        payment.setPaymentMethod(request.getPaymentMethod());
+        payment.setReferenceNumber(request.getReferenceNumber() != null ? request.getReferenceNumber().trim() : null);
+        payment.setStatus("SUCCESS");
+        payment.setNotes(request.getNotes());
+
+        payment = supplierPaymentRepository.save(payment);
+        if (payment.getPaymentNumber() == null) {
+            payment.setPaymentNumber("SPAY-" + String.format("%05d", payment.getId()));
+            payment = supplierPaymentRepository.save(payment);
+        }
+
+        // Update purchase paidAmount and remaining balance
+        BigDecimal newPaid = (purchase.getPaidAmount() != null ? purchase.getPaidAmount() : BigDecimal.ZERO).add(request.getAmount());
+        purchase.setPaidAmount(newPaid);
+        purchase.setRemainingBalance(purchase.getTotalAmount().subtract(newPaid));
+        purchase.updatePaymentStatus();
+        purchaseRepository.save(purchase);
+
+        return payment;
+    }
+
+    @Transactional
     public Invoice cancelInvoice(Long invoiceId, String reason, String cancelledBy) {
         Invoice invoice = getInvoiceById(invoiceId);
 
@@ -134,7 +236,7 @@ private TechnicianRepository technicianRepository;
                 .orElseThrow(() -> new IllegalArgumentException("Sales order not found with id: " + salesOrderId));
 
         Optional<Invoice> existing = invoiceRepository.findBySalesOrderId(order.getId());
-        if (existing.isPresent()) {
+        if (existing.isPresent() && !"CANCELLED".equals(existing.get().getStatus())) {
             return existing.get();
         }
 
@@ -144,6 +246,7 @@ private TechnicianRepository technicianRepository;
         invoice.setInvoiceDate(LocalDate.now());
         invoice.setDueDate(LocalDate.now().plusDays(15));
 
+        // 70% Goods @ 12% + 30% Services @ 18% = 13.80% Solar EPC Composite Rate
         BigDecimal subtotal = order.getQuotation() != null ? order.getQuotation().getSubtotal() :
                 order.getTotalAmount().multiply(new BigDecimal("100.00")).divide(new BigDecimal("113.80"), 2, RoundingMode.HALF_UP);
         BigDecimal tax = order.getQuotation() != null ? order.getQuotation().getTaxAmount() :
@@ -154,9 +257,8 @@ private TechnicianRepository technicianRepository;
         invoice.setTotalAmount(order.getTotalAmount());
         invoice.setPaidAmount(order.getTotalPaid() != null ? order.getTotalPaid() : BigDecimal.ZERO);
         invoice.setBalanceAmount(order.getRemainingBalance());
-        invoice.setStatus(order.getRemainingBalance().compareTo(BigDecimal.ZERO) == 0 ? "PAID" :
-                (order.getTotalPaid() != null && order.getTotalPaid().compareTo(BigDecimal.ZERO) > 0 ? "PARTIALLY_PAID" : "ISSUED"));
         invoice.setHsnSacCode("70% Goods (HSN 8541 @ 12%) + 30% Services (SAC 998731 @ 18%)");
+        invoice.updateStatus();
 
         invoice = invoiceRepository.save(invoice);
         if (invoice.getInvoiceNumber() == null) {
@@ -199,31 +301,30 @@ private TechnicianRepository technicianRepository;
             sub.setActualReceiptDate(LocalDate.now());
         }
 
-        if (request.getNotes() != null) {
-            sub.setNotes(request.getNotes());
-        }
-
-        if (request.getStatus() == SubsidyStatus.SUBMITTED && sub.getSubmissionDate() == null) {
-            sub.setSubmissionDate(LocalDate.now());
-        }
-
         if (request.getDiscomConsumerNumber() != null && !request.getDiscomConsumerNumber().trim().isEmpty()) {
             sub.setDiscomConsumerNumber(request.getDiscomConsumerNumber().trim());
         }
+
         if (request.getDiscomApplicationNumber() != null && !request.getDiscomApplicationNumber().trim().isEmpty()) {
             sub.setDiscomApplicationNumber(request.getDiscomApplicationNumber().trim());
         }
+
         if (request.getFeasibilityApprovedDate() != null) {
             sub.setFeasibilityApprovedDate(request.getFeasibilityApprovedDate());
         }
+
         if (request.getNetMeterInstalledDate() != null) {
             sub.setNetMeterInstalledDate(request.getNetMeterInstalledDate());
         }
+
         if (request.getCommissioningCertificateNumber() != null && !request.getCommissioningCertificateNumber().trim().isEmpty()) {
             sub.setCommissioningCertificateNumber(request.getCommissioningCertificateNumber().trim());
         }
 
-        sub.recalculatePending();
+        if (request.getNotes() != null) {
+            sub.setNotes(request.getNotes());
+        }
+
         return subsidyApplicationRepository.save(sub);
     }
 
@@ -232,83 +333,75 @@ private TechnicianRepository technicianRepository;
         Technician tech = technicianRepository.findById(request.getTechnicianId())
                 .orElseThrow(() -> new IllegalArgumentException("Technician not found with id: " + request.getTechnicianId()));
 
-        if (request.getReferenceNumber() != null && !request.getReferenceNumber().trim().isEmpty()) {
-            if (technicianPaymentRepository.existsByReferenceNumber(request.getReferenceNumber().trim())) {
-                throw new IllegalArgumentException("Duplicate payout reference: A payout with reference/UTR '" +
-                        request.getReferenceNumber().trim() + "' has already been recorded.");
-            }
+        if (request.getAmountPaid() == null || request.getAmountPaid().compareTo(BigDecimal.ZERO) <= 0) {
+            throw new IllegalArgumentException("Payout amount must be greater than zero.");
         }
 
-        Installation installation = null;
+        Installation inst = null;
         if (request.getInstallationId() != null) {
-            installation = installationRepository.findById(request.getInstallationId()).orElse(null);
-            if (installation != null) {
-                if (installation.getStatus() == com.sunpower.entity.enums.Enums.InstallationStatus.CANCELLED) {
-                    throw new IllegalStateException("Cannot disburse technician payout: Installation " +
-                            installation.getInstallationNumber() + " is CANCELLED.");
-                }
-                if (technicianPaymentRepository.existsByInstallationIdAndTechnicianId(installation.getId(), tech.getId())) {
-                    throw new IllegalArgumentException("Duplicate payout error: Technician '" + tech.getName() +
-                            "' has already received a payout for installation " + installation.getInstallationNumber());
-                }
+            inst = installationRepository.findById(request.getInstallationId())
+                    .orElseThrow(() -> new IllegalArgumentException("Installation not found with id: " + request.getInstallationId()));
+
+            if (technicianPaymentRepository.existsByInstallationIdAndTechnicianId(inst.getId(), tech.getId())) {
+                throw new IllegalArgumentException("Duplicate payout error: A payout has already been recorded for technician " +
+                        tech.getName() + " on installation " + inst.getInstallationNumber());
+            }
+
+            if (inst.getStatus() == com.sunpower.entity.enums.Enums.InstallationStatus.CANCELLED) {
+                throw new IllegalStateException("Cannot disburse labor payout for a cancelled installation.");
             }
         }
 
-        BigDecimal rate = request.getApplicableRate() != null ? request.getApplicableRate() : BigDecimal.valueOf(250.00);
-        BigDecimal hours = request.getHoursCounted() != null ? request.getHoursCounted() : BigDecimal.ZERO;
-        BigDecimal calculated = hours.multiply(rate);
-        BigDecimal amountPaid = request.getAmountPaid() != null ? request.getAmountPaid() : calculated;
+        TechnicianPayment payout = new TechnicianPayment();
+        payout.setTechnician(tech);
+        payout.setInstallation(inst);
+        BigDecimal hours = request.getHoursCounted() != null ? BigDecimal.valueOf(request.getHoursCounted()) : null;
+        BigDecimal rate = request.getApplicableRate() != null ? BigDecimal.valueOf(request.getApplicableRate()) : new BigDecimal("250.00");
+        BigDecimal calculated = (hours != null && rate != null) ? hours.multiply(rate) : request.getAmountPaid();
+        BigDecimal remaining = calculated.subtract(request.getAmountPaid());
+        if (remaining.compareTo(BigDecimal.ZERO) < 0) remaining = BigDecimal.ZERO;
 
-        TechnicianPayment tp = new TechnicianPayment();
-        tp.setTechnician(tech);
-        tp.setInstallation(installation);
-        tp.setHoursCounted(hours);
-        tp.setHourlyRate(rate);
-        tp.setCalculatedAmount(calculated);
-        tp.setAmount(amountPaid);
-        tp.setAmountPaid(amountPaid);
-        tp.setPaymentDate(LocalDate.now());
-        tp.setPaymentMethod(request.getPaymentMethod() != null ? request.getPaymentMethod() : "Bank Transfer");
-        tp.setReferenceNumber(request.getReferenceNumber());
-        tp.setNotes(request.getNotes());
-        tp.recalculateTotals();
+        payout.setHoursCounted(hours);
+        payout.setHourlyRate(rate);
+        payout.setCalculatedAmount(calculated);
+        payout.setAmountPaid(request.getAmountPaid());
+        payout.setAmount(request.getAmountPaid());
+        payout.setRemainingAmount(remaining);
+        payout.setPaymentMethod(request.getPaymentMethod());
+        payout.setPaymentDate(LocalDate.now());
+        payout.setReferenceNumber(request.getReferenceNumber() != null ? request.getReferenceNumber().trim() : null);
+        payout.setNotes(request.getNotes());
+        payout.setStatus(remaining.compareTo(BigDecimal.ZERO) > 0 ? TechnicianPayoutStatus.PARTIALLY_PAID : TechnicianPayoutStatus.PAID);
 
-        tp = technicianPaymentRepository.save(tp);
-        if (tp.getPaymentNumber() == null) {
-            tp.setPaymentNumber("TPAY-" + String.format("%05d", tp.getId()));
-            tp = technicianPaymentRepository.save(tp);
+        payout = technicianPaymentRepository.save(payout);
+        if (payout.getPaymentNumber() == null) {
+            payout.setPaymentNumber("TECH-PAY-" + String.format("%05d", payout.getId()));
+            payout = technicianPaymentRepository.save(payout);
         }
 
-        // If linked to an installation with a sales order, record project expense if not already present
-        if (installation != null && installation.getSalesOrder() != null) {
-            boolean alreadyLogged = expenseRepository.findBySalesOrderId(installation.getSalesOrder().getId()).stream()
-                    .anyMatch(e -> e.getCategory() == ExpenseCategory.TECHNICIAN_PAYOUT && e.getPaidTo().equalsIgnoreCase(tech.getName()));
-            if (!alreadyLogged) {
-                Expense exp = new Expense();
-                exp.setCategory(ExpenseCategory.TECHNICIAN_PAYOUT);
-                exp.setSalesOrder(installation.getSalesOrder());
-                exp.setAmount(amountPaid);
-                exp.setExpenseDate(LocalDate.now());
-                exp.setTitle("Technician Payout - " + tech.getName());
-                exp.setDescription("Disbursed payout for job " + installation.getInstallationNumber());
-                exp.setPaidTo(tech.getName());
-                exp.setPaymentMethod(tp.getPaymentMethod());
-                expenseRepository.save(exp);
-            }
+        // Link expense to order if installation has sales order
+        if (inst != null && inst.getSalesOrder() != null) {
+            Expense exp = new Expense();
+            exp.setCategory(ExpenseCategory.TECHNICIAN_PAYOUT);
+            exp.setStatus(ExpenseStatus.APPROVED);
+            exp.setTitle("Technician Labor Payout - " + tech.getName());
+            exp.setDescription("Disbursed payout for installation " + inst.getInstallationNumber() + " (Ref: " + payout.getPaymentNumber() + ")");
+            exp.setAmount(request.getAmountPaid());
+            exp.setPaidTo(tech.getName());
+            exp.setPaymentMethod(request.getPaymentMethod());
+            exp.setExpenseDate(LocalDate.now());
+            exp.setSalesOrder(inst.getSalesOrder());
+            expenseRepository.save(exp);
         }
 
-        return tp;
+        return payout;
     }
 
     public List<JobProfitabilityDTO> calculateAllJobProfitability() {
         List<SalesOrder> orders = salesOrderRepository.findAll();
-        List<JobProfitabilityDTO> list = new ArrayList<>();
-
-        for (SalesOrder order : orders) {
-            list.add(calculateJobProfitability(order));
-        }
-
-        return list;
+        return orders.stream()
+                .map(this::calculateJobProfitability)
+                .collect(Collectors.toList());
     }
 
     public JobProfitabilityDTO calculateJobProfitability(SalesOrder order) {
@@ -320,133 +413,115 @@ private TechnicianRepository technicianRepository;
         dto.setCapacityKw(order.getCapacityKw() != null ? order.getCapacityKw() : BigDecimal.ZERO);
         dto.setOrderAmount(order.getTotalAmount() != null ? order.getTotalAmount() : BigDecimal.ZERO);
 
-        // Revenue baseline: Exclude GST collected from business recognized revenue
-        BigDecimal taxAmount;
-        if (order.getQuotation() != null && order.getQuotation().getTaxAmount() != null) {
-            taxAmount = order.getQuotation().getTaxAmount();
-        } else {
-            // Standard Solar EPC Turnkey Composite Scheme: 70% Goods @ 12% + 30% Services @ 18% = 13.80% composite GST
-            taxAmount = dto.getOrderAmount().multiply(new BigDecimal("13.80"))
-                    .divide(new BigDecimal("113.80"), 2, RoundingMode.HALF_UP);
-        }
-        dto.setTaxAmount(taxAmount);
+        BigDecimal subtotal = order.getQuotation() != null && order.getQuotation().getSubtotal() != null ?
+                order.getQuotation().getSubtotal() :
+                dto.getOrderAmount().multiply(new BigDecimal("100.00")).divide(new BigDecimal("113.80"), 2, RoundingMode.HALF_UP);
+        BigDecimal tax = order.getQuotation() != null && order.getQuotation().getTaxAmount() != null ?
+                order.getQuotation().getTaxAmount() :
+                dto.getOrderAmount().subtract(subtotal);
 
-        BigDecimal recognizedRevenue = dto.getOrderAmount().subtract(taxAmount);
-        dto.setRecognizedRevenue(recognizedRevenue);
+        dto.setTaxAmount(tax);
+        dto.setRecognizedRevenue(subtotal);
 
-        // Cash collected
-        BigDecimal cashReceived = order.getTotalPaid() != null ? order.getTotalPaid() : BigDecimal.ZERO;
-        dto.setRevenueReceived(cashReceived);
-        dto.setOutstandingBalance(order.getRemainingBalance() != null ? order.getRemainingBalance() : dto.getOrderAmount().subtract(cashReceived));
+        BigDecimal received = order.getTotalPaid() != null ? order.getTotalPaid() : BigDecimal.ZERO;
+        dto.setRevenueReceived(received);
+        dto.setOutstandingBalance(dto.getOrderAmount().subtract(received));
 
-        // 1. Hardware BOM Cost: purchase prices from inventory
+        // 1. Hardware BOM Cost
         BigDecimal hardwareCost = BigDecimal.ZERO;
-        if (order.getItems() != null) {
-            for (OrderItem item : order.getItems()) {
-if (item.getProduct() != null && item.getProduct().getPurchasePrice() != null) {
-                    BigDecimal itemCost = item.getProduct().getPurchasePrice().multiply(BigDecimal.valueOf(item.getQuantity()));
-                    hardwareCost = hardwareCost.add(itemCost);
-                }
-            }
-        }
-        dto.setHardwareCost(hardwareCost);
-
-        // 2. Installation Labor Cost: pull actual recorded crew hours and payouts
-        BigDecimal laborCost = BigDecimal.ZERO;
-        Optional<Installation> instOpt = installationRepository.findBySalesOrderId(order.getId());
-        if (instOpt.isPresent()) {
-            Installation inst = instOpt.get();
-            if (inst.getAssignedTechnicians() != null && !inst.getAssignedTechnicians().isEmpty()) {
-                for (InstallationTechnician it : inst.getAssignedTechnicians()) {
-                    if (it.getPayoutAmount() != null && it.getPayoutAmount().compareTo(BigDecimal.ZERO) > 0) {
-                        laborCost = laborCost.add(it.getPayoutAmount());
+        if (order.getQuotation() != null && order.getQuotation().getSolarPackage() != null) {
+            SolarPackage pkg = order.getQuotation().getSolarPackage();
+            if (pkg.getBomItems() != null) {
+                for (PackageBOM bom : pkg.getBomItems()) {
+                    if (bom.getProduct() != null && bom.getProduct().getPurchasePrice() != null) {
+                        BigDecimal itemCost = bom.getProduct().getPurchasePrice().multiply(BigDecimal.valueOf(bom.getQuantity()));
+                        hardwareCost = hardwareCost.add(itemCost);
                     }
                 }
             }
         }
+        if (hardwareCost.compareTo(BigDecimal.ZERO) == 0) {
+            hardwareCost = subtotal.multiply(new BigDecimal("0.55")).setScale(2, RoundingMode.HALF_UP);
+        }
+        dto.setHardwareCost(hardwareCost);
 
-        // Check if direct technician payout expenses were logged
-        List<Expense> jobExpenses = expenseRepository.findBySalesOrderId(order.getId());
-        BigDecimal techExpenseSum = BigDecimal.ZERO;
+        // 2. Direct Technician Labor Cost
+        BigDecimal laborCost = BigDecimal.ZERO;
+        Optional<Installation> instOpt = installationRepository.findBySalesOrderId(order.getId());
+        if (instOpt.isPresent()) {
+            Installation inst = instOpt.get();
+            List<TechnicianPayment> payouts = technicianPaymentRepository.findByInstallationId(inst.getId());
+            for (TechnicianPayment p : payouts) {
+                if (p.getAmountPaid() != null) {
+                    laborCost = laborCost.add(p.getAmountPaid());
+                }
+            }
+            if (laborCost.compareTo(BigDecimal.ZERO) == 0 && inst.getActualStartTime() != null && inst.getActualFinishTime() != null) {
+                long hrs = java.time.Duration.between(inst.getActualStartTime(), inst.getActualFinishTime()).toHours();
+                if (hrs > 0) {
+                    laborCost = BigDecimal.valueOf(hrs).multiply(new BigDecimal("250.00"));
+                }
+            }
+        }
+        dto.setInstallationLaborCost(laborCost);
+
+        // 3. Operational Expenses linked to this job
         BigDecimal transportCost = BigDecimal.ZERO;
-        BigDecimal serviceCost = BigDecimal.ZERO;
+        BigDecimal serviceRepairCost = BigDecimal.ZERO;
         BigDecimal otherExpenses = BigDecimal.ZERO;
 
+        List<Expense> jobExpenses = expenseRepository.findBySalesOrderId(order.getId());
         for (Expense exp : jobExpenses) {
-            if (exp.getCategory() == ExpenseCategory.TECHNICIAN_PAYOUT) {
-                techExpenseSum = techExpenseSum.add(exp.getAmount());
-            } else if (exp.getCategory() == ExpenseCategory.TRANSPORT) {
+            if (exp.getStatus() == ExpenseStatus.REJECTED) continue;
+            if (exp.getCategory() == ExpenseCategory.TECHNICIAN_PAYOUT) continue; // Avoid double counting
+
+            if (exp.getCategory() == ExpenseCategory.TRANSPORT) {
                 transportCost = transportCost.add(exp.getAmount());
             } else if (exp.getCategory() == ExpenseCategory.SERVICE_REPAIR) {
-                serviceCost = serviceCost.add(exp.getAmount());
+                serviceRepairCost = serviceRepairCost.add(exp.getAmount());
             } else {
                 otherExpenses = otherExpenses.add(exp.getAmount());
             }
         }
-
-        // Avoid double-counting labor if both installation crew and tech expense exist
-        if (laborCost.compareTo(BigDecimal.ZERO) == 0) {
-            laborCost = techExpenseSum;
-        }
-
-        // Also check if any service tickets are linked to this order's installation or warranty
-        if (instOpt.isPresent()) {
-            List<ServiceTicket> tickets = serviceTicketRepository.findByInstallationSalesOrderId(order.getId());
-            for (ServiceTicket st : tickets) {
-                List<Expense> ticketExpenses = expenseRepository.findAll().stream()
-                        .filter(e -> e.getServiceTicket() != null && e.getServiceTicket().getId().equals(st.getId()))
-                        .toList();
-                for (Expense te : ticketExpenses) {
-                    serviceCost = serviceCost.add(te.getAmount());
-                }
-            }
-        }
-
-        dto.setInstallationLaborCost(laborCost);
         dto.setTransportCost(transportCost);
-        dto.setServiceRepairCost(serviceCost);
+        dto.setServiceRepairCost(serviceRepairCost);
         dto.setOtherExpenses(otherExpenses);
 
-        BigDecimal totalProjectCost = hardwareCost.add(laborCost).add(transportCost).add(serviceCost).add(otherExpenses);
-        dto.setTotalCost(totalProjectCost);
+        // Total Project Direct Costs
+        BigDecimal totalCost = hardwareCost.add(laborCost).add(transportCost).add(serviceRepairCost).add(otherExpenses);
+        dto.setTotalCost(totalCost);
 
-        // Accounting Net Profit = Recognized Project Revenue - Total Project Cost
-        BigDecimal netProfit = recognizedRevenue.subtract(totalProjectCost);
+        // Net Operating Profit = recognizedRevenue - totalCost
+        BigDecimal netProfit = subtotal.subtract(totalCost);
         dto.setNetProfit(netProfit);
 
-        // Cash Profit = Cash Collected (less tax portion) - Total Project Cost
-        BigDecimal cashNetRevenue = cashReceived.subtract(
-                taxAmount.multiply(cashReceived).divide(dto.getOrderAmount().compareTo(BigDecimal.ZERO) > 0 ? dto.getOrderAmount() : BigDecimal.ONE, 2, RoundingMode.HALF_UP)
-        );
-        dto.setCashProfit(cashNetRevenue.subtract(totalProjectCost));
+        BigDecimal cashProfit = received.subtract(totalCost);
+        dto.setCashProfit(cashProfit);
 
-        if (recognizedRevenue.compareTo(BigDecimal.ZERO) > 0) {
-            BigDecimal margin = netProfit.multiply(BigDecimal.valueOf(100)).divide(recognizedRevenue, 2, RoundingMode.HALF_UP);
+        if (subtotal.compareTo(BigDecimal.ZERO) > 0) {
+            BigDecimal margin = netProfit.multiply(new BigDecimal("100.00")).divide(subtotal, 1, RoundingMode.HALF_UP);
             dto.setProfitMarginPercentage(margin);
+
+            if (margin.compareTo(new BigDecimal("20.0")) >= 0) {
+                dto.setProfitabilityStatus("PROFITABLE");
+            } else if (margin.compareTo(BigDecimal.ZERO) >= 0) {
+                dto.setProfitabilityStatus("LOW_MARGIN");
+            } else {
+                dto.setProfitabilityStatus("LOSS_MAKING");
+            }
         } else {
             dto.setProfitMarginPercentage(BigDecimal.ZERO);
-        }
-
-        // Profitability Status
-        if (netProfit.compareTo(BigDecimal.ZERO) < 0) {
             dto.setProfitabilityStatus("LOSS_MAKING");
-        } else if (dto.getProfitMarginPercentage().compareTo(BigDecimal.valueOf(25.00)) < 0) {
-            dto.setProfitabilityStatus("LOW_MARGIN");
-        } else {
-            dto.setProfitabilityStatus("PROFITABLE");
         }
 
-        // Subsidy Application status
-        subsidyApplicationRepository.findBySalesOrderId(order.getId()).ifPresentOrElse(
-                sub -> dto.setSubsidyStatus(sub.getStatus() != null ? sub.getStatus().name() : "PENDING"),
-                () -> dto.setSubsidyStatus("NOT_APPLIED")
-        );
+        // Subsidy status
+        Optional<SubsidyApplication> subOpt = subsidyApplicationRepository.findBySalesOrderId(order.getId());
+        dto.setSubsidyStatus(subOpt.map(s -> s.getStatus().name()).orElse("NOT_APPLIED"));
 
-        // Open Service Tickets count
-        if (order.getCustomer() != null && order.getCustomer().getId() != null) {
-            long openCount = serviceTicketRepository.findByCustomerId(order.getCustomer().getId()).stream()
-                    .filter(t -> t.getStatus() != com.sunpower.entity.enums.Enums.TicketStatus.CLOSED)
-                    .count();
+        // Open service tickets count
+        if (order.getCustomer() != null) {
+            long openCount = serviceTicketRepository.countByCustomerIdAndStatusNot(order.getCustomer().getId(),
+                    com.sunpower.entity.enums.Enums.TicketStatus.CLOSED);
             dto.setOpenServiceTicketsCount(openCount);
         } else {
             dto.setOpenServiceTicketsCount(0);
@@ -493,11 +568,12 @@ if (item.getProduct() != null && item.getProduct().getPurchasePrice() != null) {
                 .map(this::calculateJobProfitability)
                 .collect(Collectors.toList());
 
-        // 1. KPI Totals
+        // 1. Revenue Metrics
         BigDecimal totalInvoiced = filteredOrders.stream()
                 .map(SalesOrder::getTotalAmount)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
         dto.setTotalInvoicedRevenue(totalInvoiced);
+        dto.setTotalRevenue(totalInvoiced);
 
         BigDecimal totalConfirmed = filteredOrders.stream()
                 .filter(o -> o.getStatus() == com.sunpower.entity.enums.Enums.OrderStatus.CONFIRMED ||
@@ -517,6 +593,7 @@ if (item.getProduct() != null && item.getProduct().getPurchasePrice() != null) {
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
         dto.setTotalTaxCollected(totalTaxes);
 
+        // 2. Customer Payments & Receivables
         List<Payment> allPayments = paymentRepository.findAll();
         List<Payment> filteredPayments = allPayments.stream()
                 .filter(p -> p.getStatus() == com.sunpower.entity.enums.Enums.PaymentStatus.SUCCESS)
@@ -535,8 +612,12 @@ if (item.getProduct() != null && item.getProduct().getPurchasePrice() != null) {
         dto.setTotalPaymentsReceived(cashCollected);
         dto.setTotalCashCollected(cashCollected);
 
-        dto.setTotalOutstandingReceivables(totalInvoiced.subtract(cashCollected));
+        BigDecimal pendingReceivables = totalInvoiced.subtract(cashCollected);
+        if (pendingReceivables.compareTo(BigDecimal.ZERO) < 0) pendingReceivables = BigDecimal.ZERO;
+        dto.setTotalOutstandingReceivables(pendingReceivables);
+        dto.setPendingCustomerPayments(pendingReceivables);
 
+        // 3. COGS & Operational Expenses
         BigDecimal totalHardware = allProfitability.stream()
                 .map(JobProfitabilityDTO::getHardwareCost)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
@@ -547,8 +628,16 @@ if (item.getProduct() != null && item.getProduct().getPurchasePrice() != null) {
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
         dto.setTotalInstallationLaborCost(totalLabor);
 
+        BigDecimal cogs = totalHardware.add(totalLabor);
+        dto.setCogs(cogs);
+
+        // Gross Profit = Revenue - COGS
+        BigDecimal grossProfit = totalRecognized.subtract(cogs);
+        dto.setGrossProfit(grossProfit);
+
         List<Expense> allExpenses = expenseRepository.findAll();
         List<Expense> filteredExpenses = allExpenses.stream()
+                .filter(e -> e.getStatus() != ExpenseStatus.REJECTED)
                 .filter(e -> {
                     LocalDate ed = e.getExpenseDate();
                     if (ed == null) return true;
@@ -563,10 +652,13 @@ if (item.getProduct() != null && item.getProduct().getPurchasePrice() != null) {
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
         dto.setTotalOperationalExpenses(totalOpsExpenses);
 
-        BigDecimal totalProfit = allProfitability.stream()
-                .map(JobProfitabilityDTO::getNetProfit)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
-        dto.setTotalProjectProfit(totalProfit);
+        BigDecimal totalExpenses = cogs.add(totalOpsExpenses);
+        dto.setTotalExpenses(totalExpenses);
+
+        // Net Profit = Gross Profit - Operating Expenses
+        BigDecimal netProfit = grossProfit.subtract(totalOpsExpenses);
+        dto.setNetProfit(netProfit);
+        dto.setTotalProjectProfit(netProfit);
 
         if (!allProfitability.isEmpty()) {
             BigDecimal sumMargins = allProfitability.stream()
@@ -581,8 +673,28 @@ if (item.getProduct() != null && item.getProduct().getPurchasePrice() != null) {
         BigDecimal pendingSubsidies = subsidyApplicationRepository.sumPendingSubsidyReceipts();
         dto.setSubsidiesPendingReceipt(pendingSubsidies != null ? pendingSubsidies : BigDecimal.ZERO);
 
-        // Aging analysis (0-30, 31-60, 61-90, 90+ days)
+        // 4. Supplier Outstanding Balances & Overdue Invoices
+        BigDecimal supplierOutstanding = purchaseRepository.sumOutstandingSupplierBalance();
+        dto.setOutstandingSupplierPayments(supplierOutstanding != null ? supplierOutstanding : BigDecimal.ZERO);
+
         LocalDate today = LocalDate.now();
+        dto.setOverdueInvoicesCount(invoiceRepository.countOverdueInvoices(today));
+        dto.setOverdueInvoicesAmount(invoiceRepository.sumOverdueAmount(today));
+
+        // 5. Cash Flow Calculation
+        BigDecimal totalSupplierPaid = supplierPaymentRepository.sumTotalSupplierPayments();
+        BigDecimal totalTechPaid = technicianPaymentRepository.sumTotalPayoutsDisbursed();
+        BigDecimal subsidyCash = subsidyApplicationRepository.findAll().stream()
+                .map(s -> s.getAmountReceived() != null ? s.getAmountReceived() : BigDecimal.ZERO)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        BigDecimal cashInflows = cashCollected.add(subsidyCash);
+        BigDecimal cashOutflows = (totalSupplierPaid != null ? totalSupplierPaid : BigDecimal.ZERO)
+                .add(totalTechPaid != null ? totalTechPaid : BigDecimal.ZERO)
+                .add(totalOpsExpenses);
+        dto.setNetCashFlow(cashInflows.subtract(cashOutflows));
+
+        // 6. Aging analysis
         BigDecimal age0to30 = BigDecimal.ZERO;
         BigDecimal age31to60 = BigDecimal.ZERO;
         BigDecimal age61to90 = BigDecimal.ZERO;
@@ -608,14 +720,12 @@ if (item.getProduct() != null && item.getProduct().getPurchasePrice() != null) {
         dto.setAging61To90Days(age61to90);
         dto.setAgingOver90Days(ageOver90);
 
-        // 2. Monthly Revenue, Cost, Profit Trends
+        // 7. Monthly Revenue, Cost, Profit Trends (Last 6 Months in chronological order)
         Map<String, BigDecimal[]> monthMap = new LinkedHashMap<>();
         DateTimeFormatter monthFmt = DateTimeFormatter.ofPattern("MMM yyyy");
 
-        // Populate recent 6 months in chronological order
-        LocalDate now = LocalDate.now();
         for (int i = 5; i >= 0; i--) {
-            LocalDate m = now.minusMonths(i);
+            LocalDate m = today.minusMonths(i);
             monthMap.put(m.format(monthFmt), new BigDecimal[]{BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO});
         }
 
@@ -628,7 +738,6 @@ if (item.getProduct() != null && item.getProduct().getPurchasePrice() != null) {
             }
         }
 
-        // Direct Project Costs: include Hardware BOM and Installation Labor per month
         for (SalesOrder o : allOrders) {
             LocalDate dt = o.getOrderDate();
             if (dt != null) {
@@ -641,8 +750,8 @@ if (item.getProduct() != null && item.getProduct().getPurchasePrice() != null) {
             }
         }
 
-        // Operational and job expenses
         for (Expense e : allExpenses) {
+            if (e.getStatus() == ExpenseStatus.REJECTED) continue;
             if (e.getExpenseDate() != null) {
                 String k = e.getExpenseDate().format(monthFmt);
                 if (monthMap.containsKey(k)) {
@@ -662,7 +771,7 @@ if (item.getProduct() != null && item.getProduct().getPurchasePrice() != null) {
         }
         dto.setMonthlyRevenueTrends(trends);
 
-        // 3. Expense Category Breakdown
+        // 8. Expense Category Breakdown
         Map<ExpenseCategory, BigDecimal> catMap = new HashMap<>();
         for (ExpenseCategory c : ExpenseCategory.values()) {
             catMap.put(c, BigDecimal.ZERO);
@@ -676,7 +785,7 @@ if (item.getProduct() != null && item.getProduct().getPurchasePrice() != null) {
                 .collect(Collectors.toList());
         dto.setExpenseCategoryBreakdown(catItems);
 
-        // 4. Payment Status Distribution
+        // 9. Payment Status Distribution
         Map<String, Object[]> payMap = new HashMap<>();
         for (Payment p : allPayments) {
             String s = p.getStatus().name();
@@ -689,7 +798,7 @@ if (item.getProduct() != null && item.getProduct().getPurchasePrice() != null) {
                 .collect(Collectors.toList());
         dto.setPaymentStatusDistribution(payStatusList);
 
-        // 5. Subsidy Status Distribution
+        // 10. Subsidy Status Distribution
         Map<String, Object[]> subMap = new HashMap<>();
         for (SubsidyApplication sub : subsidyApplicationRepository.findAll()) {
             String s = sub.getStatus().name();
@@ -702,7 +811,137 @@ if (item.getProduct() != null && item.getProduct().getPurchasePrice() != null) {
                 .collect(Collectors.toList());
         dto.setSubsidyStatusDistribution(subStatusList);
 
+        // 11. Recent Unified Financial Transactions Feed
+        List<RecentTransactionItem> recentList = new ArrayList<>();
+        for (Payment p : allPayments) {
+            recentList.add(new RecentTransactionItem(
+                    p.getPaymentDate(),
+                    "CUSTOMER_PAYMENT",
+                    p.getPaymentNumber() != null ? p.getPaymentNumber() : "PAY-" + p.getId(),
+                    "Customer payment received for " + (p.getSalesOrder() != null ? p.getSalesOrder().getOrderNumber() : "Order"),
+                    p.getAmount(),
+                    "INFLOW",
+                    p.getStatus().name()
+            ));
+        }
+        for (TechnicianPayment tp : technicianPaymentRepository.findAll()) {
+            recentList.add(new RecentTransactionItem(
+                    tp.getPaymentDate(),
+                    "TECHNICIAN_PAYOUT",
+                    tp.getPaymentNumber() != null ? tp.getPaymentNumber() : "TECH-PAY-" + tp.getId(),
+                    "Field labor payout to " + (tp.getTechnician() != null ? tp.getTechnician().getName() : "Technician"),
+                    tp.getAmountPaid(),
+                    "OUTFLOW",
+                    tp.getStatus().name()
+            ));
+        }
+        for (Expense exp : allExpenses) {
+            recentList.add(new RecentTransactionItem(
+                    exp.getExpenseDate(),
+                    "DIRECT_EXPENSE",
+                    exp.getExpenseNumber() != null ? exp.getExpenseNumber() : "EXP-" + exp.getId(),
+                    exp.getTitle(),
+                    exp.getAmount(),
+                    "OUTFLOW",
+                    exp.getStatus().name()
+            ));
+        }
+        for (SupplierPayment sp : supplierPaymentRepository.findAll()) {
+            recentList.add(new RecentTransactionItem(
+                    sp.getPaymentDate(),
+                    "SUPPLIER_PAYMENT",
+                    sp.getPaymentNumber() != null ? sp.getPaymentNumber() : "SPAY-" + sp.getId(),
+                    "Payment to supplier " + sp.getSupplierName(),
+                    sp.getAmount(),
+                    "OUTFLOW",
+                    sp.getStatus()
+            ));
+        }
+        recentList.sort((a, b) -> {
+            if (a.getDate() == null && b.getDate() == null) return 0;
+            if (a.getDate() == null) return 1;
+            if (b.getDate() == null) return -1;
+            return b.getDate().compareTo(a.getDate());
+        });
+        if (recentList.size() > 10) {
+            recentList = recentList.subList(0, 10);
+        }
+        dto.setRecentTransactions(recentList);
+
         return dto;
+    }
+
+    public ProfitAndLossReportDTO getProfitAndLossReport(String period) {
+        FinanceDashboardDTO dash = getFinanceDashboard(period, null, null);
+        ProfitAndLossReportDTO report = new ProfitAndLossReportDTO();
+        report.setPeriod(period != null ? period : "THIS_MONTH");
+        report.setTotalRevenue(dash.getTotalInvoicedRevenue());
+        report.setGstExcludedRevenue(dash.getTotalRecognizedRevenue());
+        report.setHardwareCogs(dash.getTotalHardwareCost());
+        report.setInstallationLaborCogs(dash.getTotalInstallationLaborCost());
+        report.setTotalCogs(dash.getCogs());
+        report.setGrossProfit(dash.getGrossProfit());
+        if (dash.getTotalRecognizedRevenue().compareTo(BigDecimal.ZERO) > 0) {
+            report.setGrossMarginPercentage(dash.getGrossProfit().multiply(new BigDecimal("100.00"))
+                    .divide(dash.getTotalRecognizedRevenue(), 1, RoundingMode.HALF_UP));
+        }
+        report.setOperatingExpensesBreakdown(dash.getExpenseCategoryBreakdown());
+        report.setTotalOperatingExpenses(dash.getTotalOperationalExpenses());
+        report.setNetProfit(dash.getNetProfit());
+        if (dash.getTotalRecognizedRevenue().compareTo(BigDecimal.ZERO) > 0) {
+            report.setNetMarginPercentage(dash.getNetProfit().multiply(new BigDecimal("100.00"))
+                    .divide(dash.getTotalRecognizedRevenue(), 1, RoundingMode.HALF_UP));
+        }
+        return report;
+    }
+
+    public CashFlowReportDTO getCashFlowReport(String period) {
+        FinanceDashboardDTO dash = getFinanceDashboard(period, null, null);
+        CashFlowReportDTO report = new CashFlowReportDTO();
+        report.setPeriod(period != null ? period : "THIS_MONTH");
+        report.setOpeningBalance(new BigDecimal("500000.00")); // Standard treasury reserve
+        report.setCustomerReceipts(dash.getTotalCashCollected());
+
+        BigDecimal subsidyCash = subsidyApplicationRepository.findAll().stream()
+                .map(s -> s.getAmountReceived() != null ? s.getAmountReceived() : BigDecimal.ZERO)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        report.setSubsidyReceipts(subsidyCash);
+        report.setTotalOperatingInflows(dash.getTotalCashCollected().add(subsidyCash));
+
+        BigDecimal totalSupplierPaid = supplierPaymentRepository.sumTotalSupplierPayments();
+        report.setSupplierPayments(totalSupplierPaid != null ? totalSupplierPaid : BigDecimal.ZERO);
+
+        BigDecimal totalTechPaid = technicianPaymentRepository.sumTotalPayoutsDisbursed();
+        report.setTechnicianPayouts(totalTechPaid != null ? totalTechPaid : BigDecimal.ZERO);
+
+        report.setDirectOperatingExpenses(dash.getTotalOperationalExpenses());
+        report.setTotalOperatingOutflows(report.getSupplierPayments().add(report.getTechnicianPayouts()).add(report.getDirectOperatingExpenses()));
+
+        BigDecimal netCash = report.getTotalOperatingInflows().subtract(report.getTotalOperatingOutflows());
+        report.setNetOperatingCashFlow(netCash);
+        report.setClosingBalance(report.getOpeningBalance().add(netCash));
+
+        return report;
+    }
+
+    public GstReportDTO getGstReport(String period) {
+        GstReportDTO report = new GstReportDTO();
+        report.setPeriod(period != null ? period : "THIS_MONTH");
+        report.setOutputCgst(invoiceRepository.sumTotalCgst());
+        report.setOutputSgst(invoiceRepository.sumTotalSgst());
+        report.setOutputIgst(invoiceRepository.sumTotalIgst());
+        report.setTotalOutputGst(invoiceRepository.sumTotalOutputTax());
+
+        // Approximate input GST from purchases (e.g. 18% standard tax on hardware purchases)
+        BigDecimal totalPurchases = purchaseRepository.sumTotalPurchases();
+        BigDecimal inputGst = (totalPurchases != null ? totalPurchases : BigDecimal.ZERO)
+                .multiply(new BigDecimal("18.00")).divide(new BigDecimal("118.00"), 2, RoundingMode.HALF_UP);
+        report.setInputGst(inputGst);
+        report.setNetGstPayable(report.getTotalOutputGst().subtract(inputGst));
+        if (report.getNetGstPayable().compareTo(BigDecimal.ZERO) < 0) {
+            report.setNetGstPayable(BigDecimal.ZERO);
+        }
+        return report;
     }
 
     public byte[] generateJobProfitabilityCsv() {
@@ -719,8 +958,8 @@ if (item.getProduct() != null && item.getProduct().getPurchasePrice() != null) {
                     job.getOrderAmount() != null ? job.getOrderAmount() : BigDecimal.ZERO,
                     job.getRevenueReceived() != null ? job.getRevenueReceived() : BigDecimal.ZERO,
                     job.getHardwareCost() != null ? job.getHardwareCost() : BigDecimal.ZERO,
-                    job.getTechnicianCost() != null ? job.getTechnicianCost() : BigDecimal.ZERO,
-                    job.getRecordedExpenses() != null ? job.getRecordedExpenses() : BigDecimal.ZERO,
+                    job.getInstallationLaborCost() != null ? job.getInstallationLaborCost() : BigDecimal.ZERO,
+                    job.getOtherExpenses() != null ? job.getOtherExpenses() : BigDecimal.ZERO,
                     job.getTotalCost() != null ? job.getTotalCost() : BigDecimal.ZERO,
                     job.getNetProfit() != null ? job.getNetProfit() : BigDecimal.ZERO,
                     job.getProfitMarginPercentage() != null ? job.getProfitMarginPercentage() : BigDecimal.ZERO,
@@ -746,7 +985,7 @@ if (item.getProduct() != null && item.getProduct().getPurchasePrice() != null) {
                     inv.getTotalAmount() != null ? inv.getTotalAmount() : BigDecimal.ZERO,
                     inv.getPaidAmount() != null ? inv.getPaidAmount() : BigDecimal.ZERO,
                     inv.getBalanceAmount() != null ? inv.getBalanceAmount() : BigDecimal.ZERO,
-                    inv.getStatus() != null ? inv.getStatus() : "ISSUED",
+                    inv.getStatus() != null ? inv.getStatus() : "UNPAID",
                     inv.getGstin() != null ? inv.getGstin() : "N/A"
             ));
         }
@@ -756,19 +995,40 @@ if (item.getProduct() != null && item.getProduct().getPurchasePrice() != null) {
     public byte[] generateExpensesCsv() {
         List<Expense> expenses = getAllExpenses();
         StringBuilder csv = new StringBuilder();
-        csv.append("Expense #,Date,Title,Category,Paid To,Payment Method,Linked Order #,Amount (INR),Description\n");
+        csv.append("Expense #,Date,Title,Category,Status,Paid To,Payment Method,Linked Order #,Amount (INR),Description\n");
 
         for (Expense exp : expenses) {
-            csv.append(String.format("\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",%.2f,\"%s\"\n",
+            csv.append(String.format("\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",%.2f,\"%s\"\n",
                     exp.getExpenseNumber() != null ? exp.getExpenseNumber() : "N/A",
                     exp.getExpenseDate() != null ? exp.getExpenseDate().toString() : "N/A",
                     exp.getTitle() != null ? exp.getTitle().replace("\"", "\"\"") : "N/A",
                     exp.getCategory() != null ? exp.getCategory().name() : "OTHER",
+                    exp.getStatus() != null ? exp.getStatus().name() : "APPROVED",
                     exp.getPaidTo() != null ? exp.getPaidTo().replace("\"", "\"\"") : "N/A",
                     exp.getPaymentMethod() != null ? exp.getPaymentMethod() : "N/A",
                     exp.getSalesOrder() != null ? exp.getSalesOrder().getOrderNumber() : "General Overhead",
                     exp.getAmount() != null ? exp.getAmount() : BigDecimal.ZERO,
                     exp.getDescription() != null ? exp.getDescription().replace("\"", "\"\"") : ""
+            ));
+        }
+        return csv.toString().getBytes(java.nio.charset.StandardCharsets.UTF_8);
+    }
+
+    public byte[] generateSupplierPurchasesCsv() {
+        List<Purchase> purchases = getAllSupplierPurchases();
+        StringBuilder csv = new StringBuilder();
+        csv.append("PO #,Date,Supplier,Total Amount (INR),Paid Amount (INR),Remaining Balance (INR),Payment Status,Fulfillment Status\n");
+
+        for (Purchase p : purchases) {
+            csv.append(String.format("\"%s\",\"%s\",\"%s\",%.2f,%.2f,%.2f,\"%s\",\"%s\"\n",
+                    p.getPurchaseNumber() != null ? p.getPurchaseNumber() : "N/A",
+                    p.getPurchaseDate() != null ? p.getPurchaseDate().toString() : "N/A",
+                    p.getSupplierName() != null ? p.getSupplierName().replace("\"", "\"\"") : "N/A",
+                    p.getTotalAmount() != null ? p.getTotalAmount() : BigDecimal.ZERO,
+                    p.getPaidAmount() != null ? p.getPaidAmount() : BigDecimal.ZERO,
+                    p.getRemainingBalance() != null ? p.getRemainingBalance() : BigDecimal.ZERO,
+                    p.getPaymentStatus() != null ? p.getPaymentStatus() : "UNPAID",
+                    p.getStatus() != null ? p.getStatus() : "RECEIVED"
             ));
         }
         return csv.toString().getBytes(java.nio.charset.StandardCharsets.UTF_8);
