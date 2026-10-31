@@ -322,7 +322,6 @@ export const InstallationsPage: React.FC = () => {
                           )}
                         </div>
                       )}
-                      )}
                     </td>
                   </tr>
                 ))
