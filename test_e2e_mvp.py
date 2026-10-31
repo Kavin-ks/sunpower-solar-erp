@@ -5,7 +5,7 @@ import sys
 import time
 
 BASE_URL = "http://localhost:8080/api"
-PORTAL_URL = "http://localhost:3000/api/public/v1/enquiries"
+PORTAL_URL = "http://localhost:3000/api/enquiry"
 
 tokens = {}
 
