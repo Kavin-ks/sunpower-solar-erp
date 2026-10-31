@@ -22,4 +22,6 @@ public interface WarrantyRepository extends JpaRepository<Warranty, Long> {
 
     @Query("SELECT w FROM Warranty w WHERE w.status = 'ACTIVE' AND w.warrantyEndDate <= :targetDate")
     List<Warranty> findExpiringWarranties(@Param("targetDate") LocalDate targetDate);
+
+    long countByStatus(WarrantyStatus status);
 }

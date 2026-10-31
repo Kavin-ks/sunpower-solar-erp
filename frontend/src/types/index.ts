@@ -472,3 +472,114 @@ export interface DashboardMetrics {
   capacityDistribution: { capacity: string; count: number }[];
   recentJobProfitability: JobProfitability[];
 }
+
+export interface TechnicianWorkload {
+  name: string;
+  phone: string;
+  specialization: string;
+  activeJobs: number;
+  completedJobs: number;
+}
+
+export interface AdminDashboardData extends DashboardMetrics {
+  totalCustomers: number;
+  leadConversionRate: number;
+  totalDispatchedProducts: number;
+  totalInstalledProducts: number;
+  activeWarranties: number;
+  technicianWorkloads: TechnicianWorkload[];
+}
+
+export interface SalesDashboardData {
+  totalEnquiries: number;
+  newEnquiries: number;
+  contactedEnquiries: number;
+  qualifiedEnquiries: number;
+  rejectedEnquiries: number;
+  leadConversionRate: number;
+  pendingSurveys: number;
+  surveysAwaitingReview: number;
+  approvedSurveys: number;
+  pendingQuotations: number;
+  acceptedQuotations: number;
+  pipelineValue: number;
+  confirmedOrders: number;
+  ordersAwaitingAdvance: number;
+  capacityDistribution: { capacity: string; count: number }[];
+  recentEnquiries: Enquiry[];
+  surveysNeedingReview: SiteSurvey[];
+}
+
+export interface CategoryStock {
+  category: string;
+  units: number;
+  value: number;
+}
+
+export interface WarehouseDashboardData {
+  totalStockValue: number;
+  totalStockUnits: number;
+  reservedStockUnits: number;
+  availableStockUnits: number;
+  lowStockCount: number;
+  ordersAwaitingPicking: number;
+  dispatchedToday: number;
+  totalDispatches: number;
+  lowStockAlerts: InventoryStock[];
+  pendingPickingOrders: SalesOrder[];
+  categoryBreakdown: CategoryStock[];
+}
+
+export interface TechnicianDashboardData {
+  technicianName: string;
+  phone: string;
+  specialization: string;
+  assignedSurveysCount: number;
+  pendingSurveysCount: number;
+  completedSurveysCount: number;
+  assignedInstallationsCount: number;
+  inProgressInstallationsCount: number;
+  completedInstallationsCount: number;
+  assignedServiceVisitsCount: number;
+  upcomingSurveys: SiteSurvey[];
+  activeInstallations: Installation[];
+  assignedServiceTickets: ServiceTicket[];
+}
+
+export interface FaultBreakdown {
+  faultType: string;
+  count: number;
+}
+
+export interface SupportDashboardData {
+  openTickets: number;
+  assignedTickets: number;
+  inProgressTickets: number;
+  waitingForPartsTickets: number;
+  resolvedTickets: number;
+  closedTickets: number;
+  criticalTicketsCount: number;
+  activeWarrantiesCount: number;
+  avgResolutionDays: number;
+  urgentTickets: ServiceTicket[];
+  faultBreakdown: FaultBreakdown[];
+}
+
+export interface FinanceDashboardData {
+  totalInvoiced: number;
+  totalPaymentsReceived: number;
+  outstandingReceivables: number;
+  hardwareCost: number;
+  technicianCost: number;
+  directExpenses: number;
+  totalProjectCost: number;
+  netOperatingProfit: number;
+  grossMarginPercentage: number;
+  ordersPendingAdvanceCount: number;
+  unpaidInvoicesCount: number;
+  recentJobProfitability: JobProfitability[];
+  revenueTrends: { month: string; revenue: number; cost: number; profit: number }[];
+  subsidyAppliedCount: number;
+  subsidyApprovedCount: number;
+  subsidyApprovedAmount: number;
+}

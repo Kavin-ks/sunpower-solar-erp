@@ -87,8 +87,8 @@ export const EnquiriesPage: React.FC = () => {
   };
 
   const { user } = useAuth();
-  const isAdmin = user?.roles?.includes('ROLE_ADMIN');
-  const isSales = user?.roles?.includes('ROLE_SALES') || user?.roles?.includes('ROLE_DIRECTOR');
+  const isAdmin = user?.roles?.includes('ROLE_ADMIN') || user?.roles?.includes('ROLE_DIRECTOR');
+  const isSales = user?.roles?.includes('ROLE_SALES') && !isAdmin;
 
   return (
     <div className="space-y-6">
@@ -101,8 +101,14 @@ export const EnquiriesPage: React.FC = () => {
           </p>
         </div>
 
-        {/* Public customer enquiry portal link - Enquiries strictly originate from public form */}
         <div className="flex items-center space-x-2">
+          {isAdmin && (
+            <span className="px-3 py-1.5 bg-amber-50 text-amber-800 border border-amber-200 rounded-xl text-xs font-semibold">
+              Director Audit Mode (Read-Only)
+            </span>
+          )}
+
+          {/* Public customer enquiry portal link - Enquiries strictly originate from public form */}
           <a
             href="/enquiry"
             target="_blank"

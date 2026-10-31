@@ -69,8 +69,8 @@ export const InventoryPage: React.FC = () => {
   };
 
   const { user } = useAuth();
-  const isAdmin = user?.roles?.includes('ROLE_ADMIN');
-  const isWarehouse = user?.roles?.includes('ROLE_WAREHOUSE') || user?.roles?.includes('ROLE_DIRECTOR');
+  const isAdmin = user?.roles?.includes('ROLE_ADMIN') || user?.roles?.includes('ROLE_DIRECTOR');
+  const isWarehouse = user?.roles?.includes('ROLE_WAREHOUSE') && !isAdmin;
 
   return (
     <div className="space-y-6">
@@ -82,6 +82,12 @@ export const InventoryPage: React.FC = () => {
             Real-time stock balance, order reservations, negative stock protection, and movement audit
           </p>
         </div>
+
+        {isAdmin && (
+          <span className="px-3 py-1.5 bg-amber-50 text-amber-800 border border-amber-200 rounded-xl text-xs font-semibold">
+            Director Audit Mode (Read-Only)
+          </span>
+        )}
       </div>
 
       {/* Stock Cards */}

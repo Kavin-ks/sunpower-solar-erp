@@ -150,7 +150,8 @@ export const FinancePage: React.FC = () => {
       : '0';
 
   const { user } = useAuth();
-  const isAdmin = user?.roles?.includes('ROLE_ADMIN');
+  const isAdmin = user?.roles?.includes('ROLE_ADMIN') || user?.roles?.includes('ROLE_DIRECTOR');
+  const isFinance = user?.roles?.includes('ROLE_FINANCE') && !isAdmin;
 
   const downloadCsv = async (endpoint: string, filename: string) => {
     try {
@@ -187,6 +188,12 @@ export const FinancePage: React.FC = () => {
           </p>
         </div>
         <div className="flex items-center gap-2">
+          {isAdmin && (
+            <span className="px-3 py-1.5 bg-amber-50 text-amber-800 border border-amber-200 rounded-xl text-xs font-semibold">
+              Director Audit Mode (Read-Only)
+            </span>
+          )}
+
           <button
             onClick={exportJobProfitabilityCsv}
             className="inline-flex items-center px-3.5 py-2 rounded-lg border border-slate-200 bg-white text-slate-700 text-sm font-medium hover:bg-slate-50 transition shadow-xs cursor-pointer"
@@ -194,7 +201,7 @@ export const FinancePage: React.FC = () => {
             <Download className="w-4 h-4 mr-2 text-slate-500" />
             Export P&L CSV
           </button>
-          {!isAdmin && (
+          {!isAdmin && isFinance && (
             <button
               onClick={() => setIsExpenseModalOpen(true)}
               className="inline-flex items-center px-4 py-2 rounded-lg bg-emerald-600 text-white font-medium text-sm hover:bg-emerald-700 transition shadow-xs cursor-pointer"
@@ -557,21 +564,25 @@ export const FinancePage: React.FC = () => {
                       <Badge status={sub.status} />
                     </td>
                     <td className="py-3.5 px-4 text-right">
-                      <button
-                        onClick={() => {
-                          setSelectedSubsidy(sub);
-                          setSubsidyForm({
-                            status: sub.status,
-                            nationalPortalRegNumber: sub.nationalPortalRegNumber || '',
-                            subsidyAmountApproved: sub.subsidyAmountApproved ? String(sub.subsidyAmountApproved) : '',
-                            notes: sub.notes || '',
-                          });
-                          setIsSubsidyModalOpen(true);
-                        }}
-                        className="px-2.5 py-1 text-xs font-semibold rounded bg-slate-100 text-slate-700 hover:bg-slate-200 transition"
-                      >
-                        Update Status
-                      </button>
+                      {!isAdmin && isFinance ? (
+                        <button
+                          onClick={() => {
+                            setSelectedSubsidy(sub);
+                            setSubsidyForm({
+                              status: sub.status,
+                              nationalPortalRegNumber: sub.nationalPortalRegNumber || '',
+                              subsidyAmountApproved: sub.subsidyAmountApproved ? String(sub.subsidyAmountApproved) : '',
+                              notes: sub.notes || '',
+                            });
+                            setIsSubsidyModalOpen(true);
+                          }}
+                          className="px-2.5 py-1 text-xs font-semibold rounded bg-slate-100 text-slate-700 hover:bg-slate-200 transition cursor-pointer"
+                        >
+                          Update Status
+                        </button>
+                      ) : (
+                        <span className="text-slate-400 italic text-[11px]">View Only</span>
+                      )}
                     </td>
                   </tr>
                 ))}
