@@ -11,6 +11,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -24,6 +25,7 @@ public class InstallationController {
     private InstallationService installationService;
 
     @GetMapping
+    @PreAuthorize("hasAnyRole('ADMIN', 'TECHNICIAN', 'SUPPORT', 'DIRECTOR')")
     public ResponseEntity<List<Installation>> getAllInstallations(@RequestParam(required = false) InstallationStatus status) {
         if (status != null) {
             return ResponseEntity.ok(installationService.getInstallationsByStatus(status));
@@ -32,11 +34,13 @@ public class InstallationController {
     }
 
     @GetMapping("/{id}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'TECHNICIAN', 'SUPPORT', 'DIRECTOR')")
     public ResponseEntity<Installation> getInstallationById(@PathVariable Long id) {
         return ResponseEntity.ok(installationService.getInstallationById(id));
     }
 
     @PostMapping("/schedule")
+    @PreAuthorize("hasAnyRole('TECHNICIAN', 'WAREHOUSE', 'DIRECTOR')")
     public ResponseEntity<Installation> scheduleInstallation(
             @Valid @RequestBody ScheduleInstallationRequest request) {
         Installation installation = installationService.scheduleInstallation(request);
@@ -44,6 +48,7 @@ public class InstallationController {
     }
 
     @PostMapping("/{id}/complete")
+    @PreAuthorize("hasAnyRole('TECHNICIAN', 'DIRECTOR')")
     public ResponseEntity<Installation> completeInstallation(
             @PathVariable Long id,
             @Valid @RequestBody CompleteInstallationRequest request,
@@ -54,6 +59,7 @@ public class InstallationController {
     }
 
     @PostMapping("/{id}/photos")
+    @PreAuthorize("hasAnyRole('TECHNICIAN', 'DIRECTOR')")
     public ResponseEntity<InstallationPhoto> addPhoto(@PathVariable Long id, @RequestBody Map<String, String> payload) {
         String photoUrl = payload.get("photoUrl");
         String stage = payload.get("stage");

@@ -19,6 +19,7 @@ import {
   Sparkles,
 } from 'lucide-react';
 import api from '../api/client';
+import { useAuth } from '../context/AuthContext';
 import { ServiceTicket, Customer, Technician, Product, TicketStatus } from '../types';
 import { Badge } from '../components/ui/Badge';
 
@@ -197,8 +198,21 @@ export const ServiceTicketsPage: React.FC = () => {
     return matchesSearch && matchesStatus;
   });
 
+  const { user } = useAuth();
+  const isAdmin = user?.roles?.includes('ROLE_ADMIN');
+  const isSupport = user?.roles?.includes('ROLE_SUPPORT') || user?.roles?.includes('ROLE_DIRECTOR');
+  const isTech = user?.roles?.includes('ROLE_TECHNICIAN') || user?.roles?.includes('ROLE_DIRECTOR');
+
   return (
     <div className="space-y-6">
+      {/* Admin Read-Only Notice */}
+      {isAdmin && (
+        <div className="bg-amber-50 border-l-4 border-amber-500 p-4 rounded-r-xl text-amber-900 text-xs shadow-xs">
+          <span className="font-bold text-sm block mb-0.5">Admin Central Oversight Mode</span>
+          After-sales service complaints are registered, verified against warranty databases, and closed by the Customer Support Department, with repairs executed by Technicians. Admin has read-only oversight to monitor service SLA, fault trends, and warranty claims.
+        </div>
+      )}
+
       {/* Top Banner / Actions */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
@@ -210,13 +224,15 @@ export const ServiceTicketsPage: React.FC = () => {
             End-to-end fault logging, serial warranty verification (₹0 warranty coverage vs paid), technician dispatch, & customer closure gate.
           </p>
         </div>
-        <button
-          onClick={() => setIsCreateModalOpen(true)}
-          className="inline-flex items-center px-4 py-2.5 rounded-lg bg-emerald-600 text-white font-medium shadow-sm hover:bg-emerald-700 transition"
-        >
-          <Plus className="w-4 h-4 mr-2" />
-          Log New Service Ticket
-        </button>
+        {isSupport && (
+          <button
+            onClick={() => setIsCreateModalOpen(true)}
+            className="inline-flex items-center px-4 py-2.5 rounded-lg bg-emerald-600 text-white font-medium shadow-sm hover:bg-emerald-700 transition cursor-pointer"
+          >
+            <Plus className="w-4 h-4 mr-2" />
+            Log New Service Ticket
+          </button>
+        )}
       </div>
 
       {/* KPI Cards */}
@@ -388,55 +404,61 @@ export const ServiceTicketsPage: React.FC = () => {
                       </div>
                     </td>
                     <td className="py-3.5 px-4 text-right space-x-1 whitespace-nowrap">
-                      {/* Assign button */}
-                      {['OPEN', 'ASSIGNED'].includes(t.status) && (
-                        <button
-                          onClick={() => {
-                            setSelectedTicket(t);
-                            setAssignTechId(t.assignedTechnician ? String(t.assignedTechnician.id) : '');
-                            setIsAssignModalOpen(true);
-                          }}
-                          className="px-2.5 py-1 text-xs font-semibold rounded bg-slate-100 text-slate-700 hover:bg-slate-200 transition"
-                        >
-                          {t.assignedTechnician ? 'Reassign' : 'Assign'}
-                        </button>
-                      )}
+                      {isAdmin ? (
+                        <span className="text-slate-400 italic text-[11px]">View Only</span>
+                      ) : (
+                        <>
+                          {/* Assign button */}
+                          {['OPEN', 'ASSIGNED'].includes(t.status) && isSupport && (
+                            <button
+                              onClick={() => {
+                                setSelectedTicket(t);
+                                setAssignTechId(t.assignedTechnician ? String(t.assignedTechnician.id) : '');
+                                setIsAssignModalOpen(true);
+                              }}
+                              className="px-2.5 py-1 text-xs font-semibold rounded bg-slate-100 text-slate-700 hover:bg-slate-200 transition cursor-pointer"
+                            >
+                              {t.assignedTechnician ? 'Reassign' : 'Assign'}
+                            </button>
+                          )}
 
-                      {/* Resolve button */}
-                      {['ASSIGNED', 'IN_PROGRESS', 'WAITING_FOR_PARTS'].includes(t.status) && (
-                        <button
-                          onClick={() => {
-                            setSelectedTicket(t);
-                            setResolveForm({
-                              diagnosisNotes: 'Inverter error E04 diagnosed: grid phase voltage spike triggered auto-shutdown. Firmware re-flashed and DC isolator checked.',
-                              resolutionNotes: 'Firmware updated to v3.2.0. Cleaned contactors and tested grid voltage at 238V. Inverter generating steady power.',
-                              laborCharges: t.underWarranty ? 0 : 500,
-                              parts: [],
-                            });
-                            setIsResolveModalOpen(true);
-                          }}
-                          className="px-2.5 py-1 text-xs font-semibold rounded bg-emerald-600 text-white hover:bg-emerald-700 transition"
-                        >
-                          Resolve
-                        </button>
-                      )}
+                          {/* Resolve button */}
+                          {['ASSIGNED', 'IN_PROGRESS', 'WAITING_FOR_PARTS'].includes(t.status) && (isSupport || isTech) && (
+                            <button
+                              onClick={() => {
+                                setSelectedTicket(t);
+                                setResolveForm({
+                                  diagnosisNotes: 'Inverter error E04 diagnosed: grid phase voltage spike triggered auto-shutdown. Firmware re-flashed and DC isolator checked.',
+                                  resolutionNotes: 'Firmware updated to v3.2.0. Cleaned contactors and tested grid voltage at 238V. Inverter generating steady power.',
+                                  laborCharges: t.underWarranty ? 0 : 500,
+                                  parts: [],
+                                });
+                                setIsResolveModalOpen(true);
+                              }}
+                              className="px-2.5 py-1 text-xs font-semibold rounded bg-emerald-600 text-white hover:bg-emerald-700 transition cursor-pointer"
+                            >
+                              Resolve
+                            </button>
+                          )}
 
-                      {/* Customer confirmation gate */}
-                      {t.status === 'RESOLVED' && (
-                        <button
-                          onClick={() => {
-                            setSelectedTicket(t);
-                            setConfirmForm({
-                              confirmedByCustomerName: t.customer?.fullName || '',
-                              customerSatisfactionNotes: 'Customer satisfied with inverter reset and confirmed normal generation.',
-                            });
-                            setIsConfirmModalOpen(true);
-                          }}
-                          className="px-2.5 py-1 text-xs font-bold rounded bg-purple-600 text-white hover:bg-purple-700 transition flex-inline items-center gap-1"
-                        >
-                          <UserCheck className="w-3 h-3 inline mr-1" />
-                          Confirm & Close
-                        </button>
+                          {/* Customer confirmation gate */}
+                          {t.status === 'RESOLVED' && isSupport && (
+                            <button
+                              onClick={() => {
+                                setSelectedTicket(t);
+                                setConfirmForm({
+                                  confirmedByCustomerName: t.customer?.fullName || '',
+                                  customerSatisfactionNotes: 'Customer satisfied with inverter reset and confirmed normal generation.',
+                                });
+                                setIsConfirmModalOpen(true);
+                              }}
+                              className="px-2.5 py-1 text-xs font-bold rounded bg-purple-600 text-white hover:bg-purple-700 transition cursor-pointer inline-flex items-center gap-1"
+                            >
+                              <UserCheck className="w-3 h-3 inline mr-1" />
+                              Confirm & Close
+                            </button>
+                          )}
+                        </>
                       )}
 
                       {/* Printable Job Sheet */}

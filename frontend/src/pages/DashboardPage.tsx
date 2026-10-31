@@ -51,8 +51,21 @@ export const DashboardPage: React.FC = () => {
     }
   };
 
-  const handleExportCsv = () => {
-    window.open('/api/dashboard/export-profitability-csv', '_blank');
+  const handleExportCsv = async () => {
+    try {
+      const response = await api.get('/api/finance/export/job-profitability', { responseType: 'blob' });
+      const blob = new Blob([response.data], { type: 'text/csv;charset=utf-8;' });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `SunPower_P&L_Report_${new Date().toISOString().slice(0, 10)}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error('Failed to export CSV', err);
+    }
   };
 
   const formatCurrency = (val: number | undefined) => {

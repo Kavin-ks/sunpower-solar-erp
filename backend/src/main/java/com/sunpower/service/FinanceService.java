@@ -178,13 +178,17 @@ public class FinanceService {
         BigDecimal totalCost = hardwareCost.add(technicianCost).add(otherExpenses);
         dto.setTotalCost(totalCost);
 
-        // Net Profit = sales_orders.total_amount - Hardware BOM Cost - Technician Labor - Expenses
-        BigDecimal totalOrderAmount = order.getTotalAmount() != null ? order.getTotalAmount() : BigDecimal.ZERO;
-        BigDecimal profit = totalOrderAmount.subtract(totalCost);
+        // Net Realized Profit = Revenue Received - Total Cost
+        BigDecimal profit = revenue.subtract(totalCost);
         dto.setNetProfit(profit);
 
-        if (totalOrderAmount.compareTo(BigDecimal.ZERO) > 0) {
-            BigDecimal margin = profit.multiply(BigDecimal.valueOf(100)).divide(totalOrderAmount, 2, RoundingMode.HALF_UP);
+        // Net Profit Margin % = (Net Realized Profit / Revenue Received) * 100
+        if (revenue.compareTo(BigDecimal.ZERO) > 0) {
+            BigDecimal margin = profit.multiply(BigDecimal.valueOf(100)).divide(revenue, 2, RoundingMode.HALF_UP);
+            dto.setProfitMarginPercentage(margin);
+        } else if (order.getTotalAmount() != null && order.getTotalAmount().compareTo(BigDecimal.ZERO) > 0) {
+            BigDecimal orderProfit = order.getTotalAmount().subtract(totalCost);
+            BigDecimal margin = orderProfit.multiply(BigDecimal.valueOf(100)).divide(order.getTotalAmount(), 2, RoundingMode.HALF_UP);
             dto.setProfitMarginPercentage(margin);
         } else {
             dto.setProfitMarginPercentage(BigDecimal.ZERO);
@@ -207,5 +211,74 @@ public class FinanceService {
         }
 
         return dto;
+    }
+
+    public byte[] generateJobProfitabilityCsv() {
+        List<JobProfitabilityDTO> jobs = calculateAllJobProfitability();
+        StringBuilder csv = new StringBuilder();
+        csv.append("Order #,Customer,System Type,Capacity (kW),Order Amount (INR),Revenue Received (INR),Hardware BOM Cost (INR),Technician Cost (INR),Direct Expenses (INR),Total Cost (INR),Net Realized Profit (INR),Net Margin (%),Balance Due (INR)\n");
+
+        for (JobProfitabilityDTO job : jobs) {
+            csv.append(String.format("\"%s\",\"%s\",\"%s\",%.2f,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f\n",
+                    job.getOrderNumber() != null ? job.getOrderNumber() : "N/A",
+                    job.getCustomerName() != null ? job.getCustomerName().replace("\"", "\"\"") : "N/A",
+                    job.getSystemType() != null ? job.getSystemType() : "ON_GRID",
+                    job.getCapacityKw() != null ? job.getCapacityKw() : BigDecimal.ZERO,
+                    job.getOrderAmount() != null ? job.getOrderAmount() : BigDecimal.ZERO,
+                    job.getRevenueReceived() != null ? job.getRevenueReceived() : BigDecimal.ZERO,
+                    job.getHardwareCost() != null ? job.getHardwareCost() : BigDecimal.ZERO,
+                    job.getTechnicianCost() != null ? job.getTechnicianCost() : BigDecimal.ZERO,
+                    job.getRecordedExpenses() != null ? job.getRecordedExpenses() : BigDecimal.ZERO,
+                    job.getTotalCost() != null ? job.getTotalCost() : BigDecimal.ZERO,
+                    job.getNetProfit() != null ? job.getNetProfit() : BigDecimal.ZERO,
+                    job.getProfitMarginPercentage() != null ? job.getProfitMarginPercentage() : BigDecimal.ZERO,
+                    job.getOutstandingBalance() != null ? job.getOutstandingBalance() : BigDecimal.ZERO
+            ));
+        }
+        return csv.toString().getBytes(java.nio.charset.StandardCharsets.UTF_8);
+    }
+
+    public byte[] generateInvoicesCsv() {
+        List<Invoice> invoices = getAllInvoices();
+        StringBuilder csv = new StringBuilder();
+        csv.append("Invoice #,Invoice Date,Customer,Order #,Taxable Subtotal (INR),GST Tax (INR),Total Invoice Amount (INR),Paid Amount (INR),Balance Due (INR),Status,GSTIN\n");
+
+        for (Invoice inv : invoices) {
+            csv.append(String.format("\"%s\",\"%s\",\"%s\",\"%s\",%.2f,%.2f,%.2f,%.2f,%.2f,\"%s\",\"%s\"\n",
+                    inv.getInvoiceNumber() != null ? inv.getInvoiceNumber() : "N/A",
+                    inv.getInvoiceDate() != null ? inv.getInvoiceDate().toString() : "N/A",
+                    inv.getCustomer() != null ? inv.getCustomer().getFullName().replace("\"", "\"\"") : "N/A",
+                    inv.getSalesOrder() != null ? inv.getSalesOrder().getOrderNumber() : "N/A",
+                    inv.getSubtotal() != null ? inv.getSubtotal() : BigDecimal.ZERO,
+                    inv.getTaxAmount() != null ? inv.getTaxAmount() : BigDecimal.ZERO,
+                    inv.getTotalAmount() != null ? inv.getTotalAmount() : BigDecimal.ZERO,
+                    inv.getPaidAmount() != null ? inv.getPaidAmount() : BigDecimal.ZERO,
+                    inv.getBalanceAmount() != null ? inv.getBalanceAmount() : BigDecimal.ZERO,
+                    inv.getStatus() != null ? inv.getStatus() : "ISSUED",
+                    inv.getGstin() != null ? inv.getGstin() : "N/A"
+            ));
+        }
+        return csv.toString().getBytes(java.nio.charset.StandardCharsets.UTF_8);
+    }
+
+    public byte[] generateExpensesCsv() {
+        List<Expense> expenses = getAllExpenses();
+        StringBuilder csv = new StringBuilder();
+        csv.append("Expense #,Date,Title,Category,Paid To,Payment Method,Linked Order #,Amount (INR),Description\n");
+
+        for (Expense exp : expenses) {
+            csv.append(String.format("\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",%.2f,\"%s\"\n",
+                    exp.getExpenseNumber() != null ? exp.getExpenseNumber() : "N/A",
+                    exp.getExpenseDate() != null ? exp.getExpenseDate().toString() : "N/A",
+                    exp.getTitle() != null ? exp.getTitle().replace("\"", "\"\"") : "N/A",
+                    exp.getCategory() != null ? exp.getCategory().name() : "OTHER",
+                    exp.getPaidTo() != null ? exp.getPaidTo().replace("\"", "\"\"") : "N/A",
+                    exp.getPaymentMethod() != null ? exp.getPaymentMethod() : "N/A",
+                    exp.getSalesOrder() != null ? exp.getSalesOrder().getOrderNumber() : "General Overhead",
+                    exp.getAmount() != null ? exp.getAmount() : BigDecimal.ZERO,
+                    exp.getDescription() != null ? exp.getDescription().replace("\"", "\"\"") : ""
+            ));
+        }
+        return csv.toString().getBytes(java.nio.charset.StandardCharsets.UTF_8);
     }
 }

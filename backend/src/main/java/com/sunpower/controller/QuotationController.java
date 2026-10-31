@@ -9,6 +9,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -21,6 +22,7 @@ public class QuotationController {
     private QuotationService quotationService;
 
     @GetMapping
+    @PreAuthorize("hasAnyRole('ADMIN', 'SALES', 'FINANCE', 'DIRECTOR')")
     public ResponseEntity<List<Quotation>> getAllQuotations(@RequestParam(required = false) Long customerId) {
         if (customerId != null) {
             return ResponseEntity.ok(quotationService.getQuotationsByCustomerId(customerId));
@@ -29,11 +31,13 @@ public class QuotationController {
     }
 
     @GetMapping("/{id}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SALES', 'FINANCE', 'DIRECTOR')")
     public ResponseEntity<Quotation> getQuotationById(@PathVariable Long id) {
         return ResponseEntity.ok(quotationService.getQuotationById(id));
     }
 
     @PostMapping
+    @PreAuthorize("hasAnyRole('SALES', 'DIRECTOR')")
     public ResponseEntity<Quotation> createQuotation(
             @Valid @RequestBody QuotationCreateRequest request,
             Authentication authentication) {
@@ -43,6 +47,7 @@ public class QuotationController {
     }
 
     @PatchMapping("/{id}/status")
+    @PreAuthorize("hasAnyRole('SALES', 'DIRECTOR')")
     public ResponseEntity<Quotation> updateStatus(
             @PathVariable Long id,
             @Valid @RequestBody QuotationStatusUpdateRequest request,

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { api } from '../api/client';
 import { SalesOrder, Quotation, PaymentMethod, PaymentType } from '../types';
 import { StatusBadge } from '../components/ui/Badge';
+import { useAuth } from '../context/AuthContext';
 import {
   ShoppingCart,
   Plus,
@@ -112,8 +113,21 @@ export const OrdersPage: React.FC = () => {
     }).format(val || 0);
   };
 
+  const { user } = useAuth();
+  const isAdmin = user?.roles?.includes('ROLE_ADMIN');
+  const isSales = user?.roles?.includes('ROLE_SALES') || user?.roles?.includes('ROLE_DIRECTOR');
+  const isFinance = user?.roles?.includes('ROLE_FINANCE') || user?.roles?.includes('ROLE_DIRECTOR');
+
   return (
     <div className="space-y-6">
+      {/* Admin Read-Only Notice */}
+      {isAdmin && (
+        <div className="bg-amber-50 border-l-4 border-amber-500 p-4 rounded-r-xl text-amber-900 text-xs shadow-xs">
+          <span className="font-bold text-sm block mb-0.5">Admin Central Oversight Mode</span>
+          Sales orders and stock reservations are converted by the Sales Department upon quotation acceptance, and payments are recorded exclusively by Finance. Admin has central visibility into contract statuses and payment summaries without operational execution.
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-slate-200">
         <div>
@@ -123,13 +137,15 @@ export const OrdersPage: React.FC = () => {
           </p>
         </div>
 
-        <button
-          onClick={() => setShowConvertModal(true)}
-          className="flex items-center space-x-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-semibold shadow-sm transition cursor-pointer"
-        >
-          <Plus className="w-4 h-4" />
-          <span>Convert Accepted Quotation</span>
-        </button>
+        {isSales && (
+          <button
+            onClick={() => setShowConvertModal(true)}
+            className="flex items-center space-x-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-semibold shadow-sm transition cursor-pointer"
+          >
+            <Plus className="w-4 h-4" />
+            <span>Convert Accepted Quotation</span>
+          </button>
+        )}
       </div>
 
       {/* Orders Table */}
@@ -184,41 +200,47 @@ export const OrdersPage: React.FC = () => {
                       <StatusBadge status={order.status} />
                     </td>
                     <td className="py-3 px-4 text-right space-x-1 whitespace-nowrap">
-                      {/* Record payment button */}
-                      {order.remainingBalance > 0 && (
-                        <button
-                          onClick={() => {
-                            setSelectedOrder(order);
-                            setPaymentAmount(order.remainingBalance.toString());
-                            setShowPaymentModal(true);
-                          }}
-                          className="px-2 py-1 bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 rounded font-semibold cursor-pointer inline-flex items-center space-x-1"
-                        >
-                          <CreditCard className="w-3 h-3" />
-                          <span>Pay</span>
-                        </button>
-                      )}
+                      {isAdmin ? (
+                        <span className="text-slate-400 italic text-[11px]">View Only</span>
+                      ) : (
+                        <>
+                          {/* Record payment button (Finance only) */}
+                          {order.remainingBalance > 0 && isFinance && (
+                            <button
+                              onClick={() => {
+                                setSelectedOrder(order);
+                                setPaymentAmount(order.remainingBalance.toString());
+                                setShowPaymentModal(true);
+                              }}
+                              className="px-2 py-1 bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 rounded font-semibold cursor-pointer inline-flex items-center space-x-1"
+                            >
+                              <CreditCard className="w-3 h-3" />
+                              <span>Pay</span>
+                            </button>
+                          )}
 
-                      {/* Schedule Dispatch button (Unlocked once advance paid) */}
-                      {order.status !== 'PENDING_PAYMENT' && (
-                        <button
-                          onClick={() => navigate('/dispatch', { state: { orderId: order.id } })}
-                          className="px-2 py-1 bg-blue-50 hover:bg-blue-100 text-blue-800 border border-blue-200 rounded font-semibold cursor-pointer inline-flex items-center space-x-1"
-                        >
-                          <Truck className="w-3 h-3" />
-                          <span>Dispatch</span>
-                        </button>
-                      )}
+                          {/* Schedule Dispatch button (Warehouse only, unlocked once advance paid) */}
+                          {order.status !== 'PENDING_PAYMENT' && (user?.roles?.includes('ROLE_WAREHOUSE') || user?.roles?.includes('ROLE_DIRECTOR')) && (
+                            <button
+                              onClick={() => navigate('/dispatch', { state: { orderId: order.id } })}
+                              className="px-2 py-1 bg-blue-50 hover:bg-blue-100 text-blue-800 border border-blue-200 rounded font-semibold cursor-pointer inline-flex items-center space-x-1"
+                            >
+                              <Truck className="w-3 h-3" />
+                              <span>Dispatch</span>
+                            </button>
+                          )}
 
-                      {/* Installation schedule button */}
-                      {['CONFIRMED', 'DISPATCHED', 'IN_INSTALLATION'].includes(order.status) && (
-                        <button
-                          onClick={() => navigate('/installations', { state: { orderId: order.id } })}
-                          className="px-2 py-1 bg-purple-50 hover:bg-purple-100 text-purple-800 border border-purple-200 rounded font-semibold cursor-pointer inline-flex items-center space-x-1"
-                        >
-                          <Wrench className="w-3 h-3" />
-                          <span>Install</span>
-                        </button>
+                          {/* Installation schedule button (Technician only) */}
+                          {['CONFIRMED', 'DISPATCHED', 'IN_INSTALLATION'].includes(order.status) && (user?.roles?.includes('ROLE_TECHNICIAN') || user?.roles?.includes('ROLE_DIRECTOR')) && (
+                            <button
+                              onClick={() => navigate('/installations', { state: { orderId: order.id } })}
+                              className="px-2 py-1 bg-purple-50 hover:bg-purple-100 text-purple-800 border border-purple-200 rounded font-semibold cursor-pointer inline-flex items-center space-x-1"
+                            >
+                              <Wrench className="w-3 h-3" />
+                              <span>Install</span>
+                            </button>
+                          )}
+                        </>
                       )}
                     </td>
                   </tr>

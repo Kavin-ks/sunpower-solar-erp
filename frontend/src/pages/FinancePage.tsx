@@ -18,6 +18,7 @@ import {
   Building,
 } from 'lucide-react';
 import api from '../api/client';
+import { useAuth } from '../context/AuthContext';
 import {
   JobProfitability,
   Invoice,
@@ -148,51 +149,40 @@ export const FinancePage: React.FC = () => {
       ? (profitability.reduce((sum, j) => sum + (j.profitMarginPercentage || 0), 0) / profitability.length).toFixed(1)
       : '0';
 
+  const { user } = useAuth();
+  const isAdmin = user?.roles?.includes('ROLE_ADMIN');
+
+  const downloadCsv = async (endpoint: string, filename: string) => {
+    try {
+      const response = await api.get(endpoint, { responseType: 'blob' });
+      const blob = new Blob([response.data], { type: 'text/csv;charset=utf-8;' });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', filename);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error('Failed to download CSV', err);
+    }
+  };
+
   const exportJobProfitabilityCsv = () => {
-    const headers = [
-      'Order #',
-      'Customer',
-      'System Type',
-      'Capacity (kW)',
-      'Order Value (INR)',
-      'Revenue Received (INR)',
-      'Hardware Cost (INR)',
-      'Technician Labor (INR)',
-      'Direct Expenses (INR)',
-      'Total Cost (INR)',
-      'Net Profit (INR)',
-      'Margin %',
-      'Outstanding (INR)',
-    ];
-    const rows = profitability.map((j) => [
-      j.orderNumber,
-      `"${j.customerName}"`,
-      j.systemType,
-      j.capacityKw,
-      j.orderAmount,
-      j.revenueReceived,
-      j.hardwareCost,
-      j.technicianCost,
-      j.recordedExpenses,
-      j.totalCost,
-      j.netProfit,
-      `${j.profitMarginPercentage}%`,
-      j.outstandingBalance,
-    ]);
-    const csvContent =
-      'data:text/csv;charset=utf-8,' +
-      [headers.join(','), ...rows.map((e) => e.join(','))].join('\n');
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement('a');
-    link.setAttribute('href', encodedUri);
-    link.setAttribute('download', `SunPower_Job_Profitability_${new Date().toISOString().slice(0, 10)}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    downloadCsv('/api/finance/export/job-profitability', `SunPower_Job_Profitability_${new Date().toISOString().slice(0, 10)}.csv`);
   };
 
   return (
     <div className="space-y-6">
+      {/* Admin Read-Only Notice */}
+      {isAdmin && (
+        <div className="bg-amber-50 border-l-4 border-amber-500 p-4 rounded-r-xl text-amber-900 text-sm shadow-xs">
+          <span className="font-bold block mb-0.5">Admin Central Oversight Mode</span>
+          You have central read-only visibility into financial performance, project profitability, invoices, and subsidy tracking. Direct operational accounting actions (such as recording direct expenses and posting subsidy transactions) are reserved exclusively for the Finance Department.
+        </div>
+      )}
+
       {/* Top Banner */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
@@ -201,24 +191,26 @@ export const FinancePage: React.FC = () => {
             Financial Management & Job Profitability
           </h1>
           <p className="text-sm text-slate-500 mt-1">
-            Real-time project gross margins, hardware & labor cost allocations, GST invoices, & national subsidy disbursement.
+            Real-time project net margins, hardware & labor cost allocations, GST invoices, & national subsidy disbursement.
           </p>
         </div>
         <div className="flex items-center gap-2">
           <button
             onClick={exportJobProfitabilityCsv}
-            className="inline-flex items-center px-3.5 py-2 rounded-lg border border-slate-200 bg-white text-slate-700 text-sm font-medium hover:bg-slate-50 transition shadow-xs"
+            className="inline-flex items-center px-3.5 py-2 rounded-lg border border-slate-200 bg-white text-slate-700 text-sm font-medium hover:bg-slate-50 transition shadow-xs cursor-pointer"
           >
             <Download className="w-4 h-4 mr-2 text-slate-500" />
             Export P&L CSV
           </button>
-          <button
-            onClick={() => setIsExpenseModalOpen(true)}
-            className="inline-flex items-center px-4 py-2 rounded-lg bg-emerald-600 text-white font-medium text-sm hover:bg-emerald-700 transition shadow-xs"
-          >
-            <Plus className="w-4 h-4 mr-2" />
-            Record Direct Expense
-          </button>
+          {!isAdmin && (
+            <button
+              onClick={() => setIsExpenseModalOpen(true)}
+              className="inline-flex items-center px-4 py-2 rounded-lg bg-emerald-600 text-white font-medium text-sm hover:bg-emerald-700 transition shadow-xs cursor-pointer"
+            >
+              <Plus className="w-4 h-4 mr-2" />
+              Record Direct Expense
+            </button>
+          )}
         </div>
       </div>
 
@@ -251,7 +243,7 @@ export const FinancePage: React.FC = () => {
         </div>
 
         <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs">
-          <div className="text-xs font-semibold text-slate-500 uppercase">Average Gross Margin</div>
+          <div className="text-xs font-semibold text-slate-500 uppercase">Average Net Profit Margin</div>
           <div className="text-2xl font-bold text-emerald-600 mt-1">{averageMargin}%</div>
           <div className="text-xs text-emerald-700 mt-1 font-medium">Target: &gt; 25.0%</div>
         </div>

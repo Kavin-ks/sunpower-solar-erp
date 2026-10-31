@@ -89,4 +89,63 @@ public class EnquiryDTOs {
         public String getActionNote() { return actionNote; }
         public void setActionNote(String actionNote) { this.actionNote = actionNote; }
     }
+
+    public static class PublicEnquiryRequest {
+        @NotBlank(message = "Full name is required")
+        private String fullName;
+
+        @NotBlank(message = "Phone number is required")
+        private String phone;
+
+        private String email;
+
+        @NotBlank(message = "Rooftop property address is required")
+        private String address;
+
+        @NotBlank(message = "City is required")
+        private String city;
+
+        private String pincode;
+
+        private CustomerType customerType = CustomerType.RESIDENTIAL;
+
+        @NotNull(message = "Requested solar capacity is required")
+        @DecimalMin(value = "1.00", message = "System capacity must be between 1 kW and 5 kW")
+        @DecimalMax(value = "5.00", message = "System capacity must be between 1 kW and 5 kW")
+        private BigDecimal requestedCapacityKw;
+
+        @NotNull(message = "System type is required (On-Grid or Off-Grid)")
+        private SystemType systemType = SystemType.ON_GRID;
+
+        private boolean subsidyRequired = true;
+        private BigDecimal monthlyElectricityBill;
+        private String notes;
+
+        public PublicEnquiryRequest() {}
+
+        public String getFullName() { return fullName; }
+        public void setFullName(String fullName) { this.fullName = fullName; }
+        public String getPhone() { return phone; }
+        public void setPhone(String phone) { this.phone = phone; }
+        public String getEmail() { return email; }
+        public void setEmail(String email) { this.email = email; }
+        public String getAddress() { return address; }
+        public void setAddress(String address) { this.address = address; }
+        public String getCity() { return city; }
+        public void setCity(String city) { this.city = city; }
+        public String getPincode() { return pincode; }
+        public void setPincode(String pincode) { this.pincode = pincode; }
+        public CustomerType getCustomerType() { return customerType; }
+        public void setCustomerType(CustomerType customerType) { this.customerType = customerType; }
+        public BigDecimal getRequestedCapacityKw() { return requestedCapacityKw; }
+        public void setRequestedCapacityKw(BigDecimal requestedCapacityKw) { this.requestedCapacityKw = requestedCapacityKw; }
+        public SystemType getSystemType() { return systemType; }
+        public void setSystemType(SystemType systemType) { this.systemType = systemType; }
+        public boolean isSubsidyRequired() { return subsidyRequired; }
+        public void setSubsidyRequired(boolean subsidyRequired) { this.subsidyRequired = subsidyRequired; }
+        public BigDecimal getMonthlyElectricityBill() { return monthlyElectricityBill; }
+        public void setMonthlyElectricityBill(BigDecimal monthlyElectricityBill) { this.monthlyElectricityBill = monthlyElectricityBill; }
+        public String getNotes() { return notes; }
+        public void setNotes(String notes) { this.notes = notes; }
+    }
 }

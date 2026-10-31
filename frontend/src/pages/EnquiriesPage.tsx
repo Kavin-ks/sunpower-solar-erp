@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { api } from '../api/client';
 import { Enquiry, EnquiryStatus } from '../types';
 import { StatusBadge } from '../components/ui/Badge';
+import { useAuth } from '../context/AuthContext';
 import {
   Users,
   Plus,
@@ -113,8 +114,20 @@ export const EnquiriesPage: React.FC = () => {
     }
   };
 
+  const { user } = useAuth();
+  const isAdmin = user?.roles?.includes('ROLE_ADMIN');
+  const isSales = user?.roles?.includes('ROLE_SALES') || user?.roles?.includes('ROLE_DIRECTOR');
+
   return (
     <div className="space-y-6">
+      {/* Admin Read-Only Notice */}
+      {isAdmin && (
+        <div className="bg-amber-50 border-l-4 border-amber-500 p-4 rounded-r-xl text-amber-900 text-xs shadow-xs">
+          <span className="font-bold text-sm block mb-0.5">Admin Central Oversight Mode</span>
+          Customer leads originate dynamically from the public customer enquiry form and are qualified by the Sales Department. The Admin role has centralized read-only visibility into lead progression without operational editing.
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-slate-200">
         <div>
@@ -122,13 +135,15 @@ export const EnquiriesPage: React.FC = () => {
           <p className="text-sm text-slate-500">Capture, qualify, and track solar rooftop enquiries</p>
         </div>
 
-        <button
-          onClick={() => setShowModal(true)}
-          className="flex items-center space-x-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-semibold shadow-sm transition cursor-pointer"
-        >
-          <Plus className="w-4 h-4" />
-          <span>New Customer Lead</span>
-        </button>
+        {isSales && (
+          <button
+            onClick={() => setShowModal(true)}
+            className="flex items-center space-x-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-semibold shadow-sm transition cursor-pointer"
+          >
+            <Plus className="w-4 h-4" />
+            <span>New Customer Lead</span>
+          </button>
+        )}
       </div>
 
       {/* Filters & Search */}
@@ -479,23 +494,25 @@ export const EnquiriesPage: React.FC = () => {
                   </div>
                 </div>
 
-                <div className="flex items-center space-x-2">
-                  <span className="text-slate-500">Advance to:</span>
-                  <select
-                    value={selectedEnquiry.status}
-                    onChange={(e) => handleStatusUpdate(selectedEnquiry.id, e.target.value as any)}
-                    className="bg-white border border-slate-200 rounded-lg px-2 py-1 font-semibold text-slate-800"
-                  >
-                    <option value="NEW">NEW</option>
-                    <option value="CONTACTED">CONTACTED</option>
-                    <option value="QUALIFIED">QUALIFIED</option>
-                    <option value="SURVEY_SCHEDULED">SURVEY_SCHEDULED</option>
-                    <option value="SURVEY_APPROVED">SURVEY_APPROVED</option>
-                    <option value="QUOTED">QUOTED</option>
-                    <option value="CONVERTED">CONVERTED</option>
-                    <option value="REJECTED">REJECTED</option>
-                  </select>
-                </div>
+                {!isAdmin && (
+                  <div className="flex items-center space-x-2">
+                    <span className="text-slate-500">Advance to:</span>
+                    <select
+                      value={selectedEnquiry.status}
+                      onChange={(e) => handleStatusUpdate(selectedEnquiry.id, e.target.value as any)}
+                      className="bg-white border border-slate-200 rounded-lg px-2 py-1 font-semibold text-slate-800"
+                    >
+                      <option value="NEW">NEW</option>
+                      <option value="CONTACTED">CONTACTED</option>
+                      <option value="QUALIFIED">QUALIFIED</option>
+                      <option value="SURVEY_SCHEDULED">SURVEY_SCHEDULED</option>
+                      <option value="SURVEY_APPROVED">SURVEY_APPROVED</option>
+                      <option value="QUOTED">QUOTED</option>
+                      <option value="CONVERTED">CONVERTED</option>
+                      <option value="REJECTED">REJECTED</option>
+                    </select>
+                  </div>
+                )}
               </div>
 
               {/* Customer Info */}
