@@ -57,4 +57,17 @@ public class DispatchDTOs {
         public String getNotes() { return notes; }
         public void setNotes(String notes) { this.notes = notes; }
     }
+
+    public static class ScanBarcodeRequest {
+        @jakarta.validation.constraints.NotBlank(message = "Barcode or QR code is required")
+        private String barcode;
+        private Long dispatchItemId;
+
+        public ScanBarcodeRequest() {}
+
+        public String getBarcode() { return barcode; }
+        public void setBarcode(String barcode) { this.barcode = barcode; }
+        public Long getDispatchItemId() { return dispatchItemId; }
+        public void setDispatchItemId(Long dispatchItemId) { this.dispatchItemId = dispatchItemId; }
+    }
 }

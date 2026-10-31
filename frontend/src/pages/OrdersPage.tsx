@@ -120,14 +120,6 @@ export const OrdersPage: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      {/* Admin Read-Only Notice */}
-      {isAdmin && (
-        <div className="bg-amber-50 border-l-4 border-amber-500 p-4 rounded-r-xl text-amber-900 text-xs shadow-xs">
-          <span className="font-bold text-sm block mb-0.5">Admin Central Oversight Mode</span>
-          Sales orders and stock reservations are converted by the Sales Department upon quotation acceptance, and payments are recorded exclusively by Finance. Admin has central visibility into contract statuses and payment summaries without operational execution.
-        </div>
-      )}
-
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-slate-200">
         <div>

@@ -27,8 +27,8 @@ export const Navbar: React.FC = () => {
             <div className="flex items-center space-x-2">
               <span className="text-xl font-bold tracking-tight text-slate-900">SunPower</span>
               <span className="text-xl font-light text-emerald-600">Solutions</span>
-              <span className="text-xs bg-emerald-100 text-emerald-800 font-medium px-2 py-0.5 rounded-md border border-emerald-200">
-                ERP MVP
+              <span className="text-xs bg-emerald-50 text-emerald-700 font-semibold px-2 py-0.5 rounded-md border border-emerald-200">
+                Enterprise ERP
               </span>
             </div>
             <p className="text-xs text-slate-500">Solar Project & Installation Management System</p>

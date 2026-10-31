@@ -21,7 +21,7 @@ public class SerialNumberHistory {
     @Column(nullable = false, length = 30)
     private SerialNumberStatus status;
 
-    @Column(nullable = false, length = 100)
+    @Column(nullable = false, length = 255)
     private String eventDescription;
 
     @Column(length = 100)

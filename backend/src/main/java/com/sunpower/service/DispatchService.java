@@ -113,41 +113,115 @@ public class DispatchService {
         DispatchItem item = dispatchItemRepository.findById(request.getDispatchItemId())
                 .orElseThrow(() -> new IllegalArgumentException("Dispatch item not found with id: " + request.getDispatchItemId()));
 
-        SerialNumber serial = serialNumberRepository.findBySerialCode(request.getSerialCode())
-                .orElseThrow(() -> new IllegalArgumentException("Serial number not found: " + request.getSerialCode()));
-
-        // Validate serial belongs to the required product
-        if (!serial.getProduct().getId().equals(item.getProduct().getId())) {
-            throw new IllegalArgumentException("Validation Error: Serial number " + request.getSerialCode() +
-                    " belongs to product '" + serial.getProduct().getName() + "', but picking item requires '" + item.getProduct().getName() + "'");
+        String code = request.getSerialCode() != null ? request.getSerialCode().trim() : "";
+        if (code.isEmpty()) {
+            throw new IllegalArgumentException("Scanned barcode or serial code cannot be empty");
         }
 
-        // Validate status is IN_STOCK
-        if (serial.getStatus() != SerialNumberStatus.IN_STOCK) {
-            throw new IllegalArgumentException("Validation Error: Serial number " + request.getSerialCode() +
-                    " is not available in stock (Current status: " + serial.getStatus() + ")");
+        java.util.Optional<SerialNumber> serialOpt = serialNumberRepository.findBySerialCode(code);
+        SerialNumber serial;
+
+        if (serialOpt.isEmpty()) {
+            // Auto-generate new serial number record based on scanned barcode
+            serial = new SerialNumber();
+            serial.setProduct(item.getProduct());
+            serial.setSerialCode(code);
+            serial.setStatus(SerialNumberStatus.ALLOCATED);
+            serial.setSalesOrder(item.getDispatch().getSalesOrder());
+            serial.setCustomer(item.getDispatch().getCustomer());
+            serial.setWarehouseLocation("Outbound Bay - Assigned for Installation");
+            serial.setPurchaseReference("BC-SCAN-" + LocalDate.now().getYear());
+            serial = serialNumberRepository.save(serial);
+
+            // Record history
+            SerialNumberHistory history = new SerialNumberHistory(
+                    serial,
+                    SerialNumberStatus.ALLOCATED,
+                    "Auto-generated from scanned barcode (" + code + "). Product '" + item.getProduct().getName() +
+                            "' verified and outbound for rooftop installation under Order " +
+                            item.getDispatch().getSalesOrder().getOrderNumber() + " (Customer: " +
+                            item.getDispatch().getCustomer().getFullName() + ")",
+                    item.getDispatch().getCustomer().getFullName(),
+                    assignedBy != null ? assignedBy : "Warehouse Barcode Scanner"
+            );
+            serialNumberHistoryRepository.save(history);
+        } else {
+            serial = serialOpt.get();
+
+            // If already assigned to this item, return early
+            if (item.getSerialNumber() != null && item.getSerialNumber().getId().equals(serial.getId())) {
+                return item.getDispatch();
+            }
+
+            // Validate serial belongs to the required product
+            if (!serial.getProduct().getId().equals(item.getProduct().getId())) {
+                throw new IllegalArgumentException("Validation Error: Scanned serial " + code +
+                        " belongs to product '" + serial.getProduct().getName() + "', but picking item requires '" + item.getProduct().getName() + "'");
+            }
+
+            // Validate status
+            if (serial.getStatus() != SerialNumberStatus.IN_STOCK && serial.getStatus() != SerialNumberStatus.ALLOCATED) {
+                throw new IllegalArgumentException("Validation Error: Serial number " + code +
+                        " is currently in status '" + serial.getStatus() + "'. Only IN_STOCK units can be allocated for installation.");
+            }
+
+            serial.setStatus(SerialNumberStatus.ALLOCATED);
+            serial.setSalesOrder(item.getDispatch().getSalesOrder());
+            serial.setCustomer(item.getDispatch().getCustomer());
+            serial.setWarehouseLocation("Outbound Bay - Assigned for Installation");
+            serial = serialNumberRepository.save(serial);
+
+            // Record history
+            SerialNumberHistory history = new SerialNumberHistory(
+                    serial,
+                    SerialNumberStatus.ALLOCATED,
+                    "Scanned & verified in warehouse. Product '" + item.getProduct().getName() +
+                            "' allocated for rooftop installation under Order " +
+                            item.getDispatch().getSalesOrder().getOrderNumber() + " (Customer: " +
+                            item.getDispatch().getCustomer().getFullName() + ")",
+                    item.getDispatch().getCustomer().getFullName(),
+                    assignedBy != null ? assignedBy : "Warehouse Barcode Scanner"
+            );
+            serialNumberHistoryRepository.save(history);
         }
 
-        // Assign serial number
+        // Assign serial number to dispatch item
         item.setSerialNumber(serial);
         dispatchItemRepository.save(item);
 
-        serial.setStatus(SerialNumberStatus.ALLOCATED);
-        serial.setSalesOrder(item.getDispatch().getSalesOrder());
-        serial.setCustomer(item.getDispatch().getCustomer());
-        serialNumberRepository.save(serial);
-
-        // Record history
-        SerialNumberHistory history = new SerialNumberHistory(
-                serial,
-                SerialNumberStatus.ALLOCATED,
-                "Allocated to dispatch " + item.getDispatch().getDispatchNumber() + " for order " + item.getDispatch().getSalesOrder().getOrderNumber(),
-                item.getDispatch().getCustomer().getFullName(),
-                assignedBy != null ? assignedBy : "Warehouse Staff"
-        );
-        serialNumberHistoryRepository.save(history);
-
         return item.getDispatch();
+    }
+
+    @Transactional
+    public Dispatch scanBarcodeForDispatch(Long dispatchId, String barcode, Long dispatchItemId, String scannedBy) {
+        if (barcode == null || barcode.trim().isEmpty()) {
+            throw new IllegalArgumentException("Scanned barcode or QR code cannot be empty");
+        }
+        String cleanBarcode = barcode.trim();
+        Dispatch dispatch = getDispatchById(dispatchId);
+
+        DispatchItem targetItem = null;
+        if (dispatchItemId != null) {
+            targetItem = dispatchItemRepository.findById(dispatchItemId)
+                    .orElseThrow(() -> new IllegalArgumentException("Dispatch item not found with id: " + dispatchItemId));
+        } else {
+            // Find first unassigned serialized item in this dispatch
+            for (DispatchItem item : dispatch.getItems()) {
+                if (item.getProduct().isSerialized() && item.getSerialNumber() == null) {
+                    targetItem = item;
+                    break;
+                }
+            }
+            if (targetItem == null) {
+                throw new IllegalStateException("All serialized products in this dispatch already have assigned serial numbers!");
+            }
+        }
+
+        AssignSerialNumberRequest assignRequest = new AssignSerialNumberRequest();
+        assignRequest.setDispatchItemId(targetItem.getId());
+        assignRequest.setSerialCode(cleanBarcode);
+
+        return assignSerialNumber(assignRequest, scannedBy);
     }
 
     @Transactional
