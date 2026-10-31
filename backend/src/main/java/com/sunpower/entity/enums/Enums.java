@@ -76,13 +76,15 @@ public class Enums {
     public enum PaymentType {
         ADVANCE,
         PROGRESS,
-        FULL
+        FULL,
+        ADJUSTMENT
     }
 
     public enum PaymentStatus {
         SUCCESS,
         PENDING,
-        FAILED
+        FAILED,
+        REVERSED
     }
 
     public enum StockMovementType {
@@ -136,8 +138,11 @@ public class Enums {
         NOT_STARTED,
         DOCUMENTS_PENDING,
         SUBMITTED,
+        UNDER_VERIFICATION,
         APPROVED,
-        REJECTED
+        REJECTED,
+        PARTIALLY_RECEIVED,
+        AMOUNT_RECEIVED
     }
 
     public enum ExpenseCategory {
@@ -147,5 +152,17 @@ public class Enums {
         SERVICE_REPAIR,
         TRANSPORT,
         OTHER
+    }
+
+    public enum TechnicianPayoutStatus {
+        PENDING,
+        PARTIALLY_PAID,
+        PAID
+    }
+
+    public enum ProfitabilityStatus {
+        PROFITABLE,
+        LOW_MARGIN,
+        LOSS_MAKING
     }
 }

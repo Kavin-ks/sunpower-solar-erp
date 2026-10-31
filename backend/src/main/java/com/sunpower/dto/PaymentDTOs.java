@@ -3,6 +3,7 @@ package com.sunpower.dto;
 import com.sunpower.entity.enums.Enums.PaymentMethod;
 import com.sunpower.entity.enums.Enums.PaymentType;
 import jakarta.validation.constraints.DecimalMin;
+import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -25,7 +26,7 @@ public class PaymentDTOs {
         @NotNull(message = "Payment type is required")
         private PaymentType type = PaymentType.ADVANCE;
 
-        private String referenceNumber; // UTR / Cheque / Txn ID
+        private String referenceNumber; // Bank UTR, Cheque No, Transaction ID
         private String notes;
 
         public PaymentRecordRequest() {}
@@ -44,5 +45,15 @@ public class PaymentDTOs {
         public void setReferenceNumber(String referenceNumber) { this.referenceNumber = referenceNumber; }
         public String getNotes() { return notes; }
         public void setNotes(String notes) { this.notes = notes; }
+    }
+
+    public static class PaymentReversalRequest {
+        @NotBlank(message = "Reversal reason is required")
+        private String reason;
+
+        public PaymentReversalRequest() {}
+        public PaymentReversalRequest(String reason) { this.reason = reason; }
+        public String getReason() { return reason; }
+        public void setReason(String reason) { this.reason = reason; }
     }
 }

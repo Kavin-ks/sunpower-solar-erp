@@ -1,28 +1,37 @@
 package com.sunpower.controller;
 
-import com.sunpower.dto.FinanceDTOs.ExpenseCreateRequest;
-import com.sunpower.dto.FinanceDTOs.JobProfitabilityDTO;
+import com.sunpower.dto.FinanceDTOs.*;
 import com.sunpower.entity.Expense;
 import com.sunpower.entity.Invoice;
 import com.sunpower.entity.SubsidyApplication;
-import com.sunpower.entity.enums.Enums.SubsidyStatus;
+import com.sunpower.entity.TechnicianPayment;
 import com.sunpower.service.FinanceService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
-import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.List;
-import java.util.Map;
 
 @RestController
 @RequestMapping("/api/finance")
+@PreAuthorize("hasAnyRole('FINANCE', 'DIRECTOR', 'ADMIN')")
 public class FinanceController {
 
     @Autowired
     private FinanceService financeService;
+
+    @GetMapping("/dashboard")
+    public ResponseEntity<FinanceDashboardDTO> getFinanceDashboard(
+            @RequestParam(required = false, defaultValue = "THIS_MONTH") String period,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
+        return ResponseEntity.ok(financeService.getFinanceDashboard(period, startDate, endDate));
+    }
 
     @GetMapping("/expenses")
     public ResponseEntity<List<Expense>> getAllExpenses() {
@@ -45,6 +54,20 @@ public class FinanceController {
         return ResponseEntity.ok(financeService.getInvoiceById(id));
     }
 
+    @PostMapping("/invoices/{id}/cancel")
+    public ResponseEntity<Invoice> cancelInvoice(
+            @PathVariable Long id,
+            @Valid @RequestBody InvoiceCancelRequest request) {
+        Invoice invoice = financeService.cancelInvoice(id, request.getReason(), request.getCancelledBy());
+        return ResponseEntity.ok(invoice);
+    }
+
+    @PostMapping("/invoices/generate/{orderId}")
+    public ResponseEntity<Invoice> generateInvoiceForOrder(@PathVariable Long orderId) {
+        Invoice invoice = financeService.generateInvoiceForOrder(orderId);
+        return ResponseEntity.status(HttpStatus.CREATED).body(invoice);
+    }
+
     @GetMapping("/subsidies")
     public ResponseEntity<List<SubsidyApplication>> getAllSubsidies() {
         return ResponseEntity.ok(financeService.getAllSubsidies());
@@ -53,15 +76,21 @@ public class FinanceController {
     @PatchMapping("/subsidies/{id}/status")
     public ResponseEntity<SubsidyApplication> updateSubsidyStatus(
             @PathVariable Long id,
-            @RequestBody Map<String, Object> payload) {
-        SubsidyStatus status = SubsidyStatus.valueOf(payload.get("status").toString());
-        String notes = payload.get("notes") != null ? payload.get("notes").toString() : null;
-        String regNumber = payload.get("nationalPortalRegNumber") != null ? payload.get("nationalPortalRegNumber").toString() : null;
-        BigDecimal approvedAmount = payload.get("subsidyAmountApproved") != null ?
-                new BigDecimal(payload.get("subsidyAmountApproved").toString()) : null;
-
-        SubsidyApplication sub = financeService.updateSubsidyStatus(id, status, notes, regNumber, approvedAmount);
+            @Valid @RequestBody SubsidyUpdateRequest request) {
+        SubsidyApplication sub = financeService.updateSubsidyStatus(id, request);
         return ResponseEntity.ok(sub);
+    }
+
+    @GetMapping("/technician-payouts")
+    public ResponseEntity<List<TechnicianPayment>> getAllTechnicianPayments() {
+        return ResponseEntity.ok(financeService.getAllTechnicianPayments());
+    }
+
+    @PostMapping("/technician-payouts")
+    public ResponseEntity<TechnicianPayment> recordTechnicianPayout(
+            @Valid @RequestBody TechnicianPayoutRequest request) {
+        TechnicianPayment payout = financeService.recordTechnicianPayout(request);
+        return ResponseEntity.status(HttpStatus.CREATED).body(payout);
     }
 
     @GetMapping("/job-profitability")

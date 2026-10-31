@@ -2,6 +2,7 @@ package com.sunpower.entity;
 
 import jakarta.persistence.*;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
@@ -32,6 +33,18 @@ public class Invoice {
     @Column(nullable = false, precision = 10, scale = 2)
     private BigDecimal taxAmount = BigDecimal.ZERO;
 
+    @Column(precision = 10, scale = 2)
+    private BigDecimal cgstAmount = BigDecimal.ZERO;
+
+    @Column(precision = 10, scale = 2)
+    private BigDecimal sgstAmount = BigDecimal.ZERO;
+
+    @Column(precision = 10, scale = 2)
+    private BigDecimal igstAmount = BigDecimal.ZERO;
+
+    @Column(length = 50)
+    private String hsnSacCode = "SAC 998731"; // Solar PV Installation & Commissioning
+
     @Column(nullable = false, precision = 10, scale = 2)
     private BigDecimal totalAmount = BigDecimal.ZERO;
 
@@ -50,6 +63,14 @@ public class Invoice {
     @Column(columnDefinition = "TEXT")
     private String notes;
 
+    @Column(columnDefinition = "TEXT")
+    private String cancellationReason;
+
+    private LocalDateTime cancelledAt;
+
+    @Column(length = 100)
+    private String cancelledBy;
+
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
@@ -67,6 +88,7 @@ public class Invoice {
             invoiceNumber = "INV-" + String.format("%05d", id);
         }
         balanceAmount = totalAmount.subtract(paidAmount != null ? paidAmount : BigDecimal.ZERO);
+        calculateTaxBreakdown();
     }
 
     @PreUpdate
@@ -74,6 +96,28 @@ public class Invoice {
         updatedAt = LocalDateTime.now();
         if (totalAmount != null && paidAmount != null) {
             balanceAmount = totalAmount.subtract(paidAmount);
+        }
+        calculateTaxBreakdown();
+    }
+
+    private void calculateTaxBreakdown() {
+        if (taxAmount != null && taxAmount.compareTo(BigDecimal.ZERO) > 0) {
+            boolean isInterstate = false;
+            if (customer != null && customer.getState() != null) {
+                String st = customer.getState().trim();
+                if (!st.isEmpty() && !st.equalsIgnoreCase("Tamil Nadu") && !st.equalsIgnoreCase("TN")) {
+                    isInterstate = true;
+                }
+            }
+            if (isInterstate) {
+                igstAmount = taxAmount;
+                cgstAmount = BigDecimal.ZERO;
+                sgstAmount = BigDecimal.ZERO;
+            } else {
+                cgstAmount = taxAmount.divide(BigDecimal.valueOf(2), 2, RoundingMode.HALF_UP);
+                sgstAmount = taxAmount.subtract(cgstAmount);
+                igstAmount = BigDecimal.ZERO;
+            }
         }
     }
 
@@ -95,6 +139,14 @@ public class Invoice {
     public void setSubtotal(BigDecimal subtotal) { this.subtotal = subtotal; }
     public BigDecimal getTaxAmount() { return taxAmount; }
     public void setTaxAmount(BigDecimal taxAmount) { this.taxAmount = taxAmount; }
+    public BigDecimal getCgstAmount() { return cgstAmount; }
+    public void setCgstAmount(BigDecimal cgstAmount) { this.cgstAmount = cgstAmount; }
+    public BigDecimal getSgstAmount() { return sgstAmount; }
+    public void setSgstAmount(BigDecimal sgstAmount) { this.sgstAmount = sgstAmount; }
+    public BigDecimal getIgstAmount() { return igstAmount; }
+    public void setIgstAmount(BigDecimal igstAmount) { this.igstAmount = igstAmount; }
+    public String getHsnSacCode() { return hsnSacCode; }
+    public void setHsnSacCode(String hsnSacCode) { this.hsnSacCode = hsnSacCode; }
     public BigDecimal getTotalAmount() { return totalAmount; }
     public void setTotalAmount(BigDecimal totalAmount) { this.totalAmount = totalAmount; }
     public BigDecimal getPaidAmount() { return paidAmount; }
@@ -107,6 +159,12 @@ public class Invoice {
     public void setGstin(String gstin) { this.gstin = gstin; }
     public String getNotes() { return notes; }
     public void setNotes(String notes) { this.notes = notes; }
+    public String getCancellationReason() { return cancellationReason; }
+    public void setCancellationReason(String cancellationReason) { this.cancellationReason = cancellationReason; }
+    public LocalDateTime getCancelledAt() { return cancelledAt; }
+    public void setCancelledAt(LocalDateTime cancelledAt) { this.cancelledAt = cancelledAt; }
+    public String getCancelledBy() { return cancelledBy; }
+    public void setCancelledBy(String cancelledBy) { this.cancelledBy = cancelledBy; }
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
     public LocalDateTime getUpdatedAt() { return updatedAt; }

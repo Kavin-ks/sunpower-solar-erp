@@ -124,7 +124,12 @@ public class OrderService {
         }
 
         orderItemRepository.saveAll(orderItems);
-        order.setItems(orderItems);
+        if (order.getItems() == null) {
+            order.setItems(new ArrayList<>());
+        } else {
+            order.getItems().clear();
+        }
+        order.getItems().addAll(orderItems);
 
         // Generate preliminary invoice
         Invoice invoice = new Invoice();

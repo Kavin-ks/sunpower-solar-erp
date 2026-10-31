@@ -12,8 +12,10 @@ export type DispatchStatus = 'PENDING' | 'PICKING' | 'READY_FOR_DISPATCH' | 'DIS
 export type InstallationStatus = 'SCHEDULED' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED';
 export type WarrantyStatus = 'ACTIVE' | 'EXPIRED' | 'VOIDED';
 export type TicketStatus = 'OPEN' | 'ASSIGNED' | 'IN_PROGRESS' | 'WAITING_FOR_PARTS' | 'RESOLVED' | 'CUSTOMER_CONFIRMED' | 'CLOSED';
-export type SubsidyStatus = 'NOT_STARTED' | 'DOCUMENTS_PENDING' | 'SUBMITTED' | 'APPROVED' | 'REJECTED';
+export type SubsidyStatus = 'NOT_STARTED' | 'DOCUMENTS_PENDING' | 'SUBMITTED' | 'UNDER_VERIFICATION' | 'APPROVED' | 'PARTIALLY_RECEIVED' | 'AMOUNT_RECEIVED' | 'REJECTED';
 export type ExpenseCategory = 'PRODUCT_PURCHASE' | 'INSTALLATION' | 'TECHNICIAN_PAYOUT' | 'SERVICE_REPAIR' | 'TRANSPORT' | 'OTHER';
+export type TechnicianPayoutStatus = 'PENDING' | 'PARTIALLY_PAID' | 'PAID';
+export type ProfitabilityStatus = 'PROFITABLE' | 'LOW_MARGIN' | 'LOSS_MAKING';
 
 export interface User {
   id: number;
@@ -180,6 +182,7 @@ export interface OrderItem {
 export interface Payment {
   id: number;
   paymentNumber: string;
+  orderNumber?: string;
   amount: number;
   paymentDate: string;
   method: PaymentMethod;
@@ -187,6 +190,9 @@ export interface Payment {
   status: string;
   referenceNumber: string;
   notes?: string;
+  reversalReason?: string;
+  reversedAt?: string;
+  reversedBy?: string;
 }
 
 export interface SalesOrder {
@@ -389,12 +395,19 @@ export interface Invoice {
   dueDate: string;
   subtotal: number;
   taxAmount: number;
+  cgstAmount?: number;
+  sgstAmount?: number;
+  igstAmount?: number;
   totalAmount: number;
   paidAmount: number;
   balanceAmount: number;
   status: string;
   gstin: string;
+  hsnSacCode?: string;
   notes?: string;
+  cancellationReason?: string;
+  cancelledAt?: string;
+  cancelledBy?: string;
 }
 
 export interface SubsidyApplication {
@@ -405,9 +418,31 @@ export interface SubsidyApplication {
   nationalPortalRegNumber?: string;
   subsidyAmountClaimed: number;
   subsidyAmountApproved: number;
+  sanctionDate?: string;
+  amountReceived?: number;
+  actualReceiptDate?: string;
+  pendingSubsidyAmount?: number;
   status: SubsidyStatus;
   submissionDate?: string;
   approvalDate?: string;
+  notes?: string;
+}
+
+export interface TechnicianPayment {
+  id: number;
+  paymentNumber: string;
+  technician: Technician;
+  installation?: Installation;
+  hoursCounted?: number;
+  hourlyRate?: number;
+  calculatedAmount?: number;
+  amount: number;
+  amountPaid?: number;
+  remainingAmount?: number;
+  paymentDate: string;
+  paymentMethod: string;
+  referenceNumber?: string;
+  status?: TechnicianPayoutStatus;
   notes?: string;
 }
 
@@ -418,14 +453,43 @@ export interface JobProfitability {
   systemType: string;
   capacityKw: number;
   orderAmount: number;
+  taxAmount?: number;
+  recognizedRevenue?: number;
   revenueReceived: number;
+  outstandingBalance: number;
   hardwareCost: number;
-  technicianCost: number;
-  recordedExpenses: number;
+  installationLaborCost?: number;
+  transportCost?: number;
+  serviceRepairCost?: number;
+  otherExpenses?: number;
+  technicianCost?: number; // legacy alias
+  recordedExpenses?: number; // legacy alias
   totalCost: number;
   netProfit: number;
+  cashProfit?: number;
   profitMarginPercentage: number;
-  outstandingBalance: number;
+  profitabilityStatus?: ProfitabilityStatus;
+}
+
+export interface FinanceDashboard {
+  totalInvoicedRevenue: number;
+  totalRecognizedRevenue?: number;
+  totalTaxCollected?: number;
+  totalCashCollected?: number;
+  totalConfirmedOrderValue?: number;
+  totalPaymentsReceived: number;
+  totalOutstandingReceivables: number;
+  totalHardwareCost: number;
+  totalInstallationLaborCost: number;
+  totalOperationalExpenses: number;
+  totalProjectProfit: number;
+  averageProfitMargin: number;
+  pendingTechnicianPayouts: number;
+  subsidiesPendingReceipt: number;
+  monthlyRevenueTrends: { month: string; revenue: number; cost: number; profit: number }[];
+  expenseCategoryBreakdown: { category: string; amount: number }[];
+  paymentStatusDistribution: { status: string; count: number; amount: number }[];
+  subsidyStatusDistribution: { status: string; count: number; amount: number }[];
 }
 
 export interface DashboardMetrics {
