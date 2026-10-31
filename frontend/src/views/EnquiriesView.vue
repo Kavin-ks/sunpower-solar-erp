@@ -1,11 +1,11 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
+import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { api } from '../api/client';
 import type { Enquiry, EnquiryStatus } from '../types';
 import StatusBadge from '../components/ui/StatusBadge.vue';
 import { useAuthStore } from '../stores/auth';
-import { Search, Filter, Phone, Zap, Clock, Calendar, ExternalLink, ShieldCheck, Send } from 'lucide-vue-next';
+import { Search, Filter, Phone, Zap, Clock, Calendar, ExternalLink, ShieldCheck, Send, CheckCircle2 } from 'lucide-vue-next';
 
 const enquiries = ref<Enquiry[]>([]);
 const loading = ref(true);
@@ -15,8 +15,21 @@ const selectedEnquiry = ref<Enquiry | null>(null);
 const followupNote = ref('');
 const submittingNote = ref(false);
 
+// Phone Call Pre-Screening Basics (Problem Statement Scene 1)
+const editMonthlyBill = ref('');
+const editShadowArea = ref('');
+const editGridSuitable = ref(true);
+
 const router = useRouter();
 const authStore = useAuthStore();
+
+watch(selectedEnquiry, (newVal) => {
+  if (newVal) {
+    editMonthlyBill.value = newVal.monthlyElectricityBill ? String(newVal.monthlyElectricityBill) : '';
+    editShadowArea.value = newVal.shadowFreeAreaSqFt ? String(newVal.shadowFreeAreaSqFt) : '';
+    editGridSuitable.value = newVal.gridSuitable !== undefined ? newVal.gridSuitable : true;
+  }
+});
 
 const isAdmin = computed(() => {
   const roles = authStore.user?.roles || [];
@@ -48,6 +61,9 @@ const handleStatusUpdate = async (id: number, newStatus: EnquiryStatus, customNo
     await api.patch(`/enquiries/${id}/status`, {
       status: newStatus,
       actionNote: customNote || `Stage updated to ${newStatus}`,
+      monthlyElectricityBill: editMonthlyBill.value ? parseFloat(editMonthlyBill.value) : undefined,
+      shadowFreeAreaSqFt: editShadowArea.value ? parseFloat(editShadowArea.value) : undefined,
+      gridSuitable: editGridSuitable.value,
     });
     fetchEnquiries(false);
     if (selectedEnquiry.value && selectedEnquiry.value.id === id) {
@@ -353,6 +369,50 @@ onBeforeUnmount(() => {
             <div class="col-span-2 pt-2 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-400">
               <span>Enquiry Source: <strong class="text-slate-600 uppercase font-mono">{{ selectedEnquiry.source }}</strong></span>
               <span>Submitted: {{ selectedEnquiry.createdAt ? new Date(selectedEnquiry.createdAt).toLocaleString() : 'N/A' }}</span>
+            </div>
+          </div>
+
+          <!-- Phone Call Pre-Screening Basics (Problem Statement Scene 1) -->
+          <div class="p-3 bg-amber-50/60 border border-amber-200 rounded-xl space-y-2">
+            <div class="flex items-center justify-between">
+              <span class="font-bold text-amber-900 text-xs flex items-center space-x-1.5">
+                <Phone class="w-3.5 h-3.5 text-amber-600" />
+                <span>Phone Call Pre-Screening Checks</span>
+              </span>
+              <span class="text-[11px] text-amber-700 font-medium">Verify shadow-free space & grid</span>
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-1">
+              <div>
+                <label class="text-[10px] uppercase font-bold text-slate-500 block">Shadow-Free Space (sq ft)</label>
+                <input
+                  type="number"
+                  v-model="editShadowArea"
+                  :disabled="!isSales"
+                  placeholder="e.g. 400"
+                  class="w-full mt-1 px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg text-xs font-semibold text-slate-800"
+                />
+              </div>
+              <div>
+                <label class="text-[10px] uppercase font-bold text-slate-500 block">Monthly Electricity Bill (₹)</label>
+                <input
+                  type="number"
+                  v-model="editMonthlyBill"
+                  :disabled="!isSales"
+                  placeholder="e.g. 4500"
+                  class="w-full mt-1 px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg text-xs font-semibold text-slate-800"
+                />
+              </div>
+              <div>
+                <label class="text-[10px] uppercase font-bold text-slate-500 block">Grid Connection Suitable?</label>
+                <select
+                  v-model="editGridSuitable"
+                  :disabled="!isSales"
+                  class="w-full mt-1 px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg text-xs font-semibold text-slate-800"
+                >
+                  <option :value="true">✓ Suitable (Grid OK)</option>
+                  <option :value="false">✗ Unsuitable (Voltage issues)</option>
+                </select>
+              </div>
             </div>
           </div>
 

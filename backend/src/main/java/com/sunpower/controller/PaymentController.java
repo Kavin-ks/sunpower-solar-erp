@@ -22,7 +22,7 @@ public class PaymentController {
     private PaymentService paymentService;
 
     @GetMapping
-    @PreAuthorize("hasAnyRole('ADMIN', 'FINANCE', 'SALES', 'DIRECTOR')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'FINANCE', 'SALES')")
     public ResponseEntity<List<Payment>> getAllPayments(
             @RequestParam(required = false) Long orderId,
             @RequestParam(required = false) Long customerId) {
@@ -36,12 +36,13 @@ public class PaymentController {
     }
 
     @GetMapping("/{id}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'FINANCE', 'SALES')")
     public ResponseEntity<Payment> getPaymentById(@PathVariable Long id) {
         return ResponseEntity.ok(paymentService.getPaymentById(id));
     }
 
     @PostMapping
-    @PreAuthorize("hasAnyRole('FINANCE', 'DIRECTOR')")
+    @PreAuthorize("hasAnyRole('FINANCE', 'ADMIN')")
     public ResponseEntity<Payment> recordPayment(@Valid @RequestBody PaymentRecordRequest request) {
         Payment payment = paymentService.recordPayment(request);
         return ResponseEntity.status(HttpStatus.CREATED).body(payment);

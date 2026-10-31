@@ -305,8 +305,9 @@ public class DispatchService {
 
         dispatch = dispatchRepository.save(dispatch);
 
-        // Update serial numbers delivery status (ready for site verification and installation)
+        // Update serial numbers delivery status and automatically start warranty clock
         for (DispatchItem item : dispatch.getItems()) {
+            Product product = item.getProduct();
             SerialNumber sn = item.getSerialNumber();
             if (sn != null) {
                 sn.setDeliveryDate(deliveryDate);
@@ -315,11 +316,16 @@ public class DispatchService {
                 SerialNumberHistory history = new SerialNumberHistory(
                         sn,
                         sn.getStatus(),
-                        "Delivered to customer site. Awaiting technician physical barcode verification.",
+                        "Delivered to customer site. Warranty clock automatically initiated.",
                         dispatch.getCustomer().getAddress(),
                         confirmedBy
                 );
                 serialNumberHistoryRepository.save(history);
+
+                // Auto-warranty clock initiation on delivery
+                warrantyService.activateWarranty(dispatch.getCustomer(), dispatch.getSalesOrder(), product, sn, deliveryDate);
+            } else if (product != null && product.getCategory() != null && product.getCategory().getName().toUpperCase().contains("PANEL")) {
+                warrantyService.activateWarranty(dispatch.getCustomer(), dispatch.getSalesOrder(), product, null, deliveryDate);
             }
         }
 

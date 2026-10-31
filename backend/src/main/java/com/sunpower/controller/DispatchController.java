@@ -24,19 +24,19 @@ public class DispatchController {
     private DispatchService dispatchService;
 
     @GetMapping
-    @PreAuthorize("hasAnyRole('ADMIN', 'WAREHOUSE', 'TECHNICIAN', 'DIRECTOR')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'WAREHOUSE', 'TECHNICIAN')")
     public ResponseEntity<List<Dispatch>> getAllDispatches() {
         return ResponseEntity.ok(dispatchService.getAllDispatches());
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'WAREHOUSE', 'TECHNICIAN', 'DIRECTOR')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'WAREHOUSE', 'TECHNICIAN')")
     public ResponseEntity<Dispatch> getDispatchById(@PathVariable Long id) {
         return ResponseEntity.ok(dispatchService.getDispatchById(id));
     }
 
     @PostMapping
-    @PreAuthorize("hasAnyRole('WAREHOUSE', 'DIRECTOR')")
+    @PreAuthorize("hasAnyRole('WAREHOUSE', 'ADMIN')")
     public ResponseEntity<Dispatch> createDispatch(
             @Valid @RequestBody DispatchCreateRequest request,
             Authentication authentication) {
@@ -46,7 +46,7 @@ public class DispatchController {
     }
 
     @PostMapping("/assign-serial")
-    @PreAuthorize("hasAnyRole('WAREHOUSE', 'DIRECTOR')")
+    @PreAuthorize("hasAnyRole('WAREHOUSE', 'ADMIN')")
     public ResponseEntity<Dispatch> assignSerialNumber(
             @Valid @RequestBody AssignSerialNumberRequest request,
             Authentication authentication) {
@@ -56,7 +56,7 @@ public class DispatchController {
     }
 
     @PostMapping("/{id}/scan-barcode")
-    @PreAuthorize("hasAnyRole('WAREHOUSE', 'DIRECTOR')")
+    @PreAuthorize("hasAnyRole('WAREHOUSE', 'ADMIN')")
     public ResponseEntity<Dispatch> scanBarcode(
             @PathVariable Long id,
             @Valid @RequestBody ScanBarcodeRequest request,
@@ -66,8 +66,8 @@ public class DispatchController {
         return ResponseEntity.ok(dispatch);
     }
 
-    @PostMapping("/{id}/confirm-dispatch")
-    @PreAuthorize("hasAnyRole('WAREHOUSE', 'DIRECTOR')")
+    @RequestMapping(value = {"/{id}/confirm-dispatch", "/{id}/dispatch"}, method = {RequestMethod.POST, RequestMethod.PATCH})
+    @PreAuthorize("hasAnyRole('WAREHOUSE', 'ADMIN')")
     public ResponseEntity<Dispatch> confirmDispatch(
             @PathVariable Long id,
             Authentication authentication) {
@@ -76,14 +76,15 @@ public class DispatchController {
         return ResponseEntity.ok(dispatch);
     }
 
-    @PostMapping("/{id}/confirm-delivery")
-    @PreAuthorize("hasAnyRole('WAREHOUSE', 'DIRECTOR')")
+    @RequestMapping(value = {"/{id}/confirm-delivery", "/{id}/deliver"}, method = {RequestMethod.POST, RequestMethod.PATCH})
+    @PreAuthorize("hasAnyRole('WAREHOUSE', 'ADMIN')")
     public ResponseEntity<Dispatch> confirmDelivery(
             @PathVariable Long id,
-            @Valid @RequestBody ConfirmDeliveryRequest request,
+            @RequestBody(required = false) ConfirmDeliveryRequest request,
             Authentication authentication) {
         String actor = authentication != null ? authentication.getName() : "Logistics Manager";
-        Dispatch dispatch = dispatchService.confirmDelivery(id, request, actor);
+        ConfirmDeliveryRequest req = request != null ? request : new ConfirmDeliveryRequest();
+        Dispatch dispatch = dispatchService.confirmDelivery(id, req, actor);
         return ResponseEntity.ok(dispatch);
     }
 }

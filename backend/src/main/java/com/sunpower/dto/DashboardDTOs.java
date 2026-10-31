@@ -1,5 +1,6 @@
 package com.sunpower.dto;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
@@ -300,6 +301,10 @@ public class DashboardDTOs {
         private String technicianName;
         private String phone;
         private String specialization;
+        @JsonProperty("isLead")
+        private boolean isLead;
+        private long activeTechniciansCount;
+        private long availableTechniciansCount;
         private long assignedSurveysCount;
         private long pendingSurveysCount;
         private long completedSurveysCount;
@@ -307,9 +312,14 @@ public class DashboardDTOs {
         private long inProgressInstallationsCount;
         private long completedInstallationsCount;
         private long assignedServiceVisitsCount;
+        private long pendingJobsCount;
+        private long inProgressJobsCount;
+        private long pendingServiceVisitsCount;
+        private long overdueAssignmentsCount;
         private List<com.sunpower.entity.SiteSurvey> upcomingSurveys;
         private List<com.sunpower.entity.Installation> activeInstallations;
         private List<com.sunpower.entity.ServiceTicket> assignedServiceTickets;
+        private List<TechnicianWorkloadDTO> teamWorkloads;
 
         public TechnicianDashboardDTO() {}
 
@@ -319,6 +329,14 @@ public class DashboardDTOs {
         public void setPhone(String phone) { this.phone = phone; }
         public String getSpecialization() { return specialization; }
         public void setSpecialization(String specialization) { this.specialization = specialization; }
+        @JsonProperty("isLead")
+        public boolean isLead() { return isLead; }
+        public boolean getIsLead() { return isLead; }
+        public void setLead(boolean lead) { isLead = lead; }
+        public long getActiveTechniciansCount() { return activeTechniciansCount; }
+        public void setActiveTechniciansCount(long activeTechniciansCount) { this.activeTechniciansCount = activeTechniciansCount; }
+        public long getAvailableTechniciansCount() { return availableTechniciansCount; }
+        public void setAvailableTechniciansCount(long availableTechniciansCount) { this.availableTechniciansCount = availableTechniciansCount; }
         public long getAssignedSurveysCount() { return assignedSurveysCount; }
         public void setAssignedSurveysCount(long assignedSurveysCount) { this.assignedSurveysCount = assignedSurveysCount; }
         public long getPendingSurveysCount() { return pendingSurveysCount; }
@@ -333,12 +351,22 @@ public class DashboardDTOs {
         public void setCompletedInstallationsCount(long completedInstallationsCount) { this.completedInstallationsCount = completedInstallationsCount; }
         public long getAssignedServiceVisitsCount() { return assignedServiceVisitsCount; }
         public void setAssignedServiceVisitsCount(long assignedServiceVisitsCount) { this.assignedServiceVisitsCount = assignedServiceVisitsCount; }
+        public long getPendingJobsCount() { return pendingJobsCount; }
+        public void setPendingJobsCount(long pendingJobsCount) { this.pendingJobsCount = pendingJobsCount; }
+        public long getInProgressJobsCount() { return inProgressJobsCount; }
+        public void setInProgressJobsCount(long inProgressJobsCount) { this.inProgressJobsCount = inProgressJobsCount; }
+        public long getPendingServiceVisitsCount() { return pendingServiceVisitsCount; }
+        public void setPendingServiceVisitsCount(long pendingServiceVisitsCount) { this.pendingServiceVisitsCount = pendingServiceVisitsCount; }
+        public long getOverdueAssignmentsCount() { return overdueAssignmentsCount; }
+        public void setOverdueAssignmentsCount(long overdueAssignmentsCount) { this.overdueAssignmentsCount = overdueAssignmentsCount; }
         public List<com.sunpower.entity.SiteSurvey> getUpcomingSurveys() { return upcomingSurveys; }
         public void setUpcomingSurveys(List<com.sunpower.entity.SiteSurvey> upcomingSurveys) { this.upcomingSurveys = upcomingSurveys; }
         public List<com.sunpower.entity.Installation> getActiveInstallations() { return activeInstallations; }
         public void setActiveInstallations(List<com.sunpower.entity.Installation> activeInstallations) { this.activeInstallations = activeInstallations; }
         public List<com.sunpower.entity.ServiceTicket> getAssignedServiceTickets() { return assignedServiceTickets; }
         public void setAssignedServiceTickets(List<com.sunpower.entity.ServiceTicket> assignedServiceTickets) { this.assignedServiceTickets = assignedServiceTickets; }
+        public List<TechnicianWorkloadDTO> getTeamWorkloads() { return teamWorkloads; }
+        public void setTeamWorkloads(List<TechnicianWorkloadDTO> teamWorkloads) { this.teamWorkloads = teamWorkloads; }
     }
 
     public static class SupportDashboardDTO {
@@ -350,7 +378,8 @@ public class DashboardDTOs {
         private long closedTickets;
         private long criticalTicketsCount;
         private long activeWarrantiesCount;
-        private double avgResolutionDays;
+        private Double avgResolutionDays;
+        private String avgResolutionTurnaroundText;
         private List<com.sunpower.entity.ServiceTicket> urgentTickets;
         private List<FaultBreakdownDTO> faultBreakdown;
 
@@ -372,8 +401,10 @@ public class DashboardDTOs {
         public void setCriticalTicketsCount(long criticalTicketsCount) { this.criticalTicketsCount = criticalTicketsCount; }
         public long getActiveWarrantiesCount() { return activeWarrantiesCount; }
         public void setActiveWarrantiesCount(long activeWarrantiesCount) { this.activeWarrantiesCount = activeWarrantiesCount; }
-        public double getAvgResolutionDays() { return avgResolutionDays; }
-        public void setAvgResolutionDays(double avgResolutionDays) { this.avgResolutionDays = avgResolutionDays; }
+        public Double getAvgResolutionDays() { return avgResolutionDays; }
+        public void setAvgResolutionDays(Double avgResolutionDays) { this.avgResolutionDays = avgResolutionDays; }
+        public String getAvgResolutionTurnaroundText() { return avgResolutionTurnaroundText; }
+        public void setAvgResolutionTurnaroundText(String avgResolutionTurnaroundText) { this.avgResolutionTurnaroundText = avgResolutionTurnaroundText; }
         public List<com.sunpower.entity.ServiceTicket> getUrgentTickets() { return urgentTickets; }
         public void setUrgentTickets(List<com.sunpower.entity.ServiceTicket> urgentTickets) { this.urgentTickets = urgentTickets; }
         public List<FaultBreakdownDTO> getFaultBreakdown() { return faultBreakdown; }

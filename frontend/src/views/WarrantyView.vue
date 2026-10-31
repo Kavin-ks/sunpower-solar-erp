@@ -36,6 +36,7 @@ const handleSerialLookup = async () => {
 };
 
 const isWarrantyValid = (w: Warranty) => {
+  if (!w.warrantyStartDate || !w.warrantyEndDate) return false;
   const now = new Date();
   const end = new Date(w.warrantyEndDate);
   return w.status === 'ACTIVE' && end >= now;
@@ -116,7 +117,9 @@ onMounted(() => {
                 <span v-if="w.serialNumber" class="font-mono font-bold text-purple-700 bg-purple-50 px-2 py-0.5 rounded border border-purple-200">
                   {{ w.serialNumber.serialCode }}
                 </span>
-                <span v-else class="text-slate-400 italic">Bulk/Panels Group</span>
+                <span v-else class="font-mono text-slate-500 text-[11px]">
+                  Pending Individual Barcode Scan
+                </span>
               </td>
               <td class="py-3 px-4 font-medium text-slate-800">{{ w.customer.fullName }}</td>
               <td class="py-3 px-4 font-mono text-slate-600">{{ w.salesOrder.orderNumber }}</td>

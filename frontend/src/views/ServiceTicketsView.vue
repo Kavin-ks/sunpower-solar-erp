@@ -1,13 +1,13 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue';
 import api from '../api/client';
-import type { ServiceTicket, Customer, Technician, Product, TicketStatus } from '../types';
+import type { ServiceTicket, Customer, Technician, Product } from '../types';
 import StatusBadge from '../components/ui/StatusBadge.vue';
-import CameraPhotoUpload from '../components/common/CameraPhotoUpload.vue';
 import { useAuthStore } from '../stores/auth';
-import { Headphones, Search, Plus, ShieldCheck, UserCheck, CheckCircle2, Clock, Camera } from 'lucide-vue-next';
+import { formatFaultCode } from '../utils/faultCatalog';
+import { Headphones, Search, ShieldCheck, UserCheck, CheckCircle2, Clock, Eye, Phone, Calendar, Wrench, AlertCircle, FileText, RotateCcw } from 'lucide-vue-next';
 
-const tickets = ref<ServiceTicket[]>([]);
+const tickets = ref<any[]>([]);
 const customers = ref<Customer[]>([]);
 const technicians = ref<Technician[]>([]);
 const products = ref<Product[]>([]);
@@ -16,50 +16,39 @@ const searchTerm = ref('');
 const statusFilter = ref('ALL');
 
 // Modals
-const isCreateModalOpen = ref(false);
 const isAssignModalOpen = ref(false);
-const isResolveModalOpen = ref(false);
 const isConfirmModalOpen = ref(false);
-const selectedTicket = ref<ServiceTicket | null>(null);
-const showComplaintPhotoModal = ref(false);
+const isDetailModalOpen = ref(false);
+const isOfficerCreateModalOpen = ref(false);
+const isReopenModalOpen = ref(false);
+const reopenReason = ref('Customer called back stating fault recurred after heavy rain.');
+const selectedTicket = ref<any | null>(null);
 
 // Forms
-const createForm = ref({
+const officerCreateForm = ref({
   customerId: '',
   serialCode: '',
-  faultCode: 'E04 - Grid Phase Overvoltage',
+  faultCategory: 'Inverter Error / Grid Sync Drop',
   complaintDescription: '',
+  callerPhone: '',
+  callerName: '',
 });
 
 const assignTechId = ref('');
 
-const resolveForm = ref({
-  diagnosisNotes: '',
-  resolutionNotes: '',
-  laborCharges: 0,
-  parts: [] as { productId: number; quantity: number }[],
-});
-
 const confirmForm = ref({
-  customerSatisfactionNotes: 'Customer tested and acknowledged solar generation restored at 4.2 kW.',
+  customerSatisfactionNotes: 'Customer tested and acknowledged solar generation restored at full capacity.',
   confirmedByCustomerName: '',
 });
-
-const selectedPartProduct = ref('');
-const selectedPartQty = ref(1);
 
 const authStore = useAuthStore();
 const isAdmin = computed(() => {
   const roles = authStore.user?.roles || [];
-  return roles.includes('ROLE_ADMIN') || roles.includes('ROLE_DIRECTOR');
+  return roles.includes('ROLE_ADMIN');
 });
 const isSupport = computed(() => {
   const roles = authStore.user?.roles || [];
-  return roles.includes('ROLE_SUPPORT') && !isAdmin.value;
-});
-const isTech = computed(() => {
-  const roles = authStore.user?.roles || [];
-  return roles.includes('ROLE_TECHNICIAN') && !isAdmin.value;
+  return roles.includes('ROLE_SUPPORT');
 });
 
 const fetchTickets = async () => {
@@ -89,109 +78,100 @@ const fetchAuxiliaryData = async () => {
   }
 };
 
-const handleCreateTicket = async () => {
-  try {
-    await api.post('/service-tickets', {
-      customerId: Number(createForm.value.customerId),
-      serialCode: createForm.value.serialCode.trim() || undefined,
-      faultCode: createForm.value.faultCode,
-      complaintDescription: createForm.value.complaintDescription,
-    });
-    isCreateModalOpen.value = false;
-    createForm.value = {
-      customerId: '',
-      serialCode: '',
-      faultCode: 'E04 - Grid Phase Overvoltage',
-      complaintDescription: '',
-    };
-    fetchTickets();
-  } catch (err: any) {
-    alert(err.response?.data?.message || 'Failed to create service ticket');
-  }
-};
-
 const handleAssign = async () => {
   if (!selectedTicket.value || !assignTechId.value) return;
   try {
     await api.patch(`/service-tickets/${selectedTicket.value.id}/assign/${assignTechId.value}`);
     isAssignModalOpen.value = false;
     selectedTicket.value = null;
-    fetchTickets();
+    await fetchTickets();
   } catch (err: any) {
     alert(err.response?.data?.message || 'Failed to assign technician');
   }
 };
 
-const handleAddPart = () => {
-  if (!selectedPartProduct.value) return;
-  const prod = products.value.find((p) => p.id === Number(selectedPartProduct.value));
-  if (!prod) return;
-  resolveForm.value.parts.push({ productId: prod.id, quantity: selectedPartQty.value });
-  selectedPartProduct.value = '';
-  selectedPartQty.value = 1;
-};
-
-const handleRemovePart = (index: number) => {
-  resolveForm.value.parts.splice(index, 1);
-};
-
-const openResolveModal = (ticket: ServiceTicket) => {
-  selectedTicket.value = ticket;
-  resolveForm.value = {
-    diagnosisNotes: 'Root cause identified: Grid overvoltage surge damaged DC surge protector.',
-    resolutionNotes: 'Replaced DC surge protection device and calibrated inverter voltage parameters.',
-    laborCharges: ticket.underWarranty ? 0 : 750,
-    parts: [],
-  };
-  isResolveModalOpen.value = true;
-};
-
-const handleResolveSubmit = async () => {
-  if (!selectedTicket.value) return;
-  try {
-    await api.post(`/service-tickets/${selectedTicket.value.id}/resolve`, resolveForm.value);
-    isResolveModalOpen.value = false;
-    selectedTicket.value = null;
-    fetchTickets();
-    alert('Service Ticket resolved! Replaced parts inventory automatically deducted.');
-  } catch (err: any) {
-    alert(err.response?.data?.message || 'Failed to resolve service ticket');
-  }
-};
-
-const openConfirmModal = (ticket: ServiceTicket) => {
-  selectedTicket.value = ticket;
-  confirmForm.value = {
-    customerSatisfactionNotes: 'Customer tested and acknowledged solar generation restored at 4.2 kW.',
-    confirmedByCustomerName: ticket.customer.fullName,
-  };
-  isConfirmModalOpen.value = true;
-};
-
 const handleConfirmSubmit = async () => {
   if (!selectedTicket.value) return;
   try {
-    await api.post(`/service-tickets/${selectedTicket.value.id}/confirm-customer`, {
+    await api.post(`/service-tickets/${selectedTicket.value.id}/confirm-and-close`, {
       customerSatisfactionNotes: confirmForm.value.customerSatisfactionNotes,
       confirmedByCustomerName: confirmForm.value.confirmedByCustomerName,
     });
     isConfirmModalOpen.value = false;
     selectedTicket.value = null;
-    fetchTickets();
-    alert('Customer confirmation logged! Ticket moved to CLOSED.');
+    await fetchTickets();
   } catch (err: any) {
-    alert(err.response?.data?.message || 'Failed to log customer confirmation');
+    alert(err.response?.data?.message || 'Failed to confirm customer satisfaction and close ticket');
   }
+};
+
+const openReopenModal = (ticket: any) => {
+  selectedTicket.value = ticket;
+  reopenReason.value = 'Customer reported issue remains unresolved upon testing.';
+  isReopenModalOpen.value = true;
+};
+
+const handleReopenSubmit = async () => {
+  if (!selectedTicket.value) return;
+  try {
+    await api.post(`/service-tickets/${selectedTicket.value.id}/reopen`, {
+      reopenReason: reopenReason.value,
+    });
+    isReopenModalOpen.value = false;
+    selectedTicket.value = null;
+    await fetchTickets();
+    alert('Complaint reopened and routed back for technician reinspection.');
+  } catch (err: any) {
+    alert(err.response?.data?.message || 'Failed to reopen complaint');
+  }
+};
+
+const handleOfficerCreate = async () => {
+  try {
+    await api.post('/service-tickets/public/submit', {
+      customerPhone: officerCreateForm.value.callerPhone,
+      customerName: officerCreateForm.value.callerName,
+      serialCode: officerCreateForm.value.serialCode.trim(),
+      faultCategory: officerCreateForm.value.faultCategory,
+      complaintDescription: `[OFFICER-ASSISTED PHONE CALL taken by ${authStore.user?.fullName || 'Support Officer'}] ${officerCreateForm.value.complaintDescription}`,
+    });
+    isOfficerCreateModalOpen.value = false;
+    officerCreateForm.value = {
+      customerId: '',
+      serialCode: '',
+      faultCategory: 'Inverter Error / Grid Sync Drop',
+      complaintDescription: '',
+      callerPhone: '',
+      callerName: '',
+    };
+    await fetchTickets();
+  } catch (err: any) {
+    alert(err.response?.data?.message || 'Failed to record officer-assisted ticket');
+  }
+};
+
+const openDetailModal = async (ticket: any) => {
+  try {
+    const res = await api.get(`/service-tickets/${ticket.id}`);
+    selectedTicket.value = res.data;
+  } catch (e) {
+    selectedTicket.value = ticket;
+  }
+  isDetailModalOpen.value = true;
 };
 
 const filteredTickets = computed(() => {
   return tickets.value.filter((t) => {
     const matchesSearch =
-      !searchTerm.value ||
-      t.ticketNumber.toLowerCase().includes(searchTerm.value.toLowerCase()) ||
-      t.customer.fullName.toLowerCase().includes(searchTerm.value.toLowerCase()) ||
-      (t.serialNumber && t.serialNumber.serialCode.toLowerCase().includes(searchTerm.value.toLowerCase()));
-    const matchesStatus = statusFilter.value === 'ALL' || t.status === statusFilter.value;
+      searchTerm.value === '' ||
+      t.ticketNumber?.toLowerCase().includes(searchTerm.value.toLowerCase()) ||
+      t.customer?.fullName?.toLowerCase().includes(searchTerm.value.toLowerCase()) ||
+      t.serialNumber?.serialCode?.toLowerCase().includes(searchTerm.value.toLowerCase()) ||
+      t.faultCode?.toLowerCase().includes(searchTerm.value.toLowerCase());
+
+    const matchesStatus =
+      statusFilter.value === 'ALL' || t.status === statusFilter.value;
+
     return matchesSearch && matchesStatus;
   });
 });
@@ -204,24 +184,25 @@ onMounted(() => {
 
 <template>
   <div class="space-y-6">
-    <!-- Header -->
+    <!-- Header: Notice Register New Complaint is removed for Support department as complaints originate from customer portal -->
     <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-slate-200">
       <div>
-        <h1 class="text-2xl font-bold text-slate-900 tracking-tight">Customer Service & Field Support</h1>
+        <h1 class="text-2xl font-bold text-slate-900 tracking-tight">Customer Service & Complaint Management</h1>
         <p class="text-sm text-slate-500">
-          Post-installation complaints • Serialized warranty verification • Technician dispatch & parts replacement
+          Inbound customer portal complaints • Warranty adjudication • Field technician dispatch & sign-off
         </p>
       </div>
 
+      <!-- Support officers can record an officer-assisted call when a customer calls in -->
       <div class="flex items-center gap-2">
         <button
           v-if="isAdmin || isSupport"
           type="button"
-          @click="isCreateModalOpen = true"
-          class="flex items-center space-x-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-semibold shadow-sm transition cursor-pointer"
+          @click="isOfficerCreateModalOpen = true"
+          class="flex items-center space-x-2 px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300 rounded-xl text-xs font-semibold shadow-2xs transition cursor-pointer"
         >
-          <Plus class="w-4 h-4" />
-          <span>Register New Complaint</span>
+          <Phone class="w-3.5 h-3.5 text-slate-500" />
+          <span>Record Officer-Assisted Call</span>
         </button>
       </div>
     </div>
@@ -233,7 +214,7 @@ onMounted(() => {
         <input
           type="text"
           v-model="searchTerm"
-          placeholder="Search ticket #, customer name, serial number..."
+          placeholder="Search ticket #, customer name, serial number, fault code..."
           class="w-full pl-9 pr-4 py-2 bg-white border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-emerald-500"
         />
       </div>
@@ -243,12 +224,11 @@ onMounted(() => {
         class="bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 cursor-pointer"
       >
         <option value="ALL">All Statuses</option>
-        <option value="OPEN">Open</option>
-        <option value="ASSIGNED">Assigned</option>
-        <option value="IN_PROGRESS">In Progress</option>
-        <option value="RESOLVED">Resolved</option>
-        <option value="CUSTOMER_CONFIRMED">Customer Confirmed</option>
-        <option value="CLOSED">Closed</option>
+        <option value="OPEN">Open (Awaiting Assignment)</option>
+        <option value="ASSIGNED">Assigned to Technician</option>
+        <option value="IN_PROGRESS">In Progress on Site</option>
+        <option value="RESOLVED">Technician Completed</option>
+        <option value="CLOSED">Customer Confirmed & Closed</option>
       </select>
     </div>
 
@@ -259,79 +239,148 @@ onMounted(() => {
           <thead class="bg-slate-50 text-slate-700 uppercase font-semibold text-[10px] tracking-wider border-b border-slate-200">
             <tr>
               <th class="py-3 px-4">Ticket #</th>
+              <th class="py-3 px-4">Origin / Source</th>
               <th class="py-3 px-4">Customer</th>
               <th class="py-3 px-4">Serial / Warranty</th>
-              <th class="py-3 px-4">Fault Code</th>
+              <th class="py-3 px-4">Fault Category</th>
               <th class="py-3 px-4">Assigned Tech</th>
-              <th class="py-3 px-4">Charges</th>
+              <th class="py-3 px-4">Customer Charge</th>
               <th class="py-3 px-4">Status</th>
               <th class="py-3 px-4 text-right">Actions</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-slate-100">
             <tr v-if="filteredTickets.length === 0">
-              <td colspan="8" class="py-8 text-center text-slate-400">
+              <td colspan="9" class="py-8 text-center text-slate-400">
                 No service tickets found matching search criteria.
               </td>
             </tr>
             <tr v-for="t in filteredTickets" :key="t.id" class="hover:bg-slate-50 transition">
-              <td class="py-3 px-4 font-mono font-bold text-slate-900">{{ t.ticketNumber }}</td>
+              <td class="py-3 px-4 font-mono font-bold text-slate-900">
+                {{ t.ticketNumber }}
+              </td>
+              <td class="py-3 px-4">
+                <span v-if="t.submissionSource === 'CUSTOMER_PORTAL'" class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold bg-blue-50 text-blue-700 border border-blue-200">
+                  Customer Portal
+                </span>
+                <span v-else class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold bg-amber-50 text-amber-700 border border-amber-200">
+                  Officer-Assisted
+                </span>
+              </td>
               <td class="py-3 px-4 font-semibold text-slate-800">
-                <div>{{ t.customer.fullName }}</div>
-                <div class="text-[11px] text-slate-400 font-normal">{{ t.customer.phone }}</div>
+                <div>{{ t.customer?.fullName }}</div>
+                <div class="text-[11px] text-slate-400 font-normal">{{ t.customer?.phone }}</div>
               </td>
               <td class="py-3 px-4">
-                <span v-if="t.underWarranty" class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">
+                <div v-if="t.underWarranty" class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">
                   ✓ Active Warranty
-                </span>
-                <span v-else class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-rose-100 text-rose-800 border border-rose-200">
+                </div>
+                <div v-else class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-rose-100 text-rose-800 border border-rose-200">
                   Out of Warranty
-                </span>
-                <span v-if="t.serialNumber" class="block font-mono text-[10px] text-slate-500 mt-0.5">
+                </div>
+                <div v-if="t.serialNumber" class="block font-mono text-[10px] text-slate-500 mt-0.5">
                   {{ t.serialNumber.serialCode }}
-                </span>
+                </div>
               </td>
               <td class="py-3 px-4">
-                <span class="font-medium text-slate-800">{{ t.faultCode || 'General Defect' }}</span>
+                <span class="font-medium text-slate-800">{{ formatFaultCode(t.faultCode) }}</span>
               </td>
               <td class="py-3 px-4">
                 <span v-if="t.assignedTechnician" class="font-semibold text-slate-800">{{ t.assignedTechnician.name }}</span>
                 <span v-else class="text-slate-400 italic">Unassigned</span>
               </td>
               <td class="py-3 px-4">
-                <span v-if="t.totalCustomerCharges > 0" class="font-bold text-slate-900">₹{{ t.totalCustomerCharges }}</span>
-                <span v-else class="text-emerald-700 font-semibold">₹0 (Warranty)</span>
+                <!-- Authoritative charge display: No ₹0 (Warranty) for Out of Warranty -->
+                <div v-if="t.underWarranty" class="text-emerald-700 font-bold">
+                  ₹0 (Warranty)
+                </div>
+                <div v-else-if="t.totalCustomerCharges > 0" class="font-bold text-slate-900">
+                  ₹{{ t.totalCustomerCharges }} <span class="text-[10px] text-rose-600 font-medium">(Chargeable)</span>
+                </div>
+                <div v-else class="text-amber-700 font-medium">
+                  Pending Estimation
+                </div>
+                <div class="text-[10px] text-slate-400 font-mono">{{ t.chargeStatusText || '' }}</div>
               </td>
               <td class="py-3 px-4">
                 <StatusBadge :status="t.status" />
               </td>
-              <td class="py-3 px-4 text-right space-x-2 whitespace-nowrap">
-                <button
-                  v-if="(isAdmin || isSupport) && t.status === 'OPEN'"
-                  type="button"
-                  @click="selectedTicket = t; isAssignModalOpen = true"
-                  class="px-2.5 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded font-semibold cursor-pointer text-xs"
-                >
-                  Assign Tech
-                </button>
+              <td class="py-3 px-4 text-right space-x-1.5 whitespace-nowrap">
+                <!-- Status-dependent actions as required by section 7 -->
+                <template v-if="t.status === 'OPEN'">
+                  <button
+                    type="button"
+                    @click="openDetailModal(t)"
+                    class="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded font-semibold cursor-pointer text-xs"
+                  >
+                    View Complaint
+                  </button>
+                  <button
+                    v-if="isAdmin || isSupport"
+                    type="button"
+                    @click="selectedTicket = t; isAssignModalOpen = true"
+                    class="px-2.5 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded font-semibold cursor-pointer text-xs"
+                  >
+                    Assign Tech
+                  </button>
+                </template>
 
-                <button
-                  v-if="(isAdmin || isTech) && ['ASSIGNED', 'IN_PROGRESS', 'WAITING_FOR_PARTS'].includes(t.status)"
-                  type="button"
-                  @click="openResolveModal(t)"
-                  class="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded font-semibold cursor-pointer text-xs"
-                >
-                  Resolve & Add Parts
-                </button>
+                <template v-else-if="t.status === 'ASSIGNED'">
+                  <button
+                    type="button"
+                    @click="openDetailModal(t)"
+                    class="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded font-semibold cursor-pointer text-xs"
+                  >
+                    View Details
+                  </button>
+                </template>
 
-                <button
-                  v-if="(isAdmin || isSupport) && t.status === 'RESOLVED'"
-                  type="button"
-                  @click="openConfirmModal(t)"
-                  class="px-2.5 py-1 bg-teal-600 hover:bg-teal-700 text-white rounded font-semibold cursor-pointer text-xs"
-                >
-                  Customer Confirm
-                </button>
+                <template v-else-if="t.status === 'IN_PROGRESS'">
+                  <button
+                    type="button"
+                    @click="openDetailModal(t)"
+                    class="px-2.5 py-1 bg-amber-100 hover:bg-amber-200 text-amber-800 rounded font-semibold cursor-pointer text-xs"
+                  >
+                    View Work Progress
+                  </button>
+                </template>
+
+                <template v-else-if="t.status === 'RESOLVED'">
+                  <button
+                    type="button"
+                    @click="openDetailModal(t)"
+                    class="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded font-semibold cursor-pointer text-xs"
+                  >
+                    Review Repair
+                  </button>
+                  <button
+                    v-if="isAdmin || isSupport"
+                    type="button"
+                    @click="selectedTicket = t; isConfirmModalOpen = true"
+                    class="px-2.5 py-1 bg-teal-600 hover:bg-teal-700 text-white rounded font-semibold cursor-pointer text-xs"
+                  >
+                    Confirm & Close
+                  </button>
+                </template>
+
+                <template v-else-if="t.status === 'CLOSED'">
+                  <button
+                    type="button"
+                    @click="openDetailModal(t)"
+                    class="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded font-semibold cursor-pointer text-xs"
+                  >
+                    View Complete History
+                  </button>
+                  <button
+                    v-if="isAdmin || isSupport"
+                    type="button"
+                    @click="openReopenModal(t)"
+                    class="px-2.5 py-1 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded font-semibold cursor-pointer text-xs"
+                    title="Authorized reopening if customer reports recurring issue"
+                  >
+                    Reopen Complaint
+                  </button>
+                </template>
               </td>
             </tr>
           </tbody>
@@ -339,65 +388,175 @@ onMounted(() => {
       </div>
     </div>
 
-    <!-- Modal: Register Complaint -->
-    <div v-if="isCreateModalOpen" class="fixed inset-0 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center z-50 p-4">
-      <div class="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl">
-        <div class="flex items-center justify-between pb-3 border-b border-slate-100 mb-4">
-          <h2 class="text-lg font-bold text-slate-900">Register Support Ticket & Complaint</h2>
-          <button type="button" @click="isCreateModalOpen = false" class="text-slate-400 hover:text-slate-600 text-lg cursor-pointer">✕</button>
+    <!-- Modal: View Complaint / History Details -->
+    <div v-if="isDetailModalOpen && selectedTicket" class="fixed inset-0 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center z-50 p-4">
+      <div class="bg-white rounded-2xl max-w-2xl w-full p-6 shadow-2xl max-h-[90vh] overflow-y-auto space-y-4">
+        <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+          <div>
+            <div class="flex items-center space-x-2">
+              <span class="font-mono text-base font-bold text-slate-900">{{ selectedTicket.ticketNumber }}</span>
+              <StatusBadge :status="selectedTicket.status" />
+            </div>
+            <p class="text-xs text-slate-500">Source: {{ selectedTicket.submissionSource }} • Reported: {{ selectedTicket.reportedDate }}</p>
+          </div>
+          <button type="button" @click="isDetailModalOpen = false" class="text-slate-400 hover:text-slate-600 text-lg cursor-pointer">✕</button>
         </div>
 
-        <form @submit.prevent="handleCreateTicket" class="space-y-4 text-xs">
+        <div class="grid grid-cols-2 gap-4 text-xs bg-slate-50 p-3 rounded-xl border border-slate-200">
           <div>
-            <label class="block font-semibold text-slate-700 mb-1">Select Customer *</label>
-            <select
+            <span class="text-slate-400 block">Customer</span>
+            <span class="font-bold text-slate-900">{{ selectedTicket.customer?.fullName }}</span>
+            <span class="text-slate-500 block">{{ selectedTicket.customer?.phone }}</span>
+          </div>
+          <div>
+            <span class="text-slate-400 block">Equipment & Serial</span>
+            <span class="font-bold text-slate-900">{{ selectedTicket.serialNumber?.product?.name || 'Solar Equipment' }}</span>
+            <span class="font-mono text-slate-600 block">{{ selectedTicket.serialNumber?.serialCode || 'N/A' }}</span>
+          </div>
+          <div>
+            <span class="text-slate-400 block">Warranty Adjudication</span>
+            <span :class="selectedTicket.underWarranty ? 'text-emerald-700 font-bold' : 'text-rose-700 font-bold'">
+              {{ selectedTicket.warrantyCoverageStatus || (selectedTicket.underWarranty ? 'Active Warranty' : 'Out of Warranty') }}
+            </span>
+          </div>
+          <div>
+            <span class="text-slate-400 block">Assigned Technician</span>
+            <span class="font-bold text-slate-900">{{ selectedTicket.assignedTechnician?.name || 'Not yet assigned' }}</span>
+          </div>
+        </div>
+
+        <div class="text-xs">
+          <label class="font-bold text-slate-700 block mb-1">Customer Problem Description</label>
+          <div class="bg-white p-3 rounded-lg border border-slate-200 text-slate-700">
+            {{ selectedTicket.complaintDescription }}
+          </div>
+        </div>
+
+        <div v-if="selectedTicket.complaintPhotoUrl" class="text-xs">
+          <label class="font-bold text-slate-700 block mb-1">Complaint Photo Uploaded by Customer</label>
+          <img :src="selectedTicket.complaintPhotoUrl" alt="Complaint evidence" class="w-48 h-32 object-cover rounded-lg border border-slate-200" />
+        </div>
+
+        <div v-if="selectedTicket.diagnosisNotes" class="text-xs space-y-2">
+          <label class="font-bold text-slate-700 block">Technician On-Site Diagnostics & Resolution</label>
+          <div class="bg-emerald-50/50 p-3 rounded-lg border border-emerald-100 text-slate-800 space-y-1">
+            <p><strong>Diagnosis:</strong> {{ selectedTicket.diagnosisNotes }}</p>
+            <p><strong>Resolution:</strong> {{ selectedTicket.resolutionNotes }}</p>
+            <p v-if="selectedTicket.testingResults"><strong>Testing Results:</strong> {{ selectedTicket.testingResults }}</p>
+          </div>
+        </div>
+
+        <div v-if="selectedTicket.beforePhotoUrl || selectedTicket.afterPhotoUrl" class="text-xs">
+          <label class="font-bold text-slate-700 block mb-1">Technician Repair Evidence</label>
+          <div class="flex gap-4">
+            <div v-if="selectedTicket.beforePhotoUrl">
+              <span class="text-[10px] text-slate-400 block">Before Repair</span>
+              <img :src="selectedTicket.beforePhotoUrl" alt="Before" class="w-40 h-28 object-cover rounded border" />
+            </div>
+            <div v-if="selectedTicket.afterPhotoUrl">
+              <span class="text-[10px] text-slate-400 block">After Repair</span>
+              <img :src="selectedTicket.afterPhotoUrl" alt="After" class="w-40 h-28 object-cover rounded border" />
+            </div>
+          </div>
+        </div>
+
+        <div v-if="selectedTicket.customerConfirmationNotes" class="text-xs bg-teal-50 p-3 rounded-lg border border-teal-200 text-teal-900">
+          <p class="font-bold">✓ Customer Digital Confirmation Recorded</p>
+          <p>{{ selectedTicket.customerConfirmationNotes }}</p>
+          <p class="text-[10px] text-teal-600 mt-1">Confirmed at: {{ selectedTicket.customerConfirmedAt }}</p>
+        </div>
+
+        <div v-if="selectedTicket.activities && selectedTicket.activities.length > 0" class="text-xs">
+          <label class="font-bold text-slate-700 block mb-2">Audit Trail</label>
+          <div class="space-y-1.5 max-h-40 overflow-y-auto border border-slate-200 rounded-lg p-2.5 bg-slate-50">
+            <div v-for="act in selectedTicket.activities" :key="act.id" class="text-[11px] pb-1 border-b border-slate-200 last:border-b-0">
+              <div class="flex justify-between font-semibold text-slate-800">
+                <span>{{ act.activityType }}</span>
+                <span class="text-slate-400 text-[10px]">{{ act.timestamp }}</span>
+              </div>
+              <p class="text-slate-600">{{ act.notes }}</p>
+              <span class="text-[10px] text-slate-400">By: {{ act.performedBy }}</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="flex justify-end pt-3 border-t border-slate-100">
+          <button type="button" @click="isDetailModalOpen = false" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-semibold text-xs cursor-pointer">
+            Close
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal: Record Officer-Assisted Complaint -->
+    <div v-if="isOfficerCreateModalOpen" class="fixed inset-0 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center z-50 p-4">
+      <div class="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl">
+        <div class="flex items-center justify-between pb-3 border-b border-slate-100 mb-4">
+          <div>
+            <h2 class="text-lg font-bold text-slate-900">Record Officer-Assisted Complaint</h2>
+            <p class="text-xs text-slate-500">Explicitly logged as telephone intake by {{ authStore.user?.fullName }}</p>
+          </div>
+          <button type="button" @click="isOfficerCreateModalOpen = false" class="text-slate-400 hover:text-slate-600 text-lg cursor-pointer">✕</button>
+        </div>
+
+        <form @submit.prevent="handleOfficerCreate" class="space-y-3 text-xs">
+          <div>
+            <label class="block font-semibold text-slate-700 mb-1">Customer Phone Number *</label>
+            <input
+              type="text"
               required
-              v-model="createForm.customerId"
+              v-model="officerCreateForm.callerPhone"
+              placeholder="e.g. 9876543210"
               class="w-full px-3 py-2 border border-slate-200 rounded-lg text-xs focus:ring-2 focus:ring-emerald-500 focus:outline-none"
-            >
-              <option value="">-- Choose Customer --</option>
-              <option v-for="c in customers" :key="c.id" :value="c.id">
-                {{ c.fullName }} ({{ c.phone }})
-              </option>
-            </select>
+            />
           </div>
 
           <div>
-            <label class="block font-semibold text-slate-700 mb-1">Defective Component Serial Code (Optional)</label>
+            <label class="block font-semibold text-slate-700 mb-1">Customer Contact Name</label>
             <input
               type="text"
-              v-model="createForm.serialCode"
-              placeholder="e.g. SN-INV-5KW-001 (Automatic warranty verification)"
+              v-model="officerCreateForm.callerName"
+              placeholder="Customer Full Name"
+              class="w-full px-3 py-2 border border-slate-200 rounded-lg text-xs focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+            />
+          </div>
+
+          <div>
+            <label class="block font-semibold text-slate-700 mb-1">Equipment Serial Number *</label>
+            <input
+              type="text"
+              required
+              v-model="officerCreateForm.serialCode"
+              placeholder="e.g. SN-INV-5KW-001 or ITRK-PNL-ORD00001-1"
               class="w-full px-3 py-2 border border-slate-200 rounded-lg text-xs font-mono focus:ring-2 focus:ring-emerald-500 focus:outline-none"
             />
           </div>
 
           <div>
-            <label class="block font-semibold text-slate-700 mb-1">Fault Code / Category *</label>
-            <select v-model="createForm.faultCode" class="w-full px-3 py-2 border border-slate-200 rounded-lg text-xs focus:ring-2 focus:ring-emerald-500 focus:outline-none">
-              <option value="E04 - Grid Phase Overvoltage">E04 - Grid Phase Overvoltage</option>
-              <option value="E01 - Inverter Grounding Fault">E01 - Inverter Grounding Fault</option>
-              <option value="E09 - PV String Underperformance">E09 - PV String Underperformance</option>
-              <option value="E15 - Battery Communication Loss">E15 - Battery Communication Loss</option>
-              <option value="PHY - Physical Frame / Cable Damage">PHY - Physical Frame / Cable Damage</option>
+            <label class="block font-semibold text-slate-700 mb-1">Reported Fault Category *</label>
+            <select v-model="officerCreateForm.faultCategory" class="w-full px-3 py-2 border border-slate-200 rounded-lg text-xs focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+              <option value="Inverter Error / Grid Sync Drop">Inverter Error / Grid Sync Drop</option>
+              <option value="Solar Panel Generation Defect">Solar Panel Generation Defect</option>
+              <option value="Battery Storage Underperformance">Battery Storage Underperformance</option>
+              <option value="Physical / Weather Damage (Excluded)">Physical / Weather Damage (Excluded)</option>
             </select>
           </div>
 
           <div>
-            <label class="block font-semibold text-slate-700 mb-1">Customer Complaint Description *</label>
+            <label class="block font-semibold text-slate-700 mb-1">Issue Description *</label>
             <textarea
               rows="3"
               required
-              v-model="createForm.complaintDescription"
+              v-model="officerCreateForm.complaintDescription"
+              placeholder="Details conveyed by customer during telephone intake..."
               class="w-full px-3 py-2 border border-slate-200 rounded-lg text-xs focus:ring-2 focus:ring-emerald-500 focus:outline-none"
-              placeholder="e.g. Inverter displaying red LED warning and zero kWh generation since morning."
             ></textarea>
           </div>
 
           <div class="flex justify-end space-x-3 pt-3 border-t border-slate-100">
             <button
               type="button"
-              @click="isCreateModalOpen = false"
+              @click="isOfficerCreateModalOpen = false"
               class="px-4 py-2 border border-slate-200 text-slate-600 rounded-xl hover:bg-slate-50 font-medium cursor-pointer"
             >
               Cancel
@@ -406,7 +565,7 @@ onMounted(() => {
               type="submit"
               class="px-4 py-2 bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 font-semibold shadow-xs cursor-pointer"
             >
-              Register Ticket
+              Submit Inbound Complaint
             </button>
           </div>
         </form>
@@ -417,7 +576,7 @@ onMounted(() => {
     <div v-if="isAssignModalOpen && selectedTicket" class="fixed inset-0 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center z-50 p-4">
       <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl">
         <h2 class="text-lg font-bold text-slate-900 mb-1">Assign Service Technician</h2>
-        <p class="text-xs text-slate-500 mb-4">Ticket: {{ selectedTicket.ticketNumber }} • Customer: {{ selectedTicket.customer.fullName }}</p>
+        <p class="text-xs text-slate-500 mb-4">Ticket: {{ selectedTicket.ticketNumber }} • Customer: {{ selectedTicket.customer?.fullName }}</p>
 
         <form @submit.prevent="handleAssign" class="space-y-4 text-xs">
           <div>
@@ -453,94 +612,20 @@ onMounted(() => {
       </div>
     </div>
 
-    <!-- Modal: Resolve Ticket & Replace Parts -->
-    <div v-if="isResolveModalOpen && selectedTicket" class="fixed inset-0 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center z-50 p-4">
-      <div class="bg-white rounded-2xl max-w-xl w-full p-6 shadow-2xl max-h-[90vh] overflow-y-auto">
-        <div class="flex items-center justify-between pb-3 border-b border-slate-100 mb-4">
-          <div>
-            <h2 class="text-lg font-bold text-slate-900">Resolve Service Ticket</h2>
-            <p class="text-xs text-slate-500">Ticket: {{ selectedTicket.ticketNumber }} • Coverage: {{ selectedTicket.underWarranty ? 'UNDER WARRANTY (Free Parts)' : 'CHARGEABLE' }}</p>
-          </div>
-          <button type="button" @click="isResolveModalOpen = false" class="text-slate-400 hover:text-slate-600 text-lg cursor-pointer">✕</button>
-        </div>
-
-        <form @submit.prevent="handleResolveSubmit" class="space-y-4 text-xs">
-          <div>
-            <label class="block font-semibold text-slate-700 mb-1">Diagnosis Notes *</label>
-            <textarea rows="2" required v-model="resolveForm.diagnosisNotes" class="w-full px-3 py-2 border border-slate-200 rounded-lg text-xs focus:ring-2 focus:ring-emerald-500 focus:outline-none"></textarea>
-          </div>
-
-          <div>
-            <label class="block font-semibold text-slate-700 mb-1">Action / Resolution Notes *</label>
-            <textarea rows="2" required v-model="resolveForm.resolutionNotes" class="w-full px-3 py-2 border border-slate-200 rounded-lg text-xs focus:ring-2 focus:ring-emerald-500 focus:outline-none"></textarea>
-          </div>
-
-          <!-- Parts Replacement from Inventory -->
-          <div>
-            <label class="block font-semibold text-slate-700 mb-1">Replace Hardware Parts from Warehouse Inventory</label>
-            <div class="flex gap-2 mb-2">
-              <select v-model="selectedPartProduct" class="flex-1 px-3 py-2 border border-slate-200 rounded-lg text-xs focus:ring-2 focus:ring-emerald-500 focus:outline-none">
-                <option value="">-- Choose Spare Product --</option>
-                <option v-for="p in products" :key="p.id" :value="p.id">
-                  {{ p.name }} (Available: {{ p.currentStock }})
-                </option>
-              </select>
-              <input
-                type="number"
-                min="1"
-                v-model="selectedPartQty"
-                class="w-16 px-2 py-2 border border-slate-200 rounded-lg text-xs text-center"
-              />
-              <button
-                type="button"
-                @click="handleAddPart"
-                class="px-3 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-lg text-xs font-semibold cursor-pointer"
-              >
-                Add Part
-              </button>
-            </div>
-
-            <div v-if="resolveForm.parts.length > 0" class="border border-slate-200 rounded-lg divide-y divide-slate-100">
-              <div v-for="(part, idx) in resolveForm.parts" :key="idx" class="p-2 flex justify-between items-center">
-                <span>Product ID: {{ part.productId }} (Qty: {{ part.quantity }})</span>
-                <button type="button" @click="handleRemovePart(idx)" class="text-rose-600 font-bold hover:text-rose-800 cursor-pointer">Remove</button>
-              </div>
-            </div>
-          </div>
-
-          <div class="flex justify-end space-x-3 pt-3 border-t border-slate-100">
-            <button
-              type="button"
-              @click="isResolveModalOpen = false"
-              class="px-4 py-2 border border-slate-200 text-slate-600 rounded-xl hover:bg-slate-50 font-medium cursor-pointer"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              class="px-4 py-2 bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 font-semibold shadow-xs cursor-pointer"
-            >
-              Submit Ticket Resolution
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
-
-    <!-- Modal: Customer Confirmation -->
+    <!-- Modal: Customer Confirmation and Close -->
     <div v-if="isConfirmModalOpen && selectedTicket" class="fixed inset-0 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center z-50 p-4">
       <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl">
-        <h2 class="text-lg font-bold text-slate-900 mb-1">Customer Sign-Off Confirmation</h2>
-        <p class="text-xs text-slate-500 mb-4">Ticket: {{ selectedTicket.ticketNumber }}</p>
+        <h2 class="text-lg font-bold text-slate-900 mb-1">Customer Sign-Off & Ticket Closure</h2>
+        <p class="text-xs text-slate-500 mb-4">Ticket: {{ selectedTicket.ticketNumber }} • Technician has completed repair</p>
 
         <form @submit.prevent="handleConfirmSubmit" class="space-y-4 text-xs">
           <div>
-            <label class="block font-semibold text-slate-700 mb-1">Customer Signee Name *</label>
+            <label class="block font-semibold text-slate-700 mb-1">Confirmed Customer Name *</label>
             <input type="text" required v-model="confirmForm.confirmedByCustomerName" class="w-full px-3 py-2 border border-slate-200 rounded-lg text-xs focus:ring-2 focus:ring-emerald-500 focus:outline-none" />
           </div>
 
           <div>
-            <label class="block font-semibold text-slate-700 mb-1">Satisfaction & Restoration Notes *</label>
+            <label class="block font-semibold text-slate-700 mb-1">Satisfaction & Verification Notes *</label>
             <textarea rows="3" required v-model="confirmForm.customerSatisfactionNotes" class="w-full px-3 py-2 border border-slate-200 rounded-lg text-xs focus:ring-2 focus:ring-emerald-500 focus:outline-none"></textarea>
           </div>
 
@@ -557,6 +642,37 @@ onMounted(() => {
               class="px-4 py-2 bg-teal-600 text-white rounded-xl hover:bg-teal-700 font-semibold shadow-xs cursor-pointer"
             >
               Close & Archive Ticket
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Modal: Reopen Complaint -->
+    <div v-if="isReopenModalOpen && selectedTicket" class="fixed inset-0 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center z-50 p-4">
+      <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl">
+        <h2 class="text-lg font-bold text-slate-900 mb-1">Authorized Complaint Reopening</h2>
+        <p class="text-xs text-slate-500 mb-4">Ticket: {{ selectedTicket.ticketNumber }} • Customer: {{ selectedTicket.customer?.fullName }}</p>
+
+        <form @submit.prevent="handleReopenSubmit" class="space-y-4 text-xs">
+          <div>
+            <label class="block font-semibold text-slate-700 mb-1">Reason for Reopening *</label>
+            <textarea rows="3" required v-model="reopenReason" class="w-full px-3 py-2 border border-slate-200 rounded-lg text-xs focus:ring-2 focus:ring-rose-500 focus:outline-none" placeholder="Provide customer statement or recurrence details..."></textarea>
+          </div>
+
+          <div class="flex justify-end space-x-3 pt-3 border-t border-slate-100">
+            <button
+              type="button"
+              @click="isReopenModalOpen = false"
+              class="px-4 py-2 border border-slate-200 text-slate-600 rounded-xl hover:bg-slate-50 font-medium cursor-pointer"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              class="px-4 py-2 bg-rose-600 text-white rounded-xl hover:bg-rose-700 font-semibold shadow-xs cursor-pointer"
+            >
+              Reopen & Route to Field
             </button>
           </div>
         </form>

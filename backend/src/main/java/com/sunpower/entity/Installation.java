@@ -1,6 +1,7 @@
 package com.sunpower.entity;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.sunpower.entity.enums.Enums.InstallationStatus;
 import jakarta.persistence.*;
 import java.math.BigDecimal;
@@ -11,6 +12,7 @@ import java.util.List;
 
 @Entity
 @Table(name = "installations")
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 public class Installation {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

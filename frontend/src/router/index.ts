@@ -13,6 +13,8 @@ import DispatchView from '../views/DispatchView.vue';
 import InstallationsView from '../views/InstallationsView.vue';
 import WarrantyView from '../views/WarrantyView.vue';
 import ServiceTicketsView from '../views/ServiceTicketsView.vue';
+import TechnicianServiceJobsView from '../views/TechnicianServiceJobsView.vue';
+import MyAssignedWorkView from '../views/MyAssignedWorkView.vue';
 import FinanceView from '../views/FinanceView.vue';
 
 const routes = [
@@ -81,6 +83,16 @@ const routes = [
         path: 'service',
         name: 'ServiceTickets',
         component: ServiceTicketsView,
+      },
+      {
+        path: 'my-work',
+        name: 'MyAssignedWork',
+        component: MyAssignedWorkView,
+      },
+      {
+        path: 'service-jobs',
+        name: 'TechnicianServiceJobs',
+        component: TechnicianServiceJobsView,
       },
       {
         path: 'finance',

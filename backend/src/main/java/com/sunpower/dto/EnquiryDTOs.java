@@ -81,6 +81,9 @@ public class EnquiryDTOs {
         @NotNull(message = "Status is required")
         private EnquiryStatus status;
         private String actionNote;
+        private BigDecimal monthlyElectricityBill;
+        private BigDecimal shadowFreeAreaSqFt;
+        private Boolean gridSuitable;
 
         public EnquiryStatusUpdateRequest() {}
 
@@ -88,6 +91,12 @@ public class EnquiryDTOs {
         public void setStatus(EnquiryStatus status) { this.status = status; }
         public String getActionNote() { return actionNote; }
         public void setActionNote(String actionNote) { this.actionNote = actionNote; }
+        public BigDecimal getMonthlyElectricityBill() { return monthlyElectricityBill; }
+        public void setMonthlyElectricityBill(BigDecimal monthlyElectricityBill) { this.monthlyElectricityBill = monthlyElectricityBill; }
+        public BigDecimal getShadowFreeAreaSqFt() { return shadowFreeAreaSqFt; }
+        public void setShadowFreeAreaSqFt(BigDecimal shadowFreeAreaSqFt) { this.shadowFreeAreaSqFt = shadowFreeAreaSqFt; }
+        public Boolean getGridSuitable() { return gridSuitable; }
+        public void setGridSuitable(Boolean gridSuitable) { this.gridSuitable = gridSuitable; }
     }
 
     public static class PublicEnquiryRequest {

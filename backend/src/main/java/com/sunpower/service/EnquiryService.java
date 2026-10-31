@@ -119,6 +119,17 @@ public class EnquiryService {
         Enquiry enquiry = getEnquiryById(id);
         EnquiryStatus oldStatus = enquiry.getStatus();
         enquiry.setStatus(request.getStatus());
+
+        if (request.getMonthlyElectricityBill() != null) {
+            enquiry.setMonthlyElectricityBill(request.getMonthlyElectricityBill());
+        }
+        if (request.getShadowFreeAreaSqFt() != null) {
+            enquiry.setShadowFreeAreaSqFt(request.getShadowFreeAreaSqFt());
+        }
+        if (request.getGridSuitable() != null) {
+            enquiry.setGridSuitable(request.getGridSuitable());
+        }
+
         enquiry = enquiryRepository.save(enquiry);
 
         EnquiryActivity activity = new EnquiryActivity(

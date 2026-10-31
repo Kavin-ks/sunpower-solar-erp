@@ -225,14 +225,6 @@ onMounted(() => {
       </div>
     </div>
 
-    <!-- Info Callout -->
-    <div class="bg-emerald-50/70 border border-emerald-200 p-3.5 rounded-xl flex items-center space-x-3 text-xs text-emerald-900">
-      <ShieldCheck class="w-5 h-5 text-emerald-600 shrink-0" />
-      <p>
-        <strong>Department Boundary Gate:</strong> Technical inspection findings are strictly filled by certified technicians.
-        Sales can inspect findings but cannot edit technical values. A quotation can only be generated once the survey status is <strong>APPROVED</strong>.
-      </p>
-    </div>
 
     <!-- Surveys List Table -->
     <div class="bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden">

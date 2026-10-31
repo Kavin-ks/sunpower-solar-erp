@@ -25,7 +25,7 @@ public class InstallationController {
     private InstallationService installationService;
 
     @GetMapping
-    @PreAuthorize("hasAnyRole('ADMIN', 'SALES', 'TECHNICIAN', 'SUPPORT', 'WAREHOUSE', 'FINANCE', 'DIRECTOR')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SALES', 'TECHNICIAN', 'SUPPORT', 'WAREHOUSE', 'FINANCE')")
     public ResponseEntity<List<Installation>> getAllInstallations(@RequestParam(required = false) InstallationStatus status) {
         if (status != null) {
             return ResponseEntity.ok(installationService.getInstallationsByStatus(status));
@@ -33,14 +33,21 @@ public class InstallationController {
         return ResponseEntity.ok(installationService.getAllInstallations());
     }
 
+    @GetMapping("/my-assigned")
+    @PreAuthorize("hasAnyRole('TECHNICIAN', 'ADMIN')")
+    public ResponseEntity<List<Installation>> getMyAssignedInstallations(Authentication authentication) {
+        String username = authentication != null ? authentication.getName() : "technician";
+        return ResponseEntity.ok(installationService.getInstallationsForTechnician(username));
+    }
+
     @GetMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'SALES', 'TECHNICIAN', 'SUPPORT', 'WAREHOUSE', 'FINANCE', 'DIRECTOR')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SALES', 'TECHNICIAN', 'SUPPORT', 'WAREHOUSE', 'FINANCE')")
     public ResponseEntity<Installation> getInstallationById(@PathVariable Long id) {
         return ResponseEntity.ok(installationService.getInstallationById(id));
     }
 
-    @PostMapping("/schedule")
-    @PreAuthorize("hasAnyRole('TECHNICIAN', 'WAREHOUSE', 'DIRECTOR')")
+    @RequestMapping(value = {"", "/schedule"}, method = RequestMethod.POST)
+    @PreAuthorize("hasAnyRole('TECHNICIAN', 'WAREHOUSE', 'ADMIN')")
     public ResponseEntity<Installation> scheduleInstallation(
             @Valid @RequestBody ScheduleInstallationRequest request) {
         Installation installation = installationService.scheduleInstallation(request);
@@ -48,7 +55,7 @@ public class InstallationController {
     }
 
     @PostMapping("/{id}/verify-product")
-    @PreAuthorize("hasAnyRole('TECHNICIAN', 'DIRECTOR')")
+    @PreAuthorize("hasAnyRole('TECHNICIAN', 'ADMIN')")
     public ResponseEntity<com.sunpower.entity.SerialNumber> verifyProduct(
             @PathVariable Long id,
             @RequestBody Map<String, String> payload,
@@ -62,8 +69,8 @@ public class InstallationController {
         return ResponseEntity.ok(sn);
     }
 
-    @PostMapping("/{id}/start")
-    @PreAuthorize("hasAnyRole('TECHNICIAN', 'DIRECTOR')")
+    @RequestMapping(value = "/{id}/start", method = {RequestMethod.POST, RequestMethod.PATCH})
+    @PreAuthorize("hasAnyRole('TECHNICIAN', 'ADMIN')")
     public ResponseEntity<Installation> startInstallation(
             @PathVariable Long id,
             Authentication authentication) {
@@ -72,8 +79,8 @@ public class InstallationController {
         return ResponseEntity.ok(installation);
     }
 
-    @PostMapping("/{id}/complete")
-    @PreAuthorize("hasAnyRole('TECHNICIAN', 'DIRECTOR')")
+    @RequestMapping(value = "/{id}/complete", method = {RequestMethod.POST, RequestMethod.PATCH})
+    @PreAuthorize("hasAnyRole('TECHNICIAN', 'ADMIN')")
     public ResponseEntity<Installation> completeInstallation(
             @PathVariable Long id,
             @Valid @RequestBody CompleteInstallationRequest request,
@@ -84,7 +91,7 @@ public class InstallationController {
     }
 
     @PostMapping("/{id}/photos")
-    @PreAuthorize("hasAnyRole('TECHNICIAN', 'DIRECTOR')")
+    @PreAuthorize("hasAnyRole('TECHNICIAN', 'ADMIN')")
     public ResponseEntity<InstallationPhoto> addPhoto(@PathVariable Long id, @RequestBody Map<String, String> payload) {
         String photoUrl = payload.get("photoUrl");
         String stage = payload.get("stage");

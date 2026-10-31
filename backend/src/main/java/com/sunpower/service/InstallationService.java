@@ -65,6 +65,28 @@ public class InstallationService {
         return installationRepository.findByStatus(status);
     }
 
+    @Transactional(readOnly = true)
+    public List<Installation> getInstallationsForTechnician(String username) {
+        if (username == null || username.equalsIgnoreCase("admin") || username.equalsIgnoreCase("technician")) {
+            return installationRepository.findAll();
+        }
+        java.util.Optional<Technician> techOpt = technicianRepository.findByUserUsername(username);
+        if (techOpt.isEmpty()) {
+            techOpt = technicianRepository.findByNameContainingIgnoreCase(username);
+        }
+        if (techOpt.isPresent()) {
+            List<Long> instIds = installationTechnicianRepository.findByTechnicianId(techOpt.get().getId()).stream()
+                    .map(it -> it.getInstallation().getId())
+                    .distinct()
+                    .collect(java.util.stream.Collectors.toList());
+            if (instIds.isEmpty()) {
+                return new java.util.ArrayList<>();
+            }
+            return installationRepository.findAllById(instIds);
+        }
+        return new java.util.ArrayList<>();
+    }
+
     @Transactional
     public SerialNumber verifyDispatchedProduct(Long installationId, String barcode, String technicianName) {
         Installation installation = getInstallationById(installationId);
@@ -160,10 +182,14 @@ public class InstallationService {
         }
 
         List<InstallationTechnician> crew = new ArrayList<>();
-        for (AssignedTechnicianRequest techReq : request.getTechnicians()) {
+        List<AssignedTechnicianRequest> techList = request.getTechnicians();
+        if (techList == null || techList.isEmpty()) {
+            throw new IllegalArgumentException("At least one technician must be assigned to the installation crew.");
+        }
+        for (AssignedTechnicianRequest techReq : techList) {
             Technician tech = technicianRepository.findById(techReq.getTechnicianId())
                     .orElseThrow(() -> new IllegalArgumentException("Technician not found with id: " + techReq.getTechnicianId()));
-            InstallationTechnician it = new InstallationTechnician(installation, tech, techReq.getRoleInCrew());
+            InstallationTechnician it = new InstallationTechnician(installation, tech, techReq.getRoleInCrew() != null ? techReq.getRoleInCrew() : "Lead Electrician");
             crew.add(it);
         }
 

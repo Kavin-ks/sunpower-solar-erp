@@ -60,6 +60,12 @@ const menu_data: DataType[] = [
     link: "/contact",
     has_dropdown: false,
   },
+  {
+    id: 7,
+    title: "Support & Warranty",
+    link: "/complaint",
+    has_dropdown: false,
+  },
 ];
 
 export default menu_data;

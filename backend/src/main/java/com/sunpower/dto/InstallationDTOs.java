@@ -15,8 +15,8 @@ public class InstallationDTOs {
         @NotNull(message = "Scheduled date is required")
         private LocalDate scheduledDate;
 
-        @NotNull(message = "At least one technician must be assigned")
         private List<AssignedTechnicianRequest> technicians;
+        private List<Long> technicianIds;
 
         private String workNotes;
 
@@ -26,8 +26,23 @@ public class InstallationDTOs {
         public void setSalesOrderId(Long salesOrderId) { this.salesOrderId = salesOrderId; }
         public LocalDate getScheduledDate() { return scheduledDate; }
         public void setScheduledDate(LocalDate scheduledDate) { this.scheduledDate = scheduledDate; }
-        public List<AssignedTechnicianRequest> getTechnicians() { return technicians; }
+
+        public List<AssignedTechnicianRequest> getTechnicians() {
+            if ((technicians == null || technicians.isEmpty()) && technicianIds != null && !technicianIds.isEmpty()) {
+                technicians = new java.util.ArrayList<>();
+                for (Long tId : technicianIds) {
+                    AssignedTechnicianRequest r = new AssignedTechnicianRequest();
+                    r.setTechnicianId(tId);
+                    r.setRoleInCrew("Installer");
+                    technicians.add(r);
+                }
+            }
+            return technicians;
+        }
+
         public void setTechnicians(List<AssignedTechnicianRequest> technicians) { this.technicians = technicians; }
+        public List<Long> getTechnicianIds() { return technicianIds; }
+        public void setTechnicianIds(List<Long> technicianIds) { this.technicianIds = technicianIds; }
         public String getWorkNotes() { return workNotes; }
         public void setWorkNotes(String workNotes) { this.workNotes = workNotes; }
     }

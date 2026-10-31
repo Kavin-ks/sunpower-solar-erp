@@ -153,6 +153,7 @@ const handlePayoutSubmit = async () => {
       hoursCounted: payoutForm.value.hoursCounted ? parseFloat(payoutForm.value.hoursCounted) : undefined,
       hourlyRate: payoutForm.value.applicableRate ? parseFloat(payoutForm.value.applicableRate) : undefined,
       amount: parseFloat(payoutForm.value.amountPaid),
+      amountPaid: parseFloat(payoutForm.value.amountPaid),
       paymentMethod: payoutForm.value.paymentMethod,
       referenceNumber: payoutForm.value.referenceNumber,
       notes: payoutForm.value.notes,

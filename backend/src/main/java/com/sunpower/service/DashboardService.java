@@ -10,6 +10,7 @@ import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -331,54 +332,127 @@ summary.setCapacityDistribution(dist);
 
     public TechnicianDashboardDTO getTechnicianDashboard(String username) {
         TechnicianDashboardDTO dto = new TechnicianDashboardDTO();
+        List<Technician> allTechs = technicianRepository.findAll();
+        dto.setActiveTechniciansCount(allTechs.stream().filter(Technician::isActive).count());
+        dto.setAvailableTechniciansCount(allTechs.stream().filter(t -> t.isActive() && t.isAvailable()).count());
+
+        boolean isLead = username == null || username.equalsIgnoreCase("admin") || username.equalsIgnoreCase("technician");
+        dto.setLead(isLead);
+
         Technician tech = null;
         if (username != null && !username.trim().isEmpty()) {
-            tech = technicianRepository.findByNameContainingIgnoreCase(username).orElse(null);
+            tech = technicianRepository.findByUserUsername(username).orElse(null);
+            if (tech == null) {
+                tech = technicianRepository.findByNameContainingIgnoreCase(username).orElse(null);
+            }
         }
         if (tech == null) {
-            tech = technicianRepository.findByNameContainingIgnoreCase("Karthik").orElse(
-                    technicianRepository.findAll().stream().findFirst().orElse(null)
-            );
+            tech = allTechs.stream().findFirst().orElse(null);
         }
-        if (tech == null) return dto;
+        if (tech != null) {
+            dto.setTechnicianName(tech.getName());
+            dto.setPhone(tech.getPhone());
+            dto.setSpecialization(tech.getSkills());
 
-        dto.setTechnicianName(tech.getName());
-        dto.setPhone(tech.getPhone());
-        dto.setSpecialization(tech.getSkills());
+            Long tId = tech.getId();
+            List<SiteSurvey> surveys = isLead ? siteSurveyRepository.findAll() : siteSurveyRepository.findByTechnicianId(tId);
+            dto.setAssignedSurveysCount(surveys.size());
+            dto.setPendingSurveysCount(surveys.stream().filter(s -> s.getStatus() == SurveyStatus.SCHEDULED || s.getStatus() == SurveyStatus.PENDING).count());
+            dto.setCompletedSurveysCount(surveys.stream().filter(s -> s.getStatus() == SurveyStatus.APPROVED || s.getStatus() == SurveyStatus.REPORT_SUBMITTED).count());
 
-        Long tId = tech.getId();
-        List<SiteSurvey> surveys = siteSurveyRepository.findByTechnicianId(tId);
-        dto.setAssignedSurveysCount(surveys.size());
-        dto.setPendingSurveysCount(surveys.stream().filter(s -> s.getStatus() == SurveyStatus.SCHEDULED || s.getStatus() == SurveyStatus.PENDING).count());
-        dto.setCompletedSurveysCount(surveys.stream().filter(s -> s.getStatus() == SurveyStatus.APPROVED || s.getStatus() == SurveyStatus.REPORT_SUBMITTED).count());
+            List<Installation> installs;
+            if (isLead) {
+                installs = installationRepository.findAll();
+            } else {
+                installs = installationTechnicianRepository.findByTechnicianId(tId).stream()
+                        .map(InstallationTechnician::getInstallation).distinct().collect(Collectors.toList());
+            }
+            dto.setAssignedInstallationsCount(installs.size());
+            dto.setInProgressInstallationsCount(installs.stream().filter(i -> i.getStatus() == InstallationStatus.IN_PROGRESS).count());
+            dto.setCompletedInstallationsCount(installs.stream().filter(i -> i.getStatus() == InstallationStatus.COMPLETED).count());
 
-        List<Installation> installs = installationTechnicianRepository.findByTechnicianId(tId).stream()
-                .map(InstallationTechnician::getInstallation).distinct().collect(Collectors.toList());
-        dto.setAssignedInstallationsCount(installs.size());
-        dto.setInProgressInstallationsCount(installs.stream().filter(i -> i.getStatus() == InstallationStatus.IN_PROGRESS).count());
-        dto.setCompletedInstallationsCount(installs.stream().filter(i -> i.getStatus() == InstallationStatus.COMPLETED).count());
+            List<ServiceTicket> tickets = isLead ? ticketRepository.findAll() : ticketRepository.findByAssignedTechnicianId(tId);
+            dto.setAssignedServiceVisitsCount(tickets.size());
+            dto.setPendingServiceVisitsCount(tickets.stream().filter(t -> t.getStatus() != TicketStatus.CLOSED).count());
 
-        List<ServiceTicket> tickets = ticketRepository.findByAssignedTechnicianId(tId);
-        dto.setAssignedServiceVisitsCount(tickets.size());
+            dto.setUpcomingSurveys(surveys.stream().filter(s -> s.getStatus() == SurveyStatus.SCHEDULED || s.getStatus() == SurveyStatus.PENDING).limit(6).collect(Collectors.toList()));
+            dto.setActiveInstallations(installs.stream().filter(i -> i.getStatus() != InstallationStatus.COMPLETED).limit(6).collect(Collectors.toList()));
+            dto.setAssignedServiceTickets(tickets.stream().filter(t -> t.getStatus() != TicketStatus.CLOSED).limit(6).collect(Collectors.toList()));
+        }
 
-        dto.setUpcomingSurveys(surveys.stream().filter(s -> s.getStatus() == SurveyStatus.SCHEDULED || s.getStatus() == SurveyStatus.PENDING).limit(6).collect(Collectors.toList()));
-        dto.setActiveInstallations(installs.stream().filter(i -> i.getStatus() != InstallationStatus.COMPLETED).limit(6).collect(Collectors.toList()));
-        dto.setAssignedServiceTickets(tickets.stream().filter(t -> t.getStatus() != TicketStatus.CLOSED).limit(6).collect(Collectors.toList()));
+        // Fleet-wide workload for Lead and Admin
+        List<TechnicianWorkloadDTO> workloads = new ArrayList<>();
+        for (Technician t : allTechs) {
+            long activeSurveys = siteSurveyRepository.findByTechnicianId(t.getId()).stream().filter(s -> s.getStatus() == SurveyStatus.SCHEDULED || s.getStatus() == SurveyStatus.PENDING).count();
+            long activeInstalls = installationTechnicianRepository.findByTechnicianId(t.getId()).stream().map(InstallationTechnician::getInstallation).filter(i -> i.getStatus() == InstallationStatus.IN_PROGRESS || i.getStatus() == InstallationStatus.SCHEDULED).count();
+            long activeTickets = ticketRepository.findByAssignedTechnicianId(t.getId()).stream().filter(tk -> tk.getStatus() != TicketStatus.CLOSED).count();
+            long completedInstalls = installationTechnicianRepository.findByTechnicianId(t.getId()).stream().map(InstallationTechnician::getInstallation).filter(i -> i.getStatus() == InstallationStatus.COMPLETED).count();
+
+            workloads.add(new TechnicianWorkloadDTO(t.getName(), t.getPhone(), t.getSkills(), activeSurveys + activeInstalls + activeTickets, completedInstalls));
+        }
+        dto.setTeamWorkloads(workloads);
         return dto;
     }
 
     public SupportDashboardDTO getSupportDashboard() {
         SupportDashboardDTO dto = new SupportDashboardDTO();
+        List<ServiceTicket> allTickets = ticketRepository.findAll();
+
         dto.setOpenTickets(ticketRepository.countByStatus(TicketStatus.OPEN));
         dto.setAssignedTickets(ticketRepository.countByStatus(TicketStatus.ASSIGNED));
         dto.setInProgressTickets(ticketRepository.countByStatus(TicketStatus.IN_PROGRESS));
         dto.setWaitingForPartsTickets(ticketRepository.countByStatus(TicketStatus.WAITING_FOR_PARTS));
         dto.setResolvedTickets(ticketRepository.countByStatus(TicketStatus.RESOLVED));
         dto.setClosedTickets(ticketRepository.countByStatus(TicketStatus.CLOSED));
-        dto.setActiveWarrantiesCount(warrantyRepository.countByStatus(WarrantyStatus.ACTIVE));
-        dto.setAvgResolutionDays(1.4);
 
-        long crit = ticketRepository.findAll().stream()
+        // Active warranties: registered serialized items with valid delivery/start dates and not expired
+        LocalDate today = LocalDate.now();
+        long activeWarranties = warrantyRepository.findAll().stream()
+                .filter(w -> w.getStatus() == WarrantyStatus.ACTIVE &&
+                        w.getSerialNumber() != null &&
+                        w.getWarrantyStartDate() != null &&
+                        w.getWarrantyEndDate() != null &&
+                        !today.isAfter(w.getWarrantyEndDate()))
+                .count();
+        dto.setActiveWarrantiesCount(activeWarranties);
+
+        // Turnaround calculation using actual timestamps:
+        // Average = Total elapsed time from complaint creation to verified resolution / Number of resolved complaints in the selected period.
+        // Use resolved / closed tickets only. Handle missing timestamps safely.
+        // If there are no resolved tickets, show "N/A — No resolved complaints"
+        List<ServiceTicket> resolvedTickets = allTickets.stream()
+                .filter(t -> (t.getStatus() == TicketStatus.RESOLVED || t.getStatus() == TicketStatus.CLOSED) && t.getCreatedAt() != null)
+                .collect(Collectors.toList());
+
+        double totalHours = 0;
+        int countWithTimestamps = 0;
+        for (ServiceTicket t : resolvedTickets) {
+            LocalDateTime start = t.getCreatedAt();
+            LocalDateTime end = t.getCustomerConfirmedAt();
+            if (end == null) {
+                end = t.getTechnicianCompletedAt();
+            }
+            if (end == null && t.getUpdatedAt() != null) {
+                end = t.getUpdatedAt();
+            }
+            if (end != null && !end.isBefore(start)) {
+                java.time.Duration duration = java.time.Duration.between(start, end);
+                totalHours += duration.toMinutes() / 60.0;
+                countWithTimestamps++;
+            }
+        }
+
+        if (countWithTimestamps > 0) {
+            double avgDays = (totalHours / countWithTimestamps) / 24.0;
+            double rounded = Math.round(avgDays * 10.0) / 10.0;
+            dto.setAvgResolutionDays(rounded);
+            dto.setAvgResolutionTurnaroundText(String.format("%.1f days (based on %d resolved tickets)", rounded, countWithTimestamps));
+        } else {
+            dto.setAvgResolutionDays(null);
+            dto.setAvgResolutionTurnaroundText("N/A — No resolved complaints");
+        }
+
+        long crit = allTickets.stream()
                 .filter(t -> t.getComplaintDescription() != null &&
                         (t.getComplaintDescription().toLowerCase().contains("urgent") ||
                          t.getComplaintDescription().toLowerCase().contains("fault") ||
@@ -387,18 +461,23 @@ summary.setCapacityDistribution(dist);
                 .count();
         dto.setCriticalTicketsCount(crit);
 
-        dto.setUrgentTickets(ticketRepository.findAll().stream()
+        dto.setUrgentTickets(allTickets.stream()
                 .filter(t -> t.getStatus() != TicketStatus.CLOSED)
                 .sorted(Comparator.comparing(ServiceTicket::getId).reversed())
                 .limit(8).collect(Collectors.toList()));
 
-        List<FaultBreakdownDTO> faults = Arrays.asList(
-                new FaultBreakdownDTO("Inverter Error / Fault Code", 4),
-                new FaultBreakdownDTO("Net Meter Grid Sync Drop", 3),
-                new FaultBreakdownDTO("Storage Battery Capacity Drop", 2),
-                new FaultBreakdownDTO("SPD / Earthing Voltage Spike", 1),
-                new FaultBreakdownDTO("MC4 Solar Array Cable Fault", 1)
-        );
+        // Group actual fault codes/categories from service tickets
+        Map<String, Long> faultCounts = allTickets.stream()
+                .filter(t -> t.getFaultCode() != null && !t.getFaultCode().trim().isEmpty())
+                .collect(Collectors.groupingBy(ServiceTicket::getFaultCode, Collectors.counting()));
+
+        List<FaultBreakdownDTO> faults = faultCounts.entrySet().stream()
+                .map(e -> new FaultBreakdownDTO(e.getKey(), e.getValue()))
+                .sorted((a, b) -> Long.compare(b.getCount(), a.getCount()))
+                .collect(Collectors.toList());
+        if (faults.isEmpty()) {
+            faults = Arrays.asList(new FaultBreakdownDTO("Solar Generation Offline", allTickets.size()));
+        }
         dto.setFaultBreakdown(faults);
         return dto;
     }

@@ -25,7 +25,7 @@ const route = useRoute();
 
 const config = computed(() => {
   const roles = authStore.user?.roles || [];
-  const isAdmin = roles.includes('ROLE_ADMIN') || roles.includes('ROLE_DIRECTOR');
+  const isAdmin = roles.includes('ROLE_ADMIN');
   const isSales = roles.includes('ROLE_SALES');
   const isWarehouse = roles.includes('ROLE_WAREHOUSE');
   const isTechnician = roles.includes('ROLE_TECHNICIAN');
@@ -35,10 +35,11 @@ const config = computed(() => {
   if (isAdmin) {
     return {
       badge: 'Executive Oversight',
-      deptName: 'Executive Director',
+      deptName: 'System Administrator (Executive Oversight)',
       badgeColor: 'bg-purple-50 text-purple-700 border-purple-200',
-      sectionLabel: 'System-Wide Workspaces (Audit View)',
+      sectionLabel: 'System-Wide Operations & Audit',
       isAdmin: true,
+      hideBadge: false,
       items: [
         { name: 'Executive Overview', path: '/', icon: LayoutDashboard },
         { name: 'Enquiries & Leads (Audit)', path: '/enquiries', icon: Users },
@@ -49,7 +50,8 @@ const config = computed(() => {
         { name: 'Dispatch & Serials (Audit)', path: '/dispatch', icon: Truck },
         { name: 'Installations (Audit)', path: '/installations', icon: Wrench },
         { name: 'Warranty Tracker (Audit)', path: '/warranties', icon: ShieldAlert },
-        { name: 'Service Tickets (Audit)', path: '/service', icon: Headphones },
+        { name: 'Service Complaints (Audit)', path: '/service', icon: Headphones },
+        { name: 'My Assigned Service Jobs', path: '/service-jobs', icon: Headphones },
         { name: 'Finance & P&L (Audit)', path: '/finance', icon: CircleDollarSign },
       ],
     };
@@ -61,6 +63,7 @@ const config = computed(() => {
       badgeColor: 'bg-blue-50 text-blue-700 border-blue-200',
       sectionLabel: 'Sales Workflows',
       isAdmin: false,
+      hideBadge: false,
       items: [
         { name: 'Sales Dashboard', path: '/', icon: LayoutDashboard },
         { name: 'Customer Enquiries & Leads', path: '/enquiries', icon: Users },
@@ -78,6 +81,7 @@ const config = computed(() => {
       badgeColor: 'bg-amber-50 text-amber-700 border-amber-200',
       sectionLabel: 'Warehouse Workflows',
       isAdmin: false,
+      hideBadge: false,
       items: [
         { name: 'Warehouse Dashboard', path: '/', icon: LayoutDashboard },
         { name: 'Inventory Catalogue & Stock', path: '/inventory', icon: Boxes },
@@ -89,26 +93,29 @@ const config = computed(() => {
   }
   if (isTechnician) {
     return {
-      badge: 'Technician Workspace',
+      badge: '',
       deptName: 'Field & Commissioning',
-      badgeColor: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+      badgeColor: '',
       sectionLabel: 'Field Operations',
       isAdmin: false,
+      hideBadge: true, // Removed Technician Workspace / Field & Commissioning sidebar container as requested
       items: [
         { name: 'Technician Dashboard', path: '/', icon: LayoutDashboard },
+        { name: 'My Assigned Work', path: '/my-work', icon: Wrench },
         { name: 'Assigned Site Surveys', path: '/surveys', icon: Compass },
         { name: 'Installations & On-Site Verification', path: '/installations', icon: Wrench },
-        { name: 'Assigned Service Visits', path: '/service', icon: Headphones },
+        { name: 'Service Complaints', path: '/service-jobs', icon: Headphones },
       ],
     };
   }
   if (isSupport) {
     return {
-      badge: 'Support Workspace',
-      deptName: 'Customer Care & Warranty',
-      badgeColor: 'bg-rose-50 text-rose-700 border-rose-200',
+      badge: '',
+      deptName: 'Customer Support',
+      badgeColor: '',
       sectionLabel: 'Support Operations',
       isAdmin: false,
+      hideBadge: true, // Remove Support Workspace / Customer Care & Warranty container as required
       items: [
         { name: 'Support Dashboard', path: '/', icon: LayoutDashboard },
         { name: 'Service Tickets & Complaints', path: '/service', icon: Headphones },
@@ -124,6 +131,7 @@ const config = computed(() => {
       badgeColor: 'bg-teal-50 text-teal-700 border-teal-200',
       sectionLabel: 'Accounting Workflows',
       isAdmin: false,
+      hideBadge: false,
       items: [
         { name: 'Finance Dashboard', path: '/', icon: LayoutDashboard },
         { name: 'GST Invoices & Receivables', path: '/finance', icon: CircleDollarSign },
@@ -140,6 +148,7 @@ const config = computed(() => {
     badgeColor: 'bg-slate-50 text-slate-700 border-slate-200',
     sectionLabel: 'Standard Workflows',
     isAdmin: false,
+    hideBadge: false,
     items: [
       { name: 'Dashboard', path: '/', icon: LayoutDashboard },
       { name: 'Enquiries', path: '/enquiries', icon: Users },
@@ -160,7 +169,7 @@ const isItemActive = (path: string) => {
   <aside class="w-64 bg-white border-r border-slate-200 min-h-[calc(100vh-61px)] flex flex-col justify-between py-4 select-none shrink-0 shadow-xs">
     <div class="px-3 space-y-1">
       <!-- Department Badge Card -->
-      <div :class="['mb-3 px-3 py-2.5 rounded-xl border shadow-2xs', config.badgeColor]">
+      <div v-if="!config.hideBadge" :class="['mb-3 px-3 py-2.5 rounded-xl border shadow-2xs', config.badgeColor]">
         <div class="flex items-center justify-between">
           <span class="text-[10px] font-extrabold tracking-wider uppercase block">
             {{ config.badge }}
