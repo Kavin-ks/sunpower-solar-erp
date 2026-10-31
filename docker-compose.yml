@@ -7,7 +7,7 @@ services:
     command: --default-authentication-plugin=mysql_native_password
     environment:
       MYSQL_DATABASE: solar_db
-      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_ROOT_PASSWORD: MyNewPassword@123
       MYSQL_USER: solar
       MYSQL_PASSWORD: solarpassword
     ports:
@@ -15,7 +15,7 @@ services:
     volumes:
       - mysql_data:/var/lib/mysql
     healthcheck:
-      test: ["CMD-SHELL", "mysqladmin ping -h localhost -uroot -prootpassword || exit 1"]
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -uroot -pMyNewPassword@123 || exit 1"]
       interval: 5s
       timeout: 5s
       retries: 10
@@ -36,7 +36,7 @@ services:
     environment:
       SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/solar_db?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
       SPRING_DATASOURCE_USERNAME: root
-      SPRING_DATASOURCE_PASSWORD: rootpassword
+      SPRING_DATASOURCE_PASSWORD: MyNewPassword@123
       SPRING_JPA_HIBERNATE_DDL_AUTO: update
       APP_UPLOAD_DIR: /app/uploads
       APP_JWT_SECRET: 404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970
@@ -48,7 +48,7 @@ services:
     networks:
       - sunpower-network
 
-  # React 19 + Vite + Nginx Frontend
+  # React 19 + Vite + Nginx Staff Dashboard
   frontend:
     build:
       context: ./frontend
@@ -60,6 +60,24 @@ services:
     ports:
       - "80:80"
       - "5173:80"
+    networks:
+      - sunpower-network
+
+  # Next.js 13.5 Customer Portal & Marketing Website
+  odoo-solar:
+    build:
+      context: ./odoo-solar
+      dockerfile: Dockerfile
+    container_name: sunpower-odoo-solar
+    restart: unless-stopped
+    depends_on:
+      - backend
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:8080
+      BACKEND_API_URL: http://backend:8080
+      PORT: 3000
+    ports:
+      - "3000:3000"
     networks:
       - sunpower-network
 
