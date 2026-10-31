@@ -1,0 +1,245 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1920 1080" width="100%" height="100%" style="background:#070b14; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
+  <defs>
+    <!-- Background Gradient -->
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0b1326"/>
+      <stop offset="50%" stop-color="#070b14"/>
+      <stop offset="100%" stop-color="#04070d"/>
+    </linearGradient>
+
+    <!-- Card Glow Filters -->
+    <filter id="shadowCard" x="-10%" y="-10%" width="125%" height="130%">
+      <feDropShadow dx="0" dy="10" stdDeviation="14" flood-color="#000000" flood-opacity="0.7"/>
+    </filter>
+    <filter id="neonGlow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="3" result="blur"/>
+      <feComposite in="SourceGraphic" in2="blur" operator="over"/>
+    </filter>
+
+    <!-- Gradients for Cards -->
+    <linearGradient id="cardGrad1" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#1e3a8a"/><stop offset="100%" stop-color="#0f172a"/>
+    </linearGradient>
+    <linearGradient id="cardGrad2" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#0369a1"/><stop offset="100%" stop-color="#0f172a"/>
+    </linearGradient>
+    <linearGradient id="cardGrad3" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#047857"/><stop offset="100%" stop-color="#0f172a"/>
+    </linearGradient>
+    <linearGradient id="cardGrad4" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#b45309"/><stop offset="100%" stop-color="#0f172a"/>
+    </linearGradient>
+    <linearGradient id="cardGrad5" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#c2410c"/><stop offset="100%" stop-color="#0f172a"/>
+    </linearGradient>
+    <linearGradient id="cardGrad6" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#7e22ce"/><stop offset="100%" stop-color="#0f172a"/>
+    </linearGradient>
+    <linearGradient id="cardGrad7" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#0e7490"/><stop offset="100%" stop-color="#0f172a"/>
+    </linearGradient>
+    <linearGradient id="cardGrad8" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#be123c"/><stop offset="100%" stop-color="#0f172a"/>
+    </linearGradient>
+
+    <!-- Marker Arrow -->
+    <marker id="arrowHead" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M 0 0 L 8 4 L 0 8 z" fill="#38bdf8"/>
+    </marker>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1920" height="1080" fill="url(#bgGrad)"/>
+
+  <!-- Blueprint Subtle Grid -->
+  <g stroke="#1e293b" stroke-width="1" stroke-opacity="0.3">
+    <path d="M 0,200 L 1920,200 M 0,550 L 1920,550 M 0,900 L 1920,900"/>
+    <path d="M 240,0 L 240,1080 M 480,0 L 480,1080 M 720,0 L 720,1080 M 960,0 L 960,1080 M 1200,0 L 1200,1080 M 1440,0 L 1440,1080 M 1680,0 L 1680,1080"/>
+  </g>
+
+  <!-- Title Header -->
+  <g transform="translate(60, 40)">
+    <text x="0" y="40" fill="#f8fafc" font-size="34" font-weight="800" letter-spacing="1">ODOO SOLAR ERP — END-TO-END APPLICATION WORKFLOW PIPELINE</text>
+    <text x="0" y="70" fill="#38bdf8" font-size="16" font-weight="600" letter-spacing="0.5">CHRONOLOGICAL JOURNEY: CUSTOMER DISCOVERY ➔ LEAD ➔ FEASIBILITY ➔ BOM &amp; QUOTE ➔ ORDER LOCK ➔ DISPATCH ➔ INSTALLATION ➔ WARRANTY</text>
+  </g>
+
+  <!-- ======================================================== -->
+  <!-- ROW 1 (STEPS 1 to 4)                                     -->
+  <!-- ======================================================== -->
+
+  <!-- Horizontal Glow Path connecting Row 1 -->
+  <path d="M 440,330 L 520,330 M 880,330 L 960,330 M 1320,330 L 1400,330" stroke="#38bdf8" stroke-width="3" stroke-dasharray="6,4" filter="url(#neonGlow)"/>
+
+  <!-- STEP 1: CUSTOMER & DISCOVERY -->
+  <g transform="translate(80, 160)" filter="url(#shadowCard)">
+    <rect width="360" height="340" rx="16" fill="url(#cardGrad1)" stroke="#3b82f6" stroke-width="2"/>
+    <circle cx="50" cy="50" r="24" fill="#3b82f6"/>
+    <text x="43" y="58" fill="#ffffff" font-size="20" font-weight="800">1</text>
+    <text x="90" y="44" fill="#93c5fd" font-size="12" font-weight="700">CUSTOMER JOURNEY</text>
+    <text x="90" y="66" fill="#ffffff" font-size="18" font-weight="800">Customer &amp; Discovery</text>
+    
+    <line x1="24" y1="90" x2="336" y2="90" stroke="#1e40af" stroke-width="1.5"/>
+    
+    <text x="24" y="125" fill="#e2e8f0" font-size="14" font-weight="600">• Public Website: odoo-solar (Next.js)</text>
+    <text x="24" y="155" fill="#94a3b8" font-size="13">• Explores 1kW to 5kW Turnkey Packages</text>
+    <text x="24" y="185" fill="#94a3b8" font-size="13">• Compares On-Grid vs Off-Grid vs Hybrid</text>
+    <text x="24" y="215" fill="#94a3b8" font-size="13">• Reviews PM Surya Ghar Subsidy (up to ₹78k)</text>
+    <text x="24" y="245" fill="#94a3b8" font-size="13">• Industrial SVG specs: Roof area, daily kWh</text>
+    
+    <rect x="24" y="280" width="312" height="36" rx="6" fill="#1e293b"/>
+    <text x="40" y="303" fill="#60a5fa" font-size="12" font-weight="600">ACTION: Clicks "Book Free Roof Survey"</text>
+  </g>
+
+  <!-- STEP 2: LEAD & ENQUIRY -->
+  <g transform="translate(520, 160)" filter="url(#shadowCard)">
+    <rect width="360" height="340" rx="16" fill="url(#cardGrad2)" stroke="#0284c7" stroke-width="2"/>
+    <circle cx="50" cy="50" r="24" fill="#0284c7"/>
+    <text x="43" y="58" fill="#ffffff" font-size="20" font-weight="800">2</text>
+    <text x="90" y="44" fill="#7dd3fc" font-size="12" font-weight="700">SALES DEPARTMENT</text>
+    <text x="90" y="66" fill="#ffffff" font-size="18" font-weight="800">Lead &amp; Enquiry Ingestion</text>
+    
+    <line x1="24" y1="90" x2="336" y2="90" stroke="#0369a1" stroke-width="1.5"/>
+    
+    <text x="24" y="125" fill="#e2e8f0" font-size="14" font-weight="600">• Form submission via /api/enquiry</text>
+    <text x="24" y="155" fill="#94a3b8" font-size="13">• Dynamic email via Google Apps Script</text>
+    <text x="24" y="185" fill="#94a3b8" font-size="13">• Auto-notifies arivuchezhiyan000@gmail.com</text>
+    <text x="24" y="215" fill="#94a3b8" font-size="13">• EnquiryService.createEnquiry() creates lead</text>
+    <text x="24" y="245" fill="#94a3b8" font-size="13">• Sales rep assigned; qualifies electrical bill</text>
+    
+    <rect x="24" y="280" width="312" height="36" rx="6" fill="#1e293b"/>
+    <text x="40" y="303" fill="#38bdf8" font-size="12" font-weight="600">FUNCTION: assignToSales() ➔ SURVEY_REQUESTED</text>
+  </g>
+
+  <!-- STEP 3: SITE SURVEY GATE -->
+  <g transform="translate(960, 160)" filter="url(#shadowCard)">
+    <rect width="360" height="340" rx="16" fill="url(#cardGrad3)" stroke="#10b981" stroke-width="2"/>
+    <circle cx="50" cy="50" r="24" fill="#059669"/>
+    <text x="43" y="58" fill="#ffffff" font-size="20" font-weight="800">3</text>
+    <text x="90" y="44" fill="#6ee7b7" font-size="12" font-weight="700">ENGINEERING / TECHNICIANS</text>
+    <text x="90" y="66" fill="#ffffff" font-size="18" font-weight="800">Site Feasibility Gate</text>
+    
+    <line x1="24" y1="90" x2="336" y2="90" stroke="#047857" stroke-width="1.5"/>
+    
+    <text x="24" y="125" fill="#e2e8f0" font-size="14" font-weight="600">• Certified technician visits rooftop</text>
+    <text x="24" y="155" fill="#94a3b8" font-size="13">• Measures usable shadow-free area (sq.ft)</text>
+    <text x="24" y="185" fill="#94a3b8" font-size="13">• Records tilt angle (13° S) &amp; DC cable run</text>
+    <text x="24" y="215" fill="#94a3b8" font-size="13">• Uploads geo-tagged photos to survey_photos</text>
+    <text x="24" y="245" fill="#a7f3d0" font-size="13" font-weight="700">• reviewAndApprove() sets status = APPROVED</text>
+    
+    <rect x="24" y="280" width="312" height="36" rx="6" fill="#064e3b"/>
+    <text x="40" y="303" fill="#34d399" font-size="12" font-weight="700">STRICT GATE: Survey must be APPROVED for Quote!</text>
+  </g>
+
+  <!-- STEP 4: BOM & QUOTATION -->
+  <g transform="translate(1400, 160)" filter="url(#shadowCard)">
+    <rect width="360" height="340" rx="16" fill="url(#cardGrad4)" stroke="#f59e0b" stroke-width="2"/>
+    <circle cx="50" cy="50" r="24" fill="#d97706"/>
+    <text x="43" y="58" fill="#ffffff" font-size="20" font-weight="800">4</text>
+    <text x="90" y="44" fill="#fde68a" font-size="12" font-weight="700">SALES &amp; INVENTORY</text>
+    <text x="90" y="66" fill="#ffffff" font-size="18" font-weight="800">BOM Costing &amp; Quotation</text>
+    
+    <line x1="24" y1="90" x2="336" y2="90" stroke="#b45309" stroke-width="1.5"/>
+    
+    <text x="24" y="125" fill="#e2e8f0" font-size="14" font-weight="600">• package_bom queries live inventory costs</text>
+    <text x="24" y="155" fill="#94a3b8" font-size="13">• Hardware Cost = Σ (BOM Qty × Unit Cost)</text>
+    <text x="24" y="185" fill="#94a3b8" font-size="13">• Automatically calculates gross margin %</text>
+    <text x="24" y="215" fill="#fef08a" font-size="13" font-weight="700">• Discount &gt; 10%: Locks for MD Approval</text>
+    <text x="24" y="245" fill="#94a3b8" font-size="13">• Generates branded customer PDF proposal</text>
+    
+    <rect x="24" y="280" width="312" height="36" rx="6" fill="#451a03"/>
+    <text x="40" y="303" fill="#fbbf24" font-size="12" font-weight="700">GATE: QuotationService.createQuotation()</text>
+  </g>
+
+  <!-- ======================================================== -->
+  <!-- TRANSITION ARROW ROW 1 TO ROW 2                          -->
+  <!-- ======================================================== -->
+  <path d="M 1580,500 L 1580,580 L 260,580 L 260,650" fill="none" stroke="#f59e0b" stroke-width="3" stroke-dasharray="6,4" marker-end="url(#arrowHead)" filter="url(#neonGlow)"/>
+
+  <!-- ======================================================== -->
+  <!-- ROW 2 (STEPS 5 to 8)                                     -->
+  <!-- ======================================================== -->
+
+  <!-- Horizontal Glow Path connecting Row 2 -->
+  <path d="M 440,820 L 520,820 M 880,820 L 960,820 M 1320,820 L 1400,820" stroke="#f43f5e" stroke-width="3" stroke-dasharray="6,4" filter="url(#neonGlow)"/>
+
+  <!-- STEP 5: SALES ORDER LOCK -->
+  <g transform="translate(80, 650)" filter="url(#shadowCard)">
+    <rect width="360" height="340" rx="16" fill="url(#cardGrad5)" stroke="#ea580c" stroke-width="2"/>
+    <circle cx="50" cy="50" r="24" fill="#c2410c"/>
+    <text x="43" y="58" fill="#ffffff" font-size="20" font-weight="800">5</text>
+    <text x="90" y="44" fill="#fdba74" font-size="12" font-weight="700">FINANCE DEPARTMENT</text>
+    <text x="90" y="66" fill="#ffffff" font-size="18" font-weight="800">Sales Order Deposit Lock</text>
+    
+    <line x1="24" y1="90" x2="336" y2="90" stroke="#9a3412" stroke-width="1.5"/>
+    
+    <text x="24" y="125" fill="#fef08a" font-size="14" font-weight="700">• 30% Advance Deposit strictly enforced</text>
+    <text x="24" y="155" fill="#94a3b8" font-size="13">• OrderService.convertQuotationToOrder()</text>
+    <text x="24" y="185" fill="#94a3b8" font-size="13">• Auto-provisions Warehouse Dispatch Ticket</text>
+    <text x="24" y="215" fill="#94a3b8" font-size="13">• Auto-provisions Field Installation Job</text>
+    <text x="24" y="245" fill="#94a3b8" font-size="13">• FinanceService starts Job Profitability Ledger</text>
+    
+    <rect x="24" y="280" width="312" height="36" rx="6" fill="#431407"/>
+    <text x="40" y="303" fill="#fb923c" font-size="12" font-weight="700">LOCK: Quote ➔ Order requires Advance Deposit</text>
+  </g>
+
+  <!-- STEP 6: WAREHOUSE DISPATCH -->
+  <g transform="translate(520, 650)" filter="url(#shadowCard)">
+    <rect width="360" height="340" rx="16" fill="url(#cardGrad6)" stroke="#a855f7" stroke-width="2"/>
+    <circle cx="50" cy="50" r="24" fill="#7e22ce"/>
+    <text x="43" y="58" fill="#ffffff" font-size="20" font-weight="800">6</text>
+    <text x="90" y="44" fill="#d8b4fe" font-size="12" font-weight="700">WAREHOUSE &amp; LOGISTICS</text>
+    <text x="90" y="66" fill="#ffffff" font-size="18" font-weight="800">Barcode Serial Dispatch</text>
+    
+    <line x1="24" y1="90" x2="336" y2="90" stroke="#6b21a8" stroke-width="1.5"/>
+    
+    <text x="24" y="125" fill="#e2e8f0" font-size="14" font-weight="600">• Hardware allocated in inventory_stocks</text>
+    <text x="24" y="155" fill="#94a3b8" font-size="13">• Physical Barcode Scanner Gate enforced</text>
+    <text x="24" y="185" fill="#94a3b8" font-size="13">• DispatchService.scanBarcodeForDispatch()</text>
+    <text x="24" y="215" fill="#f0abfc" font-size="13" font-weight="600">• Every Panel, Inverter, Battery validated</text>
+    <text x="24" y="245" fill="#94a3b8" font-size="13">• Vehicle manifest released: STAGED ➔ DISPATCHED</text>
+    
+    <rect x="24" y="280" width="312" height="36" rx="6" fill="#3b0764"/>
+    <text x="40" y="303" fill="#c084fc" font-size="12" font-weight="700">GATE: 100% Barcode Match before Dispatch</text>
+  </g>
+
+  <!-- STEP 7: FIELD INSTALLATION -->
+  <g transform="translate(960, 650)" filter="url(#shadowCard)">
+    <rect width="360" height="340" rx="16" fill="url(#cardGrad7)" stroke="#06b6d4" stroke-width="2"/>
+    <circle cx="50" cy="50" r="24" fill="#0e7490"/>
+    <text x="43" y="58" fill="#ffffff" font-size="20" font-weight="800">7</text>
+    <text x="90" y="44" fill="#67e8f9" font-size="12" font-weight="700">FIELD ENGINEERING</text>
+    <text x="90" y="66" fill="#ffffff" font-size="18" font-weight="800">Installation &amp; E-Sign</text>
+    
+    <line x1="24" y1="90" x2="336" y2="90" stroke="#155e75" stroke-width="1.5"/>
+    
+    <text x="24" y="125" fill="#e2e8f0" font-size="14" font-weight="600">• Technician executes 5-point checklist:</text>
+    <text x="24" y="155" fill="#94a3b8" font-size="13">  (Torque, DC Polarity, Earthing &lt; 5Ω, SPD, Sync)</text>
+    <text x="24" y="185" fill="#67e8f9" font-size="13" font-weight="700">• Captures Customer Digital Signature on roof</text>
+    <text x="24" y="215" fill="#94a3b8" font-size="13">• completeInstallation() logs finish timestamp</text>
+    <text x="24" y="245" fill="#94a3b8" font-size="13">• Triggers technician wage labor calculation</text>
+    
+    <rect x="24" y="280" width="312" height="36" rx="6" fill="#083344"/>
+    <text x="40" y="303" fill="#22d3ee" font-size="12" font-weight="700">SIGN-OFF: Digital Signature locks Handover</text>
+  </g>
+
+  <!-- STEP 8: WARRANTY & SUPPORT -->
+  <g transform="translate(1400, 650)" filter="url(#shadowCard)">
+    <rect width="360" height="340" rx="16" fill="url(#cardGrad8)" stroke="#f43f5e" stroke-width="2"/>
+    <circle cx="50" cy="50" r="24" fill="#be123c"/>
+    <text x="43" y="58" fill="#ffffff" font-size="20" font-weight="800">8</text>
+    <text x="90" y="44" fill="#fda4af" font-size="12" font-weight="700">CUSTOMER SERVICE</text>
+    <text x="90" y="66" fill="#ffffff" font-size="18" font-weight="800">Warranty &amp; Breakdown Desk</text>
+    
+    <line x1="24" y1="90" x2="336" y2="90" stroke="#9f1239" stroke-width="1.5"/>
+    
+    <text x="24" y="125" fill="#fda4af" font-size="14" font-weight="700">• 20-Year Module &amp; 2-Year Inverter Warranties</text>
+    <text x="24" y="155" fill="#94a3b8" font-size="13">• Warranty clock locked to handover date</text>
+    <text x="24" y="185" fill="#94a3b8" font-size="13">• Service Tickets verified via serial barcode</text>
+    <text x="24" y="215" fill="#4ade80" font-size="13" font-weight="700">• If in warranty: Replacement parts = ₹0.00</text>
+    <text x="24" y="245" fill="#94a3b8" font-size="13">• Ticket closed ONLY after Customer Confirms</text>
+    
+    <rect x="24" y="280" width="312" height="36" rx="6" fill="#4c0519"/>
+    <text x="40" y="303" fill="#fb7185" font-size="12" font-weight="700">LIFECYCLE COMPLETE: 20-Year Active Coverage</text>
+  </g>
+
+</svg>
