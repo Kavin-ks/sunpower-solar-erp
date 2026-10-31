@@ -2,7 +2,7 @@
 import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { api } from '../api/client';
-import type { Enquiry, EnquiryStatus } from '../types';
+import type { Enquiry, EnquiryStatus, Technician } from '../types';
 import StatusBadge from '../components/ui/StatusBadge.vue';
 import { useAuthStore } from '../stores/auth';
 import {
@@ -33,6 +33,48 @@ const statusFilter = ref('');
 const selectedEnquiry = ref<Enquiry | null>(null);
 const followupNote = ref('');
 const submittingNote = ref(false);
+
+// Certified Technicians & Survey Scheduling Modal State
+const technicians = ref<Technician[]>([]);
+const showScheduleModal = ref(false);
+const schedulingSurvey = ref(false);
+const scheduleForm = ref({
+  enquiryId: 0,
+  enquiryNumber: '',
+  customerId: 0,
+  customerName: '',
+  assignedToName: '',
+  technicianId: '',
+  scheduledDate: new Date().toISOString().split('T')[0],
+  surveyNotes: '',
+});
+
+const availableTechnicians = computed(() => {
+  if (!technicians.value || technicians.value.length === 0) return [];
+  const activeTechs = technicians.value.filter((t) => t.active !== false);
+  const available = activeTechs.filter((t) => t.available !== false);
+  return available.length > 0 ? available : activeTechs;
+});
+
+// Instant Client-Side + API Reactive Search
+const filteredEnquiries = computed(() => {
+  const q = search.value.trim().toLowerCase();
+  return enquiries.value.filter((enq) => {
+    if (statusFilter.value && enq.status !== statusFilter.value) {
+      return false;
+    }
+    if (!q) return true;
+    const enquiryNumber = String(enq.enquiryNumber || enq.id || '').toLowerCase();
+    const customerName = String(enq.customer?.fullName || (enq as any).customerName || '').toLowerCase();
+    const customerPhone = String(enq.customer?.phone || (enq as any).phone || '').toLowerCase();
+    const customerEmail = String(enq.customer?.email || (enq as any).email || '').toLowerCase();
+
+    return enquiryNumber.includes(q) ||
+           customerName.includes(q) ||
+           customerPhone.includes(q) ||
+           customerEmail.includes(q);
+  });
+});
 
 // Phone Call Pre-Screening Basics (Problem Statement Scene 1)
 const editMonthlyBill = ref('');
@@ -279,11 +321,74 @@ const handleAddFollowup = async () => {
   }
 };
 
+const fetchTechnicians = async () => {
+  try {
+    const res = await api.get('/technicians');
+    technicians.value = Array.isArray(res.data) ? res.data : (res.data?.data || res.data?.content || []);
+  } catch (err) {
+    console.error('Failed to load certified technicians', err);
+  }
+};
+
+const openScheduleSurveyModal = async (enq: Enquiry) => {
+  scheduleForm.value = {
+    enquiryId: enq.id,
+    enquiryNumber: enq.enquiryNumber || `ENQ-${enq.id}`,
+    customerId: enq.customer?.id || (enq as any).customerId,
+    customerName: enq.customer?.fullName || (enq as any).customerName,
+    assignedToName: '',
+    technicianId: '',
+    scheduledDate: new Date().toISOString().split('T')[0],
+    surveyNotes: `Site physical inspection for ${enq.requestedCapacityKw || 3} kW system (${enq.systemType === 'OFF_GRID' ? 'Off-Grid' : 'On-Grid'}).`,
+  };
+
+  if (technicians.value.length === 0) {
+    await fetchTechnicians();
+  }
+  if (availableTechnicians.value.length > 0) {
+    scheduleForm.value.technicianId = String(availableTechnicians.value[0].id);
+  }
+  showScheduleModal.value = true;
+};
+
+const handleAssignAndSchedule = async (enq: Enquiry) => {
+  if (!enq.assignedTo) {
+    await handleAssignToMe(enq);
+  }
+  const updated = enquiries.value.find((e) => e.id === enq.id) || selectedEnquiry.value || enq;
+  await openScheduleSurveyModal(updated);
+};
+
+const handleScheduleSubmit = async () => {
+  if (!scheduleForm.value.customerId || !scheduleForm.value.technicianId) {
+    alert('Please select an assigned certified technician.');
+    return;
+  }
+  schedulingSurvey.value = true;
+  try {
+    await api.post('/surveys/schedule', {
+      customerId: Number(scheduleForm.value.customerId),
+      enquiryId: Number(scheduleForm.value.enquiryId) || null,
+      technicianId: Number(scheduleForm.value.technicianId),
+      scheduledDate: scheduleForm.value.scheduledDate,
+      surveyNotes: scheduleForm.value.surveyNotes,
+    });
+    showScheduleModal.value = false;
+    alert(`Site survey successfully scheduled for ${scheduleForm.value.customerName}! Enquiry updated to SURVEY_SCHEDULED.`);
+    fetchEnquiries(false);
+    if (selectedEnquiry.value && selectedEnquiry.value.id === scheduleForm.value.enquiryId) {
+      const res = await api.get(`/enquiries/${scheduleForm.value.enquiryId}`);
+      selectedEnquiry.value = res.data;
+    }
+  } catch (err: any) {
+    alert(err.response?.data?.message || 'Failed to schedule site survey');
+  } finally {
+    schedulingSurvey.value = false;
+  }
+};
+
 const goToScheduleSurvey = (enq: Enquiry) => {
-  router.push({
-    path: '/surveys',
-    query: { customerId: String(enq.customer.id), enquiryId: String(enq.id) },
-  });
+  openScheduleSurveyModal(enq);
 };
 
 const goToCreateQuote = (enq: Enquiry) => {
@@ -297,6 +402,7 @@ let pollInterval: any = null;
 
 onMounted(() => {
   fetchEnquiries(true);
+  fetchTechnicians();
   pollInterval = setInterval(() => {
     fetchEnquiries(false);
   }, 8000);
@@ -328,16 +434,6 @@ onBeforeUnmount(() => {
           <Plus class="w-4 h-4" />
           <span>+ Log Phone / WhatsApp Lead</span>
         </button>
-
-        <a
-          href="/enquiry"
-          target="_blank"
-          rel="noopener noreferrer"
-          class="flex items-center space-x-1.5 px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-semibold border border-slate-200 transition"
-        >
-          <ExternalLink class="w-3.5 h-3.5" />
-          <span>Customer Web Portal</span>
-        </a>
       </div>
     </div>
 
@@ -385,18 +481,17 @@ onBeforeUnmount(() => {
               <th class="py-3 px-4">System Req</th>
               <th class="py-3 px-4">Bill & Smart Sizing</th>
               <th class="py-3 px-4">Roof Feasibility</th>
-              <th class="py-3 px-4">Lead Owner</th>
               <th class="py-3 px-4">Status</th>
               <th class="py-3 px-4 text-right">Actions</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-slate-100">
-            <tr v-if="enquiries.length === 0">
+            <tr v-if="filteredEnquiries.length === 0">
               <td colspan="8" class="py-8 text-center text-slate-400">
                 No customer enquiries found matching filter.
               </td>
             </tr>
-            <tr v-for="enq in enquiries" :key="enq.id" class="hover:bg-slate-50 transition">
+            <tr v-for="enq in filteredEnquiries" :key="enq.id" class="hover:bg-slate-50 transition">
               <td class="py-3 px-4 font-mono font-bold text-slate-900">
                 {{ enq.enquiryNumber }}
                 <span class="block text-[10px] font-normal text-slate-400 uppercase font-sans">
@@ -446,22 +541,6 @@ onBeforeUnmount(() => {
                 </span>
               </td>
               <td class="py-3 px-4">
-                <div v-if="enq.assignedTo" class="flex items-center space-x-1 font-semibold text-slate-800">
-                  <UserIcon class="w-3 h-3 text-slate-400" />
-                  <span>{{ enq.assignedTo.fullName }}</span>
-                </div>
-                <button
-                  v-else-if="isSales"
-                  type="button"
-                  @click.stop="handleAssignToMe(enq)"
-                  class="px-2 py-0.5 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded text-[11px] font-semibold inline-flex items-center space-x-1 cursor-pointer"
-                >
-                  <UserCheck class="w-3 h-3" />
-                  <span>Claim Lead</span>
-                </button>
-                <span v-else class="text-slate-400 text-[11px] italic">Unassigned</span>
-              </td>
-              <td class="py-3 px-4">
                 <StatusBadge :status="enq.status" />
               </td>
               <td class="py-3 px-4 text-right space-x-2 whitespace-nowrap">
@@ -481,6 +560,16 @@ onBeforeUnmount(() => {
                 >
                   <Calendar class="w-3 h-3" />
                   <span>Schedule Survey</span>
+                </button>
+
+                <button
+                  v-if="enq.status === 'SURVEY_SCHEDULED'"
+                  type="button"
+                  @click="router.push('/surveys')"
+                  class="px-2.5 py-1 text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded text-xs font-semibold cursor-pointer inline-flex items-center space-x-1"
+                >
+                  <Calendar class="w-3 h-3" />
+                  <span>View Survey</span>
                 </button>
 
                 <button
@@ -524,17 +613,6 @@ onBeforeUnmount(() => {
               <span class="font-semibold text-slate-600">Current Lead Stage:</span>
               <div class="mt-1 flex items-center gap-2">
                 <StatusBadge :status="selectedEnquiry.status" />
-                <span v-if="selectedEnquiry.assignedTo" class="text-[11px] text-slate-500">
-                  (Owner: <strong>{{ selectedEnquiry.assignedTo.fullName }}</strong>)
-                </span>
-                <button
-                  v-else-if="isSales"
-                  type="button"
-                  @click="handleAssignToMe(selectedEnquiry)"
-                  class="px-2 py-0.5 bg-blue-50 text-blue-700 rounded border border-blue-200 text-[10px] font-bold cursor-pointer"
-                >
-                  Claim Lead
-                </button>
               </div>
             </div>
 
@@ -799,6 +877,16 @@ onBeforeUnmount(() => {
               </button>
 
               <button
+                v-if="selectedEnquiry.status === 'SURVEY_SCHEDULED'"
+                type="button"
+                @click="selectedEnquiry = null; router.push('/surveys')"
+                class="px-3 py-1.5 bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200 rounded-xl font-semibold inline-flex items-center space-x-1 cursor-pointer"
+              >
+                <Calendar class="w-3.5 h-3.5" />
+                <span>View Scheduled Survey</span>
+              </button>
+
+              <button
                 v-if="selectedEnquiry.status === 'SURVEY_APPROVED' && isSales"
                 type="button"
                 @click="goToCreateQuote(selectedEnquiry)"
@@ -1010,6 +1098,97 @@ onBeforeUnmount(() => {
               class="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold shadow-xs transition disabled:opacity-50 cursor-pointer"
             >
               {{ creatingEnquiry ? 'Registering Lead...' : 'Log Customer Enquiry' }}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Modal: Schedule Site Survey (Auto-Selected Customer & Enquiry) -->
+    <div v-if="showScheduleModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center z-50 p-4">
+      <div class="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl">
+        <div class="flex items-center justify-between pb-3 border-b border-slate-100 mb-4">
+          <div class="flex items-center gap-2">
+            <div class="w-8 h-8 rounded-lg bg-blue-100 text-blue-700 flex items-center justify-center font-bold">
+              <Calendar class="w-4 h-4" />
+            </div>
+            <div>
+              <h2 class="text-base font-bold text-slate-900">Schedule Physical Site Survey</h2>
+              <p class="text-xs text-slate-500">Dispatch certified technician for rooftop shadow & electrical inspection</p>
+            </div>
+          </div>
+          <button type="button" @click="showScheduleModal = false" class="text-slate-400 hover:text-slate-600 text-lg cursor-pointer">
+            ✕
+          </button>
+        </div>
+
+        <form @submit.prevent="handleScheduleSubmit" class="space-y-4 text-xs">
+          <!-- Auto-Selected Customer & Enquiry Lock Badge -->
+          <div class="p-3 bg-emerald-50 rounded-xl border border-emerald-200 flex items-center justify-between">
+            <div>
+              <span class="text-[10px] uppercase font-bold text-emerald-800 tracking-wider">Target Customer & Lead</span>
+              <div class="text-xs font-bold text-slate-900 mt-0.5">{{ scheduleForm.customerName }}</div>
+              <div class="text-[11px] text-slate-500 font-mono mt-0.5">
+                Enquiry ID: {{ scheduleForm.enquiryNumber }}
+              </div>
+            </div>
+            <span class="px-2.5 py-1 bg-white text-emerald-700 font-bold text-[11px] rounded-lg border border-emerald-200 shadow-2xs">
+              ✓ Auto-Selected
+            </span>
+          </div>
+
+          <div>
+            <label class="block font-semibold text-slate-700 mb-1">Assign Certified Technician *</label>
+            <select
+              required
+              v-model="scheduleForm.technicianId"
+              class="w-full px-3 py-2 border border-slate-200 rounded-lg text-xs font-medium focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+            >
+              <option value="">-- Select Certified Solar Technician --</option>
+              <option v-for="t in availableTechnicians" :key="t.id" :value="String(t.id)">
+                {{ t.name }} — {{ t.skills || (t as any).specialization || 'Certified Solar Technician' }}
+              </option>
+            </select>
+            <p v-if="availableTechnicians.length === 0" class="text-[11px] text-amber-600 mt-1">
+              Loading available certified technicians...
+            </p>
+          </div>
+
+          <div>
+            <label class="block font-semibold text-slate-700 mb-1">Scheduled Inspection Date *</label>
+            <input
+              type="date"
+              required
+              v-model="scheduleForm.scheduledDate"
+              class="w-full px-3 py-2 border border-slate-200 rounded-lg text-xs focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+            />
+          </div>
+
+          <div>
+            <label class="block font-semibold text-slate-700 mb-1">Work Instructions for Field Technician</label>
+            <textarea
+              rows="2"
+              v-model="scheduleForm.surveyNotes"
+              class="w-full px-3 py-2 border border-slate-200 rounded-lg text-xs focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+              placeholder="e.g. Inspect South terrace, test RCC slab thickness, verify 230V connection..."
+            ></textarea>
+          </div>
+
+          <div class="flex justify-end gap-2 pt-3 border-t border-slate-100">
+            <button
+              type="button"
+              @click="showScheduleModal = false"
+              class="px-4 py-2 border border-slate-200 text-slate-600 rounded-xl hover:bg-slate-50 font-medium cursor-pointer"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              :disabled="schedulingSurvey || !scheduleForm.technicianId"
+              class="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold shadow-xs transition disabled:opacity-50 cursor-pointer flex items-center gap-1.5"
+            >
+              <Calendar class="w-3.5 h-3.5" />
+              <span>{{ schedulingSurvey ? 'Scheduling Survey...' : 'Confirm Survey Appointment' }}</span>
             </button>
           </div>
         </form>

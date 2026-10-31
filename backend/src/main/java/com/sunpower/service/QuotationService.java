@@ -74,6 +74,14 @@ public class QuotationService {
             throw new IllegalStateException("Site survey must be approved before generating a quotation. Current status: " + survey.getStatus());
         }
 
+        // CRITICAL BUSINESS RULE: Prevent duplicate quotations from the same survey
+        List<Quotation> existingQuotes = quotationRepository.findBySiteSurveyId(request.getSiteSurveyId());
+        boolean hasActiveQuote = existingQuotes.stream()
+                .anyMatch(q -> q.getStatus() != QuotationStatus.REJECTED);
+        if (hasActiveQuote) {
+            throw new IllegalStateException("A quotation has already been generated for this site survey.");
+        }
+
         SolarPackage solarPackage = solarPackageRepository.findById(request.getSolarPackageId())
                 .orElseThrow(() -> new IllegalArgumentException("Solar package not found with id: " + request.getSolarPackageId()));
 

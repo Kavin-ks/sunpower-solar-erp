@@ -14,6 +14,7 @@ public interface SiteSurveyRepository extends JpaRepository<SiteSurvey, Long> {
     List<SiteSurvey> findByStatus(SurveyStatus status);
     List<SiteSurvey> findByCustomerId(Long customerId);
     List<SiteSurvey> findByTechnicianId(Long technicianId);
+    List<SiteSurvey> findByEnquiryId(Long enquiryId);
 
     @Query("SELECT s FROM SiteSurvey s WHERE s.customer.id = :customerId AND s.status = 'APPROVED'")
     List<SiteSurvey> findApprovedSurveysByCustomerId(@Param("customerId") Long customerId);

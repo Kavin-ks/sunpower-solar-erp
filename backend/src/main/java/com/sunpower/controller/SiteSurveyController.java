@@ -25,7 +25,7 @@ public class SiteSurveyController {
     private SiteSurveyService siteSurveyService;
 
     @GetMapping
-    @PreAuthorize("hasAnyRole('ADMIN', 'SALES', 'TECHNICIAN', 'FINANCE')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SALES', 'TECHNICIAN', 'DIRECTOR', 'FINANCE')")
     public ResponseEntity<List<SiteSurvey>> getAllSurveys(@RequestParam(required = false) SurveyStatus status) {
         if (status != null) {
             return ResponseEntity.ok(siteSurveyService.getSurveysByStatus(status));
@@ -34,26 +34,26 @@ public class SiteSurveyController {
     }
 
     @GetMapping("/my-assigned")
-    @PreAuthorize("hasAnyRole('TECHNICIAN', 'ADMIN')")
+    @PreAuthorize("hasAnyRole('TECHNICIAN', 'ADMIN', 'DIRECTOR')")
     public ResponseEntity<List<SiteSurvey>> getMyAssignedSurveys(Authentication authentication) {
         String username = authentication != null ? authentication.getName() : "technician";
         return ResponseEntity.ok(siteSurveyService.getSurveysForTechnician(username));
     }
 
     @GetMapping("/approved/customer/{customerId}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'SALES', 'FINANCE')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SALES', 'DIRECTOR', 'FINANCE')")
     public ResponseEntity<List<SiteSurvey>> getApprovedSurveysByCustomer(@PathVariable Long customerId) {
         return ResponseEntity.ok(siteSurveyService.getApprovedSurveysByCustomerId(customerId));
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'SALES', 'TECHNICIAN', 'FINANCE')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SALES', 'TECHNICIAN', 'DIRECTOR', 'FINANCE')")
     public ResponseEntity<SiteSurvey> getSurveyById(@PathVariable Long id) {
         return ResponseEntity.ok(siteSurveyService.getSurveyById(id));
     }
 
     @PostMapping("/schedule")
-    @PreAuthorize("hasAnyRole('SALES', 'ADMIN')")
+    @PreAuthorize("hasAnyRole('SALES', 'ADMIN', 'DIRECTOR')")
     public ResponseEntity<SiteSurvey> scheduleSurvey(
             @Valid @RequestBody SurveyScheduleRequest request,
             Authentication authentication) {
@@ -63,14 +63,14 @@ public class SiteSurveyController {
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasAnyRole('TECHNICIAN', 'ADMIN')")
+    @PreAuthorize("hasAnyRole('TECHNICIAN', 'SALES', 'ADMIN', 'DIRECTOR')")
     public ResponseEntity<SiteSurvey> updateSurvey(@PathVariable Long id, @RequestBody SurveyScheduleRequest request) {
         SiteSurvey survey = siteSurveyService.updateSurveyDetails(id, request);
         return ResponseEntity.ok(survey);
     }
 
     @PostMapping("/{id}/inspection-report")
-    @PreAuthorize("hasAnyRole('TECHNICIAN', 'ADMIN')")
+    @PreAuthorize("hasAnyRole('TECHNICIAN', 'SALES', 'ADMIN', 'DIRECTOR')")
     public ResponseEntity<SiteSurvey> submitInspectionReport(
             @PathVariable Long id,
             @RequestBody com.sunpower.dto.SiteSurveyDTOs.SurveyInspectionReportRequest request,
@@ -81,7 +81,11 @@ public class SiteSurveyController {
     }
 
     @PatchMapping("/{id}/approval")
+<<<<<<< HEAD
     @PreAuthorize("hasAnyRole('SALES', 'TECHNICIAN', 'ADMIN')")
+=======
+    @PreAuthorize("hasAnyRole('SALES', 'ADMIN', 'DIRECTOR')")
+>>>>>>> origin/main
     public ResponseEntity<SiteSurvey> reviewAndApprove(
             @PathVariable Long id,
             @Valid @RequestBody SurveyApprovalRequest request,

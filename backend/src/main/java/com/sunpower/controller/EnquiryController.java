@@ -27,13 +27,7 @@ public class EnquiryController {
     public ResponseEntity<List<Enquiry>> getAllEnquiries(
             @RequestParam(required = false) String search,
             @RequestParam(required = false) EnquiryStatus status) {
-        if (status != null) {
-            return ResponseEntity.ok(enquiryService.getEnquiriesByStatus(status));
-        }
-        if (search != null && !search.trim().isEmpty()) {
-            return ResponseEntity.ok(enquiryService.searchEnquiries(search));
-        }
-        return ResponseEntity.ok(enquiryService.getAllEnquiries());
+        return ResponseEntity.ok(enquiryService.searchEnquiries(search, status));
     }
 
     @GetMapping("/{id}")

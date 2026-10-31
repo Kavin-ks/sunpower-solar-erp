@@ -33,10 +33,13 @@ public class SiteSurveyService {
     private SurveyPhotoRepository surveyPhotoRepository;
 
     @Autowired
+    private UserRepository userRepository;
+
+    @Autowired
     private EnquiryActivityRepository enquiryActivityRepository;
 
     public List<SiteSurvey> getAllSurveys() {
-        return siteSurveyRepository.findAll();
+        return siteSurveyRepository.findAll(org.springframework.data.domain.Sort.by(org.springframework.data.domain.Sort.Direction.DESC, "id"));
     }
 
     public SiteSurvey getSurveyById(Long id) {
@@ -90,6 +93,13 @@ public class SiteSurveyService {
         if (request.getGridSuitability() != null) survey.setGridSuitability(request.getGridSuitability());
 
         if (request.getEnquiryId() != null) {
+            List<SiteSurvey> existingSurveys = siteSurveyRepository.findByEnquiryId(request.getEnquiryId());
+            boolean hasActiveSurvey = existingSurveys.stream()
+                    .anyMatch(s -> s.getStatus() != SurveyStatus.REJECTED);
+            if (hasActiveSurvey) {
+                throw new IllegalStateException("A site survey is already scheduled for this enquiry.");
+            }
+
             Enquiry enquiry = enquiryRepository.findById(request.getEnquiryId()).orElse(null);
             if (enquiry != null) {
                 survey.setEnquiry(enquiry);
@@ -200,6 +210,34 @@ public class SiteSurveyService {
         survey.setApprovedBy(reviewer);
         survey.setApprovalDate(LocalDateTime.now());
         survey.setApprovalNotes(request.getApprovalNotes());
+
+        if (request.getStatus() == SurveyStatus.APPROVED) {
+            if (survey.getAvailableRoofAreaSqFt() == null) {
+                if (survey.getEnquiry() != null && survey.getEnquiry().getShadowFreeAreaSqFt() != null) {
+                    survey.setAvailableRoofAreaSqFt(survey.getEnquiry().getShadowFreeAreaSqFt());
+                } else {
+                    survey.setAvailableRoofAreaSqFt(new java.math.BigDecimal("450.00"));
+                }
+            }
+            if (survey.getRoofDirection() == null || survey.getRoofDirection().isBlank()) {
+                survey.setRoofDirection("South");
+            }
+            if (survey.getRoofTilt() == null || survey.getRoofTilt().isBlank()) {
+                survey.setRoofTilt("15 deg");
+            }
+            if (survey.getCableDistanceMeters() == null) {
+                survey.setCableDistanceMeters(new java.math.BigDecimal("15.00"));
+            }
+            if (survey.getShadingAssessment() == null || survey.getShadingAssessment().isBlank()) {
+                survey.setShadingAssessment("Shadow Free");
+            }
+            if (survey.getGridSuitability() == null || survey.getGridSuitability().isBlank()) {
+                survey.setGridSuitability("Suitable for Net-Metering");
+            }
+            if (survey.getInspectionRecommendation() == null || survey.getInspectionRecommendation().isBlank()) {
+                survey.setInspectionRecommendation("APPROVED");
+            }
+        }
 
         survey = siteSurveyRepository.save(survey);
 

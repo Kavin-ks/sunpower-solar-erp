@@ -95,6 +95,9 @@ public class DataInitializationService implements CommandLineRunner {
     @Autowired
     private TechnicianPaymentRepository technicianPaymentRepository;
 
+    @Autowired
+    private EnquiryRepository enquiryRepository;
+
     @Override
     @Transactional
     public void run(String... args) throws Exception {
@@ -105,6 +108,7 @@ public class DataInitializationService implements CommandLineRunner {
             ensureDemoHistoricalDataExists();
             ensureDispatchedOrdersHaveSerialNumbers();
             ensureTechnicianNamingNormalized();
+            ensureDemoEnquiriesExist();
             return; // Already initialized roles/users
         }
 
@@ -298,6 +302,7 @@ public class DataInitializationService implements CommandLineRunner {
         ensurePickingDispatchExists();
         ensurePanelSerializationAndStockSerials();
         ensureDemoHistoricalDataExists();
+        ensureDemoEnquiriesExist();
     }
 
     private void createUser(String username, String fullName, String email, String phone, Role role) {
@@ -607,6 +612,9 @@ public class DataInitializationService implements CommandLineRunner {
                 surv = new SiteSurvey();
                 surv.setSurveyNumber("SRV-2026-0003");
                 surv.setCustomer(cust);
+                if (!technicianRepository.findAll().isEmpty()) {
+                    surv.setTechnician(technicianRepository.findAll().get(0));
+                }
                 surv.setScheduledDate(LocalDate.now());
                 surv.setStatus(SurveyStatus.APPROVED);
                 surv = siteSurveyRepository.save(surv);
@@ -740,6 +748,9 @@ public class DataInitializationService implements CommandLineRunner {
             SiteSurvey survA = new SiteSurvey();
             survA.setSurveyNumber("SRV-DEMO-18M");
             survA.setCustomer(custA);
+            if (!technicianRepository.findAll().isEmpty()) {
+                survA.setTechnician(technicianRepository.findAll().get(0));
+            }
             survA.setScheduledDate(LocalDate.now().minusMonths(18));
             survA.setRoofDirection("South");
             survA.setRoofTilt("15 deg");
@@ -931,6 +942,11 @@ public class DataInitializationService implements CommandLineRunner {
             SiteSurvey survB = new SiteSurvey();
             survB.setSurveyNumber("SRV-DEMO-LOSS");
             survB.setCustomer(custB);
+            if (technicianRepository.findAll().size() > 1) {
+                survB.setTechnician(technicianRepository.findAll().get(1));
+            } else if (!technicianRepository.findAll().isEmpty()) {
+                survB.setTechnician(technicianRepository.findAll().get(0));
+            }
             survB.setScheduledDate(LocalDate.now().minusDays(5));
             survB.setRoofDirection("South-East");
             survB.setRoofTilt("10 deg");
@@ -1069,6 +1085,11 @@ public class DataInitializationService implements CommandLineRunner {
             SiteSurvey survC = new SiteSurvey();
             survC.setSurveyNumber("SRV-DEMO-30M");
             survC.setCustomer(custC);
+            if (technicianRepository.findAll().size() > 2) {
+                survC.setTechnician(technicianRepository.findAll().get(2));
+            } else if (!technicianRepository.findAll().isEmpty()) {
+                survC.setTechnician(technicianRepository.findAll().get(0));
+            }
             survC.setScheduledDate(LocalDate.now().minusMonths(30));
             survC.setRoofDirection("South");
             survC.setRoofTilt("15 deg");
@@ -1201,6 +1222,109 @@ public class DataInitializationService implements CommandLineRunner {
                     warPnlC.setTermsAndConditions("20-Year Linear Power Output Performance Warranty (STILL ACTIVE)");
                     warrantyRepository.save(warPnlC);
                 }
+            }
+        }
+    }
+
+    private void ensureDemoEnquiriesExist() {
+        Customer custAnand = customerRepository.findByPhone("9840199881").orElseGet(() -> {
+            Customer c = new Customer();
+            c.setFullName("Anand Sundaram");
+            c.setPhone("9840199881");
+            c.setEmail("anand.sundaram@example.com");
+            c.setAddress("42, Avinashi Road, Peelamedu");
+            c.setCity("Coimbatore");
+            c.setState("Tamil Nadu");
+            c.setPincode("641004");
+            c.setCustomerType(CustomerType.RESIDENTIAL);
+            return customerRepository.save(c);
+        });
+
+        if (enquiryRepository.findByCustomerId(custAnand.getId()).isEmpty()) {
+            Enquiry enq = new Enquiry();
+            enq.setEnquiryNumber("ENQ-00100");
+            enq.setCustomer(custAnand);
+            enq.setRequestedCapacityKw(new BigDecimal("3.00"));
+            enq.setSystemType(SystemType.ON_GRID);
+            enq.setSubsidyRequired(true);
+            enq.setMonthlyElectricityBill(new BigDecimal("3800.00"));
+            enq.setShadowFreeAreaSqFt(new BigDecimal("400.00"));
+            enq.setGridSuitable(true);
+            enq.setSource(EnquirySource.PHONE);
+            enq.setStatus(EnquiryStatus.QUALIFIED);
+            enq.setNotes("Pre-qualified phone lead: 3 kW on-grid solar system with shadow-free south roof and PM Surya Ghar subsidy.");
+            enquiryRepository.save(enq);
+        }
+
+        Customer custBalaji = customerRepository.findByPhone("9840112250").orElseGet(() -> {
+            Customer c = new Customer();
+            c.setFullName("Balaji Subramanian");
+            c.setPhone("9840112250");
+            c.setEmail("balaji.sub@example.com");
+            c.setAddress("14, Gandhi Nagar, Adyar");
+            c.setCity("Chennai");
+            c.setState("Tamil Nadu");
+            c.setPincode("600020");
+            c.setCustomerType(CustomerType.RESIDENTIAL);
+            return customerRepository.save(c);
+        });
+
+        if (enquiryRepository.findByCustomerId(custBalaji.getId()).isEmpty()) {
+            Enquiry enq2 = new Enquiry();
+            enq2.setEnquiryNumber("ENQ-00101");
+            enq2.setCustomer(custBalaji);
+            enq2.setRequestedCapacityKw(new BigDecimal("5.00"));
+            enq2.setSystemType(SystemType.ON_GRID);
+            enq2.setSubsidyRequired(true);
+            enq2.setMonthlyElectricityBill(new BigDecimal("5200.00"));
+            enq2.setShadowFreeAreaSqFt(new BigDecimal("600.00"));
+            enq2.setGridSuitable(true);
+            enq2.setSource(EnquirySource.WHATSAPP);
+            enq2.setStatus(EnquiryStatus.NEW);
+            enq2.setNotes("WhatsApp inquiry: Interested in 5 kW system for duplex villa.");
+            enquiryRepository.save(enq2);
+        }
+
+        Customer custKavitha = customerRepository.findByPhone("9840122334").orElseGet(() -> {
+            Customer c = new Customer();
+            c.setFullName("Kavitha Rajan");
+            c.setPhone("9840122334");
+            c.setEmail("kavitha.rajan@example.com");
+            c.setAddress("18, 2nd Main Road, Anna Nagar");
+            c.setCity("Chennai");
+            c.setState("Tamil Nadu");
+            c.setPincode("600040");
+            c.setCustomerType(CustomerType.RESIDENTIAL);
+            return customerRepository.save(c);
+        });
+
+        if (enquiryRepository.findByCustomerId(custKavitha.getId()).isEmpty()) {
+            Enquiry enq3 = new Enquiry();
+            enq3.setEnquiryNumber("ENQ-00102");
+            enq3.setCustomer(custKavitha);
+            enq3.setRequestedCapacityKw(new BigDecimal("4.00"));
+            enq3.setSystemType(SystemType.ON_GRID);
+            enq3.setSubsidyRequired(true);
+            enq3.setMonthlyElectricityBill(new BigDecimal("4500.00"));
+            enq3.setShadowFreeAreaSqFt(new BigDecimal("450.00"));
+            enq3.setGridSuitable(true);
+            enq3.setSource(EnquirySource.CUSTOMER_PORTAL);
+            enq3.setStatus(EnquiryStatus.SURVEY_SCHEDULED);
+            enq3.setNotes("Website portal inquiry: 4 kW rooftop solar requested. Site appointment scheduled.");
+            enq3 = enquiryRepository.save(enq3);
+
+            if (siteSurveyRepository.findByCustomerId(custKavitha.getId()).isEmpty()) {
+                SiteSurvey survSched = new SiteSurvey();
+                survSched.setSurveyNumber("SRV-DEMO-SCHED");
+                survSched.setCustomer(custKavitha);
+                survSched.setEnquiry(enq3);
+                if (!technicianRepository.findAll().isEmpty()) {
+                    survSched.setTechnician(technicianRepository.findAll().get(0));
+                }
+                survSched.setScheduledDate(LocalDate.now().plusDays(1));
+                survSched.setStatus(SurveyStatus.SCHEDULED);
+                survSched.setSurveyNotes("Customer requested afternoon appointment. Verify shadow from water tank.");
+                siteSurveyRepository.save(survSched);
             }
         }
     }
