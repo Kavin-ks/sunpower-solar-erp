@@ -1,22 +1,41 @@
 /**
  * =========================================================================
- * GOOGLE APPS SCRIPT: Solar Web Enquiry Email Dispatcher
+ * GOOGLE APPS SCRIPT: Solar Web Enquiry Email Dispatcher (Bulletproof v2)
  * =========================================================================
  * 
- * Features:
  * 1. Receives form submissions from the Solar Web enquiry form.
- * 2. Sends formatted HTML email to TO and CC recipients.
- * 3. Dynamically respects TO and CC email addresses sent from your .env file,
- *    meaning you NEVER have to re-deploy or change this script when updating emails!
- * 4. Fallback defaults:
+ * 2. Dynamically reads TO and CC email addresses from the payload (sent from .env).
+ * 3. Formats an enterprise-grade HTML email template.
+ * 4. Dispatches the email to:
  *    - TO: arivuchezhiyan000@gmail.com
  *    - CC: kavinsoorya2470049@ssn.edu.in, ashwathram2470063@ssn.edu.in, naveenkumar2470051@ssn.edu.in
- * 5. Logs submissions to Google Sheet if attached.
  */
 
-// Default fallbacks if not supplied in .env
 var DEFAULT_TO_EMAIL = "arivuchezhiyan000@gmail.com";
 var DEFAULT_CC_EMAILS = "kavinsoorya2470049@ssn.edu.in,ashwathram2470063@ssn.edu.in,naveenkumar2470051@ssn.edu.in";
+
+/**
+ * Quick Test Function:
+ * Click "Run" on this function in Google Apps Script to test email delivery immediately!
+ */
+function testSendEmail() {
+  var testEvent = {
+    postData: {
+      contents: JSON.stringify({
+        Fullname: "Test Solar Customer",
+        email: "customer.test@example.com",
+        phone: "7010818264",
+        solarSystem: "3 kW",
+        systemType: "On-Grid",
+        message: "150 sq.ft available shadow-free south roof. Ready for site appointment.",
+        toEmail: DEFAULT_TO_EMAIL,
+        ccEmails: DEFAULT_CC_EMAILS
+      })
+    }
+  };
+  var res = doPost(testEvent);
+  Logger.log("Test Result: " + res.getContent());
+}
 
 /**
  * Handle GET request (Health Check)
@@ -24,7 +43,7 @@ var DEFAULT_CC_EMAILS = "kavinsoorya2470049@ssn.edu.in,ashwathram2470063@ssn.edu
 function doGet(e) {
   return ContentService.createTextOutput(JSON.stringify({
     status: "online",
-    message: "Solar Web Enquiry Apps Script is active and ready to receive POST submissions.",
+    message: "Solar Web Enquiry Apps Script is active and ready.",
     timestamp: new Date().toISOString()
   })).setMimeType(ContentService.MimeType.JSON);
 }
@@ -36,7 +55,7 @@ function doPost(e) {
   try {
     var data = {};
 
-    // 1. Parse incoming payload (JSON or Form URL-encoded)
+    // 1. Safe parsing of incoming payload
     if (e && e.postData && e.postData.contents) {
       try {
         data = JSON.parse(e.postData.contents);
@@ -47,22 +66,30 @@ function doPost(e) {
       data = e.parameter;
     }
 
-    // Extract form fields
-    var fullName = data.Fullname || data.fullname || data.name || "Anonymous Customer";
+    // 2. Extract Fields safely
+    var fullName = data.Fullname || data.fullname || data.name || "Customer";
     var email = data.email || "Not Provided";
     var phone = data.phone || "Not Provided";
     var solarSystem = data.solarSystem || data.capacity || "Not Specified";
     var systemType = data.systemType || "On-Grid";
     var message = data.message || data.questions || data.sources || "None provided";
 
-    // 2. Read TO and CC from .env payload, or Script Properties, or fallback defaults
-    var toEmail = data.toEmail || data.to || getScriptProp("TO_EMAIL") || DEFAULT_TO_EMAIL;
-    var ccEmails = data.ccEmails || data.cc || getScriptProp("CC_EMAILS") || DEFAULT_CC_EMAILS;
+    // 3. Dynamic TO and CC recipients from .env
+    var toEmail = data.toEmail || data.to || DEFAULT_TO_EMAIL;
+    var ccEmails = data.ccEmails || data.cc || DEFAULT_CC_EMAILS;
 
-    // 3. Construct Email Subject
+    // 4. Safe Date Formatting (No unquoted text)
+    var timestampStr = "";
+    try {
+      timestampStr = Utilities.formatDate(new Date(), "Asia/Kolkata", "yyyy-MM-dd HH:mm:ss") + " IST";
+    } catch (dateErr) {
+      timestampStr = new Date().toISOString();
+    }
+
+    // 5. Email Subject
     var subject = "⚡ New Solar Enquiry: " + fullName + " [" + solarSystem + " " + systemType + "]";
 
-    // 4. Construct Responsive HTML Email Template
+    // 6. Styled HTML Email Body
     var htmlBody = ""
       + "<div style='font-family: Arial, sans-serif; max-width: 650px; margin: 0 auto; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden;'>"
       + "  <div style='background: #19142d; padding: 25px; text-align: center; color: #ffffff;'>"
@@ -70,7 +97,7 @@ function doPost(e) {
       + "    <p style='margin: 6px 0 0; color: #f59e0b; font-size: 14px; font-weight: 600;'>New Solar Site Survey & Package Enquiry</p>"
       + "  </div>"
       + "  <div style='padding: 25px; background: #ffffff;'>"
-      + "    <p style='font-size: 15px; color: #334155;'>A new customer has submitted an enquiry form on the website. Below are the full details:</p>"
+      + "    <p style='font-size: 15px; color: #334155;'>A new customer has submitted an enquiry form on the website:</p>"
       + "    <table style='width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 14px;'>"
       + "      <tr style='background: #f8fafc;'>"
       + "        <td style='padding: 12px 15px; font-weight: bold; color: #475569; width: 35%; border: 1px solid #e2e8f0;'>Customer Name</td>"
@@ -98,7 +125,7 @@ function doPost(e) {
       + "      </tr>"
       + "      <tr style='background: #f8fafc;'>"
       + "        <td style='padding: 12px 15px; font-weight: bold; color: #475569; border: 1px solid #e2e8f0;'>Submitted At</td>"
-      + "        <td style='padding: 12px 15px; color: #64748b; font-size: 13px; border: 1px solid #e2e8f0;'>" + Utilities.formatDate(new Date(), "Asia/Kolkata", "yyyy-MM-dd HH:mm:ss") + " IST</td>"
+      + "        <td style='padding: 12px 15px; color: #64748b; font-size: 13px; border: 1px solid #e2e8f0;'>" + escapeHtml(timestampStr) + "</td>"
       + "      </tr>"
       + "    </table>"
       + "    <div style='margin-top: 25px; padding: 15px; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; color: #166534; font-size: 13px;'>"
@@ -110,38 +137,15 @@ function doPost(e) {
       + "  </div>"
       + "</div>";
 
-    // 5. Send Email via MailApp
+    // 7. Dispatch Email via MailApp
     MailApp.sendEmail({
       to: toEmail,
       cc: ccEmails,
       subject: subject,
       htmlBody: htmlBody,
-      replyTo: email
+      replyTo: (email && email.indexOf('@') !== -1) ? email : toEmail
     });
 
-    // 6. Optional: Append row to Google Sheet if active sheet exists
-    try {
-      var ss = SpreadsheetApp.getActiveSpreadsheet();
-      if (ss) {
-        var sheet = ss.getActiveSheet();
-        sheet.appendRow([
-          new Date(),
-          fullName,
-          email,
-          phone,
-          solarSystem,
-          systemType,
-          message,
-          "New Enquiry",
-          toEmail,
-          ccEmails
-        ]);
-      }
-    } catch (sheetErr) {
-      // Continue even if sheet not attached
-    }
-
-    // 7. Return JSON Success Response with CORS headers
     return ContentService.createTextOutput(JSON.stringify({
       status: "success",
       message: "Enquiry successfully emailed to " + toEmail + " with CC to " + ccEmails,
@@ -167,15 +171,4 @@ function escapeHtml(text) {
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&#039;");
-}
-
-/**
- * Helper to get script property
- */
-function getScriptProp(key) {
-  try {
-    return PropertiesService.getScriptProperties().getProperty(key);
-  } catch (e) {
-    return null;
-  }
 }
