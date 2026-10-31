@@ -17,3 +17,20 @@
 @import "../../public/assets/css/meanmenu.min.css";
 @import "../../public/assets/css/style.css";
 @import "../../public/assets/css/responsive.css";
+
+/* Header dropdown menu clean styling: remove borders across all dropdowns */
+.solar-menu ul .sub-menu,
+.solar-menu .sub-menu,
+ul.sub-menu,
+.sub-menu {
+  border: none !important;
+  border-top: none !important;
+  border-bottom: none !important;
+  border-left: none !important;
+  border-right: none !important;
+  box-shadow: 0 10px 25px -3px rgba(0, 0, 0, 0.12), 0 4px 6px -2px rgba(0, 0, 0, 0.05) !important;
+}
+
+.solar-menu ul .sub-menu ul li a {
+  border: none !important;
+}

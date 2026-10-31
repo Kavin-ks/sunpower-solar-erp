@@ -1,10 +1,11 @@
-'use client';
+﻿'use client';
 
 import React, { useState } from 'react';
 import { toast } from 'react-toastify';
 import * as yup from 'yup';
 import { useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
+import EnquirySuccessModal from '../modals/EnquirySuccessModal';
 
 interface FormData {
   Fullname: string;
@@ -40,6 +41,8 @@ const ContactFormHomeOne = () => {
   const [submitting, setSubmitting] = useState(false);
   const [submittedEnquiry, setSubmittedEnquiry] = useState<{ enquiryNumber: string; message: string } | null>(null);
   const [serverError, setServerError] = useState<string | null>(null);
+  const [showModal, setShowModal] = useState(false);
+  const [customerName, setCustomerName] = useState('');
 
   const {
     register,
@@ -75,10 +78,12 @@ const ContactFormHomeOne = () => {
         throw new Error(resData?.message || 'Failed to submit enquiry. Please verify details.');
       }
 
+      setCustomerName(data.Fullname || '');
       setSubmittedEnquiry({
         enquiryNumber: resData.enquiryNumber,
         message: resData.message || 'Enquiry registered successfully!',
       });
+      setShowModal(true);
       toast.success(`Enquiry submitted! Reference: ${resData.enquiryNumber}`);
       reset();
     } catch (err: any) {
@@ -93,21 +98,39 @@ const ContactFormHomeOne = () => {
 
   return (
     <>
+      {/* 24-Hour Callback & Thank You Popup Modal */}
+      <EnquirySuccessModal
+        isOpen={showModal}
+        onClose={() => setShowModal(false)}
+        enquiryNumber={submittedEnquiry?.enquiryNumber}
+        customerName={customerName}
+      />
+
       {submittedEnquiry && (
         <div
           className="alert alert-success p-3 rounded-3 mb-4 shadow-sm"
           style={{ background: '#ecfdf5', border: '1px solid #10b981', color: '#065f46' }}
         >
-          <div className="d-flex align-items-center mb-1">
-            <i className="bi bi-check-circle-fill me-2 fs-5 text-success"></i>
-            <h5 className="mb-0 fw-bold text-success">Enquiry Submitted Successfully!</h5>
+          <div className="d-flex align-items-center justify-content-between mb-1">
+            <div className="d-flex align-items-center">
+              <i className="bi bi-check-circle-fill me-2 fs-5 text-success"></i>
+              <h5 className="mb-0 fw-bold text-success">Enquiry Submitted Successfully!</h5>
+            </div>
+            <button
+              type="button"
+              onClick={() => setShowModal(true)}
+              className="btn btn-sm btn-outline-success fw-semibold"
+              style={{ fontSize: '12px', borderRadius: '20px' }}
+            >
+              View Callback Details
+            </button>
           </div>
           <p className="mb-1" style={{ fontSize: '13px' }}>
             Enquiry Reference ID: <strong>{submittedEnquiry.enquiryNumber}</strong>
           </p>
           <p className="mb-0 text-muted" style={{ fontSize: '12px' }}>
             Thank you! Your rooftop solar requirement has been registered in the central SunPower database. Our Sales
-            team will review your requirement and call you shortly to schedule your site evaluation.
+            team will review your requirement and call you within 24 hours to schedule your site evaluation.
           </p>
         </div>
       )}
@@ -123,35 +146,35 @@ const ContactFormHomeOne = () => {
         <div className="row g-3">
           {/* Full Name */}
           <div className="col-12">
-            <div className="form-box">
+            <div className="form-box contact-inner">
               <input type="text" {...register('Fullname')} placeholder="Full Name *" />
               <i className="bi bi-person"></i>
               <p className="form_error">{errors.Fullname?.message}</p>
             </div>
           </div>
 
-          {/* Email */}
-          <div className="col-12 col-md-6">
-            <div className="form-box">
+          {/* Email Address */}
+          <div className="col-12">
+            <div className="form-box contact-inner">
               <input type="text" {...register('email')} placeholder="Email Address *" />
               <i className="bi bi-envelope"></i>
               <p className="form_error">{errors.email?.message}</p>
             </div>
           </div>
 
-          {/* Phone */}
-          <div className="col-12 col-md-6">
-            <div className="form-box">
-              <input type="text" {...register('phone')} placeholder="Mobile Phone (10 digits) *" />
+          {/* Phone Number */}
+          <div className="col-12">
+            <div className="form-box contact-inner">
+              <input type="text" {...register('phone')} placeholder="Mobile Phone Number (10 digits) *" />
               <i className="bi bi-phone-flip"></i>
               <p className="form_error">{errors.phone?.message}</p>
             </div>
           </div>
 
-          {/* Site Address */}
+          {/* Installation Site Address */}
           <div className="col-12">
-            <div className="form-box">
-              <input type="text" {...register('address')} placeholder="Rooftop Installation Site Address *" />
+            <div className="form-box contact-inner">
+              <input type="text" {...register('address')} placeholder="Installation / Rooftop Site Address *" />
               <i className="bi bi-geo-alt"></i>
               <p className="form_error">{errors.address?.message}</p>
             </div>
@@ -159,7 +182,7 @@ const ContactFormHomeOne = () => {
 
           {/* City */}
           <div className="col-12 col-sm-4">
-            <div className="form-box">
+            <div className="form-box contact-inner">
               <input type="text" {...register('city')} placeholder="City *" />
               <i className="bi bi-building"></i>
               <p className="form_error">{errors.city?.message}</p>
@@ -168,7 +191,7 @@ const ContactFormHomeOne = () => {
 
           {/* State */}
           <div className="col-12 col-sm-4">
-            <div className="form-box">
+            <div className="form-box contact-inner">
               <input type="text" {...register('state')} placeholder="State *" />
               <i className="bi bi-map"></i>
               <p className="form_error">{errors.state?.message}</p>
@@ -177,16 +200,16 @@ const ContactFormHomeOne = () => {
 
           {/* PIN Code */}
           <div className="col-12 col-sm-4">
-            <div className="form-box">
+            <div className="form-box contact-inner">
               <input type="text" {...register('pincode')} placeholder="PIN Code (6 digits) *" />
               <i className="bi bi-pin-map"></i>
               <p className="form_error">{errors.pincode?.message}</p>
             </div>
           </div>
 
-          {/* Solar Capacity 1kW to 5kW */}
+          {/* Capacity Dropdown: 1kW to 5kW */}
           <div className="col-12 col-md-6">
-            <div className="form-box">
+            <div className="form-box contact-inner">
               <select {...register('solarSystem')} style={{ color: '#3e3e3f' }}>
                 <option value="1kW">1 kW Solar System</option>
                 <option value="2kW">2 kW Solar System</option>
@@ -199,9 +222,9 @@ const ContactFormHomeOne = () => {
             </div>
           </div>
 
-          {/* System Type */}
+          {/* On-Grid or Off-Grid systems */}
           <div className="col-12 col-md-6">
-            <div className="form-box">
+            <div className="form-box contact-inner">
               <select {...register('systemType')} style={{ color: '#3e3e3f' }}>
                 <option value="On-Grid">On-Grid Solar System</option>
                 <option value="Off-Grid">Off-Grid Solar System</option>
@@ -217,22 +240,21 @@ const ContactFormHomeOne = () => {
               <input
                 type="checkbox"
                 className="form-check-input mt-0"
-                id="subsidyCheckHome"
+                id="homeSubsidyCheck"
                 {...register('subsidyRequired')}
                 defaultChecked={true}
               />
-              <label className="form-check-label text-dark fw-semibold" htmlFor="subsidyCheckHome" style={{ fontSize: '13px' }}>
+              <label className="form-check-label text-dark fw-semibold" htmlFor="homeSubsidyCheck" style={{ fontSize: '13px' }}>
                 Apply for Central Government Subsidy (PM Surya Ghar Muft Bijli Yojana)
               </label>
             </div>
           </div>
 
-          {/* Remarks */}
-          <div className="col-lg-12 col-md-12">
-            <div className="form-box">
+          {/* Additional Requirements & Remarks */}
+          <div className="col-12">
+            <div className="form-box contact-inner">
               <textarea
                 {...register('message')}
-                id="massage"
                 cols={30}
                 rows={3}
                 placeholder="Rooftop shadow-free area (approx. sq.ft), current monthly EB bill (₹), or special requirements"
@@ -242,12 +264,11 @@ const ContactFormHomeOne = () => {
             </div>
           </div>
 
-          {/* Submit */}
-          <div className="col-lg-12 col-md-12">
-            <div className="form-box-button">
+          {/* Submit Button */}
+          <div className="col-12">
+            <div className="form-box-button contact-inner">
               <button type="submit" disabled={submitting} style={{ opacity: submitting ? 0.7 : 1 }}>
-                {submitting ? 'Submitting Enquiry...' : 'Book Rooftop Solar Consultation'}{' '}
-                <i className="bi bi-arrow-right"></i>
+                {submitting ? 'Registering Enquiry...' : 'Submit Solar Enquiry'}
               </button>
             </div>
           </div>
