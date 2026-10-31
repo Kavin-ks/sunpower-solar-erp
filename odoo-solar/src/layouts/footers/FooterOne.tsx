@@ -54,7 +54,7 @@ const FooterOne = () => {
             <div className="col-lg-3 col-md-6">
               <div className="footer-wiget wow animate__zoomIn">
                 <div className="footer-wiget-log">
-                  <Link href="/"><Image src={footer_logo} alt="image-title" /></Link>
+                  <Link href="/"><Image src={footer_logo} alt="Odoo Solar System ERP" style={{ width: '230px', height: 'auto', display: 'block' }} priority /></Link>
                 </div>
                 <div className="footer-wiget-text">
                   <p>{sm_info}</p>
