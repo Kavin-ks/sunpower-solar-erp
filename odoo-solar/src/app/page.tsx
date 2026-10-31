@@ -23,6 +23,8 @@ const AuthWelcomePage = () => {
   const [regPassword, setRegPassword] = useState('');
   const [regConfirmPassword, setRegConfirmPassword] = useState('');
   const [showRegPassword, setShowRegPassword] = useState(false);
+  const [showRegConfirmPassword, setShowRegConfirmPassword] = useState(false);
+  const [regError, setRegError] = useState('');
   const [regAgree, setRegAgree] = useState(true);
 
   // OTP Verification state
@@ -84,29 +86,42 @@ const AuthWelcomePage = () => {
   // Step 1: Send OTP for Registration
   const handleRequestOtp = async (e: React.FormEvent) => {
     e.preventDefault();
+    setRegError('');
 
     if (!regFullName.trim()) {
-      toast.error('Please enter your full name.');
+      const msg = 'Please enter your full name.';
+      setRegError(msg);
+      toast.error(msg);
       return;
     }
     if (!regEmail || !regEmail.includes('@')) {
-      toast.error('Please enter a valid email address.');
+      const msg = 'Please enter a valid email address.';
+      setRegError(msg);
+      toast.error(msg);
       return;
     }
     if (!regPhone || regPhone.length < 10) {
-      toast.error('Please enter a valid 10-digit mobile number.');
+      const msg = 'Please enter a valid 10-digit mobile number.';
+      setRegError(msg);
+      toast.error(msg);
       return;
     }
     if (!regPassword || regPassword.length < 6) {
-      toast.error('Password must be at least 6 characters long.');
+      const msg = 'Password must be at least 6 characters long.';
+      setRegError(msg);
+      toast.error(msg);
       return;
     }
     if (regPassword !== regConfirmPassword) {
-      toast.error('Passwords do not match.');
+      const msg = 'Passwords do not match. Please ensure both passwords are identical.';
+      setRegError(msg);
+      toast.error(msg);
       return;
     }
     if (!regAgree) {
-      toast.error('Please accept the Terms & Conditions.');
+      const msg = 'Please accept the Terms & Conditions.';
+      setRegError(msg);
+      toast.error(msg);
       return;
     }
 
@@ -661,50 +676,178 @@ const AuthWelcomePage = () => {
                   </div>
 
                   {/* Password & Confirm */}
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '14px' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '8px' }}>
                     <div>
                       <label style={{ display: 'block', fontSize: '12.5px', fontWeight: 600, color: '#334155', marginBottom: '4px' }}>
                         Create Password *
                       </label>
-                      <input
-                        type={showRegPassword ? 'text' : 'password'}
-                        value={regPassword}
-                        onChange={(e) => setRegPassword(e.target.value)}
-                        placeholder="Min 6 characters"
-                        required
-                        style={{
-                          width: '100%',
-                          padding: '10px 12px',
-                          borderRadius: '6px',
-                          border: '1.5px solid #cbd5e1',
-                          fontSize: '13.5px',
-                          color: '#0f172a',
-                          outline: 'none',
-                        }}
-                      />
+                      <div style={{ position: 'relative' }}>
+                        <input
+                          type={showRegPassword ? 'text' : 'password'}
+                          value={regPassword}
+                          onChange={(e) => {
+                            setRegPassword(e.target.value);
+                            setRegError('');
+                          }}
+                          placeholder="Min 6 characters"
+                          required
+                          style={{
+                            width: '100%',
+                            padding: '10px 36px 10px 12px',
+                            borderRadius: '6px',
+                            border: `1.5px solid ${regPassword && regPassword.length < 6 ? '#f59e0b' : '#cbd5e1'}`,
+                            fontSize: '13.5px',
+                            color: '#0f172a',
+                            outline: 'none',
+                          }}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowRegPassword(!showRegPassword)}
+                          style={{
+                            position: 'absolute',
+                            right: '10px',
+                            top: '50%',
+                            transform: 'translateY(-50%)',
+                            background: 'none',
+                            border: 'none',
+                            color: '#94a3b8',
+                            cursor: 'pointer',
+                            padding: 0,
+                          }}
+                          title={showRegPassword ? 'Hide password' : 'Show password'}
+                        >
+                          <i className={showRegPassword ? 'bi bi-eye-slash' : 'bi bi-eye'}></i>
+                        </button>
+                      </div>
+                      {regPassword && regPassword.length < 6 && (
+                        <div style={{ fontSize: '11px', color: '#d97706', marginTop: '3px' }}>
+                          <i className="bi bi-info-circle me-1"></i>Min 6 characters
+                        </div>
+                      )}
                     </div>
+
                     <div>
                       <label style={{ display: 'block', fontSize: '12.5px', fontWeight: 600, color: '#334155', marginBottom: '4px' }}>
                         Confirm Password *
                       </label>
-                      <input
-                        type={showRegPassword ? 'text' : 'password'}
-                        value={regConfirmPassword}
-                        onChange={(e) => setRegConfirmPassword(e.target.value)}
-                        placeholder="Re-enter password"
-                        required
-                        style={{
-                          width: '100%',
-                          padding: '10px 12px',
-                          borderRadius: '6px',
-                          border: '1.5px solid #cbd5e1',
-                          fontSize: '13.5px',
-                          color: '#0f172a',
-                          outline: 'none',
-                        }}
-                      />
+                      <div style={{ position: 'relative' }}>
+                        <input
+                          type={showRegConfirmPassword ? 'text' : 'password'}
+                          value={regConfirmPassword}
+                          onChange={(e) => {
+                            setRegConfirmPassword(e.target.value);
+                            setRegError('');
+                          }}
+                          placeholder="Re-enter password"
+                          required
+                          style={{
+                            width: '100%',
+                            padding: '10px 36px 10px 12px',
+                            borderRadius: '6px',
+                            border: `1.5px solid ${
+                              regConfirmPassword
+                                ? regPassword === regConfirmPassword
+                                  ? '#10b981'
+                                  : '#ef4444'
+                                : '#cbd5e1'
+                            }`,
+                            backgroundColor: regConfirmPassword
+                              ? regPassword === regConfirmPassword
+                                ? '#f0fdf4'
+                                : '#fef2f2'
+                              : '#ffffff',
+                            fontSize: '13.5px',
+                            color: '#0f172a',
+                            outline: 'none',
+                          }}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowRegConfirmPassword(!showRegConfirmPassword)}
+                          style={{
+                            position: 'absolute',
+                            right: '10px',
+                            top: '50%',
+                            transform: 'translateY(-50%)',
+                            background: 'none',
+                            border: 'none',
+                            color: '#94a3b8',
+                            cursor: 'pointer',
+                            padding: 0,
+                          }}
+                          title={showRegConfirmPassword ? 'Hide password' : 'Show password'}
+                        >
+                          <i className={showRegConfirmPassword ? 'bi bi-eye-slash' : 'bi bi-eye'}></i>
+                        </button>
+                      </div>
                     </div>
                   </div>
+
+                  {/* Visual Confirmation of Password Match / Mismatch */}
+                  {regConfirmPassword.length > 0 && regPassword === regConfirmPassword && (
+                    <div
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        padding: '6px 10px',
+                        backgroundColor: '#f0fdf4',
+                        border: '1px solid #bbf7d0',
+                        borderRadius: '6px',
+                        color: '#16a34a',
+                        fontSize: '12px',
+                        fontWeight: 600,
+                        marginBottom: '12px',
+                      }}
+                    >
+                      <i className="bi bi-check-circle-fill"></i>
+                      <span>Passwords match perfectly!</span>
+                    </div>
+                  )}
+
+                  {regConfirmPassword.length > 0 && regPassword !== regConfirmPassword && (
+                    <div
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        padding: '6px 10px',
+                        backgroundColor: '#fef2f2',
+                        border: '1px solid #fecaca',
+                        borderRadius: '6px',
+                        color: '#dc2626',
+                        fontSize: '12px',
+                        fontWeight: 600,
+                        marginBottom: '12px',
+                      }}
+                    >
+                      <i className="bi bi-x-circle-fill"></i>
+                      <span>Passwords do not match. Please verify both passwords.</span>
+                    </div>
+                  )}
+
+                  {/* Inline Error Message on Submit */}
+                  {regError && (
+                    <div
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        padding: '8px 12px',
+                        backgroundColor: '#fef2f2',
+                        border: '1px solid #fecaca',
+                        borderRadius: '6px',
+                        color: '#b91c1c',
+                        fontSize: '12.5px',
+                        fontWeight: 600,
+                        marginBottom: '12px',
+                      }}
+                    >
+                      <i className="bi bi-exclamation-triangle-fill" style={{ fontSize: '14px', flexShrink: 0 }}></i>
+                      <span>{regError}</span>
+                    </div>
+                  )}
 
                   {/* Agree Checkbox */}
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '18px' }}>
@@ -912,6 +1055,9 @@ const AuthWelcomePage = () => {
           )}
         </div>
       </div>
+
+      {/* Toast notifications container */}
+      <ToastContainer position="top-right" autoClose={3500} hideProgressBar={false} newestOnTop closeOnClick pauseOnHover />
     </div>
   );
 };
