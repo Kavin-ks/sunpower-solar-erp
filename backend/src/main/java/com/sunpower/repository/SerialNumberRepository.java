@@ -21,4 +21,6 @@ public interface SerialNumberRepository extends JpaRepository<SerialNumber, Long
            "OR (s.customer IS NOT NULL AND LOWER(s.customer.fullName) LIKE LOWER(CONCAT('%', :query, '%'))) " +
            "OR (s.customer IS NOT NULL AND s.customer.phone LIKE CONCAT('%', :query, '%'))")
     List<SerialNumber> searchSerialNumbers(@Param("query") String query);
+
+    long countByStatus(SerialNumberStatus status);
 }
