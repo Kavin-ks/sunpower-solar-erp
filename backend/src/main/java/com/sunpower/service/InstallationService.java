@@ -113,6 +113,9 @@ public class InstallationService {
         installation.setTestingPassed(request.isTestingPassed());
         installation.setTestingNotes(request.getTestingNotes());
         installation.setCustomerSigneeName(request.getCustomerSigneeName());
+        if (request.getCustomerSignatureUrl() != null) {
+            installation.setCustomerSignatureUrl(request.getCustomerSignatureUrl());
+        }
         installation.setCustomerAcceptanceNote(request.getCustomerAcceptanceNote());
         installation.setCustomerSignedAt(LocalDateTime.now());
         installation.setStatus(InstallationStatus.COMPLETED);
@@ -126,8 +129,10 @@ public class InstallationService {
                 for (InstallationTechnician it : installation.getAssignedTechnicians()) {
                     if (it.getTechnician().getId().equals(hoursReq.getTechnicianId())) {
                         it.setHoursWorked(hoursReq.getHoursWorked());
+                        BigDecimal rate = it.getTechnician().getHourlyRate() != null ?
+                                it.getTechnician().getHourlyRate() : BigDecimal.valueOf(250.00);
                         BigDecimal payout = hoursReq.getPayoutAmount() != null ?
-                                hoursReq.getPayoutAmount() : hoursReq.getHoursWorked().multiply(BigDecimal.valueOf(250.00)); // Default ₹250/hr
+                                hoursReq.getPayoutAmount() : hoursReq.getHoursWorked().multiply(rate);
                         it.setPayoutAmount(payout);
                         installationTechnicianRepository.save(it);
 

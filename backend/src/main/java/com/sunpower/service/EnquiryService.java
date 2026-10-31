@@ -81,6 +81,12 @@ public class EnquiryService {
         enquiry.setSystemType(request.getSystemType());
         enquiry.setSubsidyRequired(request.isSubsidyRequired());
         enquiry.setMonthlyElectricityBill(request.getMonthlyElectricityBill());
+        if (request.getShadowFreeAreaSqFt() != null) {
+            enquiry.setShadowFreeAreaSqFt(request.getShadowFreeAreaSqFt());
+        }
+        if (request.getGridSuitable() != null) {
+            enquiry.setGridSuitable(request.getGridSuitable());
+        }
         enquiry.setSource(request.getSource());
         enquiry.setStatus(EnquiryStatus.NEW);
         enquiry.setNotes(request.getNotes());

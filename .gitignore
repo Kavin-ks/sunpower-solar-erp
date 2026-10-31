@@ -22,3 +22,5 @@ frontend/*.local
 # Docker & Temp
 *.pid
 .env.local
+backend/data/
+

@@ -200,6 +200,11 @@ public class DispatchService {
                         confirmedBy
                 );
                 serialNumberHistoryRepository.save(history);
+
+                // Auto-warranty clock initiation on dispatch
+                warrantyService.activateWarranty(dispatch.getCustomer(), dispatch.getSalesOrder(), product, sn, LocalDate.now());
+            } else if (product.getCategory() != null && product.getCategory().getName().toUpperCase().contains("PANEL")) {
+                warrantyService.activateWarranty(dispatch.getCustomer(), dispatch.getSalesOrder(), product, null, LocalDate.now());
             }
         }
 

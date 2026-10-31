@@ -37,6 +37,8 @@ export const EnquiriesPage: React.FC = () => {
     systemType: 'ON_GRID',
     subsidyRequired: false,
     monthlyElectricityBill: '',
+    shadowFreeAreaSqFt: '',
+    gridSuitable: true,
     source: 'WEBSITE',
     notes: '',
   });
@@ -69,6 +71,8 @@ export const EnquiriesPage: React.FC = () => {
         ...formData,
         requestedCapacityKw: parseFloat(formData.requestedCapacityKw),
         monthlyElectricityBill: formData.monthlyElectricityBill ? parseFloat(formData.monthlyElectricityBill) : null,
+        shadowFreeAreaSqFt: formData.shadowFreeAreaSqFt ? parseFloat(formData.shadowFreeAreaSqFt) : null,
+        gridSuitable: formData.gridSuitable,
       });
       setShowModal(false);
       fetchEnquiries();
@@ -83,6 +87,8 @@ export const EnquiriesPage: React.FC = () => {
         systemType: 'ON_GRID',
         subsidyRequired: false,
         monthlyElectricityBill: '',
+        shadowFreeAreaSqFt: '',
+        gridSuitable: true,
         source: 'WEBSITE',
         notes: '',
       });
@@ -388,6 +394,32 @@ export const EnquiriesPage: React.FC = () => {
                   />
                   <label htmlFor="subsidyReq" className="text-xs font-semibold text-slate-700 cursor-pointer">
                     Apply for Govt Subsidy (PM Surya Ghar)
+                  </label>
+                </div>
+              </div>
+
+              {/* Initial Phone Check Details */}
+              <div className="grid grid-cols-2 gap-3 p-3 bg-slate-50 border border-slate-200 rounded-xl">
+                <div>
+                  <label className="block font-semibold text-slate-700 mb-1">Shadow-Free Area (Sq. Ft.)</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={formData.shadowFreeAreaSqFt}
+                    onChange={(e) => setFormData({ ...formData, shadowFreeAreaSqFt: e.target.value })}
+                    className="w-full px-3 py-2 border border-slate-200 rounded-lg text-xs bg-white focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+                    placeholder="e.g. 450.00 (Optional)"
+                  />
+                </div>
+                <div className="flex flex-col justify-center pt-2">
+                  <label className="flex items-center space-x-2 cursor-pointer mt-3">
+                    <input
+                      type="checkbox"
+                      checked={formData.gridSuitable}
+                      onChange={(e) => setFormData({ ...formData, gridSuitable: e.target.checked })}
+                      className="h-4 w-4 text-emerald-600 rounded border-slate-300"
+                    />
+                    <span className="text-xs font-semibold text-slate-700">Initial Grid Check Suitable</span>
                   </label>
                 </div>
               </div>

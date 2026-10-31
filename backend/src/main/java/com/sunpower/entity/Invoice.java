@@ -16,8 +16,12 @@ public class Invoice {
     private String invoiceNumber;
 
     @ManyToOne(fetch = FetchType.EAGER)
-    @JoinColumn(name = "sales_order_id", nullable = false)
+    @JoinColumn(name = "sales_order_id", nullable = true)
     private SalesOrder salesOrder;
+
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "service_ticket_id", nullable = true)
+    private ServiceTicket serviceTicket;
 
     @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "customer_id", nullable = false)
@@ -85,6 +89,8 @@ public class Invoice {
     public void setInvoiceNumber(String invoiceNumber) { this.invoiceNumber = invoiceNumber; }
     public SalesOrder getSalesOrder() { return salesOrder; }
     public void setSalesOrder(SalesOrder salesOrder) { this.salesOrder = salesOrder; }
+    public ServiceTicket getServiceTicket() { return serviceTicket; }
+    public void setServiceTicket(ServiceTicket serviceTicket) { this.serviceTicket = serviceTicket; }
     public Customer getCustomer() { return customer; }
     public void setCustomer(Customer customer) { this.customer = customer; }
     public LocalDate getInvoiceDate() { return invoiceDate; }

@@ -29,6 +29,9 @@ public class PaymentService {
     @Autowired
     private InvoiceRepository invoiceRepository;
 
+    @Autowired
+    private OrderService orderService;
+
     public List<Payment> getAllPayments() {
         return paymentRepository.findAll();
     }
@@ -79,15 +82,21 @@ public class PaymentService {
         order.setRemainingBalance(order.getTotalAmount().subtract(newTotalPaid));
 
         // Business rule: If advance requirement is satisfied, confirm order
+        boolean newlyConfirmed = false;
         if (order.getStatus() == OrderStatus.PENDING_PAYMENT && newTotalPaid.compareTo(order.getAdvanceRequired()) >= 0) {
             order.setStatus(OrderStatus.CONFIRMED);
+            newlyConfirmed = true;
         }
-        salesOrderRepository.save(order);
+        SalesOrder savedOrder = salesOrderRepository.save(order);
+
+        if (newlyConfirmed || savedOrder.getStatus() == OrderStatus.CONFIRMED) {
+            orderService.ensureDispatchAndInstallation(savedOrder);
+        }
 
         // Update corresponding Invoice
-        invoiceRepository.findBySalesOrderId(order.getId()).ifPresent(invoice -> {
+        invoiceRepository.findBySalesOrderId(savedOrder.getId()).ifPresent(invoice -> {
             invoice.setPaidAmount(newTotalPaid);
-            invoice.setBalanceAmount(order.getRemainingBalance());
+            invoice.setBalanceAmount(savedOrder.getRemainingBalance());
             if (invoice.getBalanceAmount().compareTo(BigDecimal.ZERO) == 0) {
                 invoice.setStatus("PAID");
             } else if (newTotalPaid.compareTo(BigDecimal.ZERO) > 0) {

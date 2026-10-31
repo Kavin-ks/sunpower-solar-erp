@@ -43,6 +43,9 @@ public class TechnicianService {
         tech.setPhone(updated.getPhone());
         tech.setEmail(updated.getEmail());
         tech.setSkills(updated.getSkills());
+        if (updated.getHourlyRate() != null) {
+            tech.setHourlyRate(updated.getHourlyRate());
+        }
         tech.setAvailable(updated.isAvailable());
         tech.setActive(updated.isActive());
         return technicianRepository.save(tech);

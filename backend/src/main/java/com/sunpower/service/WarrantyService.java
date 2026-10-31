@@ -36,11 +36,21 @@ public class WarrantyService {
 
     @Transactional
     public Warranty activateWarranty(Customer customer, SalesOrder order, Product product, SerialNumber serialNumber, LocalDate deliveryDate) {
-        // Prevent duplicate warranty activation for the same serial number
+        // If warranty already exists for this serial number, update dates
         if (serialNumber != null) {
             Optional<Warranty> existing = warrantyRepository.findBySerialNumberId(serialNumber.getId());
             if (existing.isPresent()) {
-                return existing.get();
+                Warranty w = existing.get();
+                if (deliveryDate != null) {
+                    w.setDeliveryDate(deliveryDate);
+                    w.setWarrantyStartDate(deliveryDate);
+                    int dur = w.getDurationMonths() != null ? w.getDurationMonths() :
+                            (product.getDefaultWarrantyMonths() != null ? product.getDefaultWarrantyMonths() : 24);
+                    w.setWarrantyEndDate(deliveryDate.plusMonths(dur));
+                    w.setStatus(WarrantyStatus.ACTIVE);
+                    return warrantyRepository.save(w);
+                }
+                return w;
             }
         }
 

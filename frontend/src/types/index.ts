@@ -51,6 +51,8 @@ export interface Enquiry {
   systemType: SystemType;
   subsidyRequired: boolean;
   monthlyElectricityBill: number;
+  shadowFreeAreaSqFt?: number;
+  gridSuitable?: boolean;
   source: EnquirySource;
   status: EnquiryStatus;
   assignedTo?: User;
@@ -65,6 +67,7 @@ export interface Technician {
   phone: string;
   email: string;
   skills: string;
+  hourlyRate?: number;
   available: boolean;
   active: boolean;
 }
@@ -318,6 +321,7 @@ export interface Installation {
   testingPassed: boolean;
   testingNotes?: string;
   customerSigneeName?: string;
+  customerSignatureUrl?: string;
   customerAcceptanceNote?: string;
   customerSignedAt?: string;
   status: InstallationStatus;
@@ -383,7 +387,8 @@ export interface Expense {
 export interface Invoice {
   id: number;
   invoiceNumber: string;
-  salesOrder: SalesOrder;
+  salesOrder?: SalesOrder;
+  serviceTicketId?: number;
   customer: Customer;
   invoiceDate: string;
   dueDate: string;
@@ -426,6 +431,8 @@ export interface JobProfitability {
   netProfit: number;
   profitMarginPercentage: number;
   outstandingBalance: number;
+  subsidyStatus?: string;
+  openServiceTicketsCount?: number;
 }
 
 export interface DashboardMetrics {
