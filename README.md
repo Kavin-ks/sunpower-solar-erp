@@ -43,7 +43,30 @@ The platform serves as the digital operational backbone of **SunPower Solutions*
 
 ---
 
-## 🚀 Running the Application
+## 🐳 Quick Start with Docker (Recommended)
+
+Run the entire platform (MySQL 8 database + Spring Boot backend + React Nginx frontend) with **one command**:
+
+```bash
+docker compose up --build
+```
+
+- **Frontend Application:** [http://localhost:5173](http://localhost:5173) or [http://localhost](http://localhost)
+- **Backend REST API:** [http://localhost:8080](http://localhost:8080)
+- **MySQL Database:** `localhost:3306` (`user: root`, `password: rootpassword`, `db: solar_db`)
+
+To run in the background (detached mode):
+```bash
+docker compose up --build -d
+```
+To stop all containers:
+```bash
+docker compose down
+```
+
+---
+
+## 🚀 Running Locally Without Docker (Manual Setup)
 
 ### Prerequisites
 - **Java 17+** (JDK 17 or higher)
