@@ -3,6 +3,7 @@ package com.sunpower.service;
 import com.sunpower.dto.FinanceDTOs.*;
 import com.sunpower.entity.*;
 import com.sunpower.entity.enums.Enums.ExpenseCategory;
+import com.sunpower.entity.enums.Enums.ExpenseStatus;
 import com.sunpower.entity.enums.Enums.SubsidyStatus;
 import com.sunpower.entity.enums.Enums.SystemType;
 import com.sunpower.entity.enums.Enums.TechnicianPayoutStatus;
@@ -52,6 +53,13 @@ public class FinanceServiceTest {
 
     @Mock
     private ServiceTicketRepository serviceTicketRepository;
+
+    @Mock
+    private PurchaseRepository purchaseRepository;
+
+    @Mock
+    private SupplierPaymentRepository supplierPaymentRepository;
+
 
     @InjectMocks
     private FinanceService financeService;
@@ -211,5 +219,128 @@ public class FinanceServiceTest {
         assertEquals(0, new BigDecimal("300000.00").compareTo(job.getRecognizedRevenue()));
         assertEquals(0, new BigDecimal("15000.00").compareTo(job.getTaxAmount()));
         assertEquals(0, new BigDecimal("315000.00").compareTo(job.getOrderAmount()));
+    }
+
+    @Test
+    void testApproveExpense_Success() {
+        Expense exp = new Expense();
+        exp.setId(15L);
+        exp.setTitle("Crane rental");
+        exp.setAmount(new BigDecimal("12000.00"));
+        exp.setStatus(ExpenseStatus.PENDING);
+
+        when(expenseRepository.findById(15L)).thenReturn(Optional.of(exp));
+        when(expenseRepository.save(any(Expense.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        Expense approved = financeService.approveExpense(15L, "Finance Manager");
+
+        assertNotNull(approved);
+        assertEquals(ExpenseStatus.APPROVED, approved.getStatus());
+        assertEquals("Finance Manager", approved.getApprovedBy());
+        assertNotNull(approved.getApprovedAt());
+    }
+
+    @Test
+    void testRejectExpense_Success() {
+        Expense exp = new Expense();
+        exp.setId(16L);
+        exp.setTitle("Unverified travel bill");
+        exp.setStatus(ExpenseStatus.PENDING);
+
+        when(expenseRepository.findById(16L)).thenReturn(Optional.of(exp));
+        when(expenseRepository.save(any(Expense.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        Expense rejected = financeService.rejectExpense(16L, "No valid GST invoice attached", "Auditor");
+
+        assertNotNull(rejected);
+        assertEquals(ExpenseStatus.REJECTED, rejected.getStatus());
+        assertEquals("No valid GST invoice attached", rejected.getRejectionReason());
+        assertEquals("Auditor", rejected.getApprovedBy());
+    }
+
+    @Test
+    void testRecordSupplierPayment_Success() {
+        Purchase purchase = new Purchase();
+        purchase.setId(88L);
+        purchase.setSupplierName("Tata Power Solar Panels");
+        purchase.setTotalAmount(new BigDecimal("150000.00"));
+        purchase.setPaidAmount(new BigDecimal("50000.00"));
+        purchase.setRemainingBalance(new BigDecimal("100000.00"));
+
+        SupplierPaymentRequest request = new SupplierPaymentRequest();
+        request.setPurchaseId(88L);
+        request.setAmount(new BigDecimal("60000.00"));
+        request.setPaymentMethod("Bank Transfer");
+        request.setReferenceNumber("UTR-TATA-8877");
+
+        when(purchaseRepository.findById(88L)).thenReturn(Optional.of(purchase));
+        when(supplierPaymentRepository.existsByReferenceNumberAndStatus("UTR-TATA-8877", "SUCCESS")).thenReturn(false);
+        when(supplierPaymentRepository.save(any(SupplierPayment.class))).thenAnswer(inv -> {
+            SupplierPayment sp = inv.getArgument(0);
+            sp.setId(1L);
+            return sp;
+        });
+
+        SupplierPayment sp = financeService.recordSupplierPayment(request);
+
+        assertNotNull(sp);
+        assertEquals(0, new BigDecimal("60000.00").compareTo(sp.getAmount()));
+        assertEquals(0, new BigDecimal("110000.00").compareTo(purchase.getPaidAmount()));
+        assertEquals(0, new BigDecimal("40000.00").compareTo(purchase.getRemainingBalance()));
+        assertEquals("PARTIALLY_PAID", purchase.getPaymentStatus());
+    }
+
+    @Test
+    void testRecordSupplierPayment_Overpayment_ThrowsException() {
+        Purchase purchase = new Purchase();
+        purchase.setId(89L);
+        purchase.setRemainingBalance(new BigDecimal("25000.00"));
+
+        SupplierPaymentRequest request = new SupplierPaymentRequest();
+        request.setPurchaseId(89L);
+        request.setAmount(new BigDecimal("30000.00"));
+
+        when(purchaseRepository.findById(89L)).thenReturn(Optional.of(purchase));
+
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () -> financeService.recordSupplierPayment(request));
+        assertTrue(ex.getMessage().contains("exceeds remaining balance"));
+        verify(supplierPaymentRepository, never()).save(any(SupplierPayment.class));
+    }
+
+    @Test
+    void testRecordSupplierPayment_DuplicateReference_ThrowsException() {
+        Purchase purchase = new Purchase();
+        purchase.setId(90L);
+        purchase.setRemainingBalance(new BigDecimal("50000.00"));
+
+        SupplierPaymentRequest request = new SupplierPaymentRequest();
+        request.setPurchaseId(90L);
+        request.setAmount(new BigDecimal("10000.00"));
+        request.setReferenceNumber("UTR-DUP-1234");
+
+        when(purchaseRepository.findById(90L)).thenReturn(Optional.of(purchase));
+        when(supplierPaymentRepository.existsByReferenceNumberAndStatus("UTR-DUP-1234", "SUCCESS")).thenReturn(true);
+
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () -> financeService.recordSupplierPayment(request));
+        assertTrue(ex.getMessage().contains("Duplicate reference error"));
+        verify(supplierPaymentRepository, never()).save(any(SupplierPayment.class));
+    }
+
+    @Test
+    void testGenerateGstReport_AccurateCalculations() {
+        when(invoiceRepository.sumTotalCgst()).thenReturn(new BigDecimal("18000.00"));
+        when(invoiceRepository.sumTotalSgst()).thenReturn(new BigDecimal("18000.00"));
+        when(invoiceRepository.sumTotalIgst()).thenReturn(BigDecimal.ZERO);
+        when(invoiceRepository.sumTotalOutputTax()).thenReturn(new BigDecimal("36000.00"));
+        when(purchaseRepository.sumTotalPurchases()).thenReturn(new BigDecimal("118000.00"));
+
+        GstReportDTO gst = financeService.getGstReport("THIS_MONTH");
+
+        assertNotNull(gst);
+        assertEquals(0, new BigDecimal("18000.00").compareTo(gst.getOutputCgst()));
+        assertEquals(0, new BigDecimal("18000.00").compareTo(gst.getOutputSgst()));
+        assertEquals(0, new BigDecimal("36000.00").compareTo(gst.getTotalOutputGst()));
+        assertEquals(0, new BigDecimal("18000.00").compareTo(gst.getInputGst()));
+        assertEquals(0, new BigDecimal("18000.00").compareTo(gst.getNetGstPayable()));
     }
 }
