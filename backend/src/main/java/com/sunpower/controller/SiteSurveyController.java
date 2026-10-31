@@ -85,7 +85,7 @@ public class SiteSurveyController {
     }
 
     @PostMapping("/{id}/photos")
-    @PreAuthorize("hasAnyRole('TECHNICIAN', 'DIRECTOR')")
+    @PreAuthorize("hasAnyRole('TECHNICIAN', 'SALES', 'DIRECTOR', 'ADMIN')")
     public ResponseEntity<SurveyPhoto> addPhoto(@PathVariable Long id, @RequestBody Map<String, String> payload) {
         String url = payload.get("photoUrl");
         String caption = payload.get("caption");

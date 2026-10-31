@@ -17,6 +17,7 @@ interface FormData {
   solarSystem: string;
   systemType: string;
   subsidyRequired: boolean;
+  monthlyElectricityBill?: number | null;
   message: string;
 }
 
@@ -32,6 +33,11 @@ const schema = yup
     solarSystem: yup.string().required('Please select solar system capacity').label('Solar System'),
     systemType: yup.string().required('Please select system type').label('System Type'),
     subsidyRequired: yup.boolean().default(true),
+    monthlyElectricityBill: yup
+      .number()
+      .typeError('Please enter valid monthly electricity bill')
+      .nullable()
+      .transform((v, o) => (o === '' ? null : v)),
     message: yup.string().default('').label('Requirements & Remarks'),
   })
   .required();
@@ -55,6 +61,7 @@ const ContactForm = () => {
       subsidyRequired: true,
       systemType: 'On-Grid',
       solarSystem: '3kW',
+      monthlyElectricityBill: 3500,
     },
   });
 
@@ -208,6 +215,19 @@ const ContactForm = () => {
               </select>
               <i className="bi bi-plug"></i>
               <p className="form_error">{errors.systemType?.message}</p>
+            </div>
+          </div>
+
+          {/* Monthly Electricity Bill (₹) */}
+          <div className="col-12">
+            <div className="form-box contact-inner">
+              <input
+                type="number"
+                {...register('monthlyElectricityBill')}
+                placeholder="Current Monthly Electricity Bill (₹, e.g. 3500)"
+              />
+              <i className="bi bi-currency-rupee"></i>
+              <p className="form_error">{errors.monthlyElectricityBill?.message}</p>
             </div>
           </div>
 

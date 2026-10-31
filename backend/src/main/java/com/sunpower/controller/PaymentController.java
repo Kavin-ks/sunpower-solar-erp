@@ -41,7 +41,7 @@ public class PaymentController {
     }
 
     @PostMapping
-    @PreAuthorize("hasAnyRole('FINANCE', 'DIRECTOR')")
+    @PreAuthorize("hasAnyRole('FINANCE', 'DIRECTOR', 'SALES', 'ADMIN')")
     public ResponseEntity<Payment> recordPayment(@Valid @RequestBody PaymentRecordRequest request) {
         Payment payment = paymentService.recordPayment(request);
         return ResponseEntity.status(HttpStatus.CREATED).body(payment);

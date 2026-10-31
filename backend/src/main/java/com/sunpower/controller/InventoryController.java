@@ -32,7 +32,7 @@ public class InventoryController {
     }
 
     @GetMapping("/movements")
-    @PreAuthorize("hasAnyRole('ADMIN', 'WAREHOUSE', 'FINANCE', 'DIRECTOR')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'WAREHOUSE', 'FINANCE', 'DIRECTOR', 'SALES')")
     public ResponseEntity<List<StockMovement>> getMovements(@RequestParam(required = false) Long productId) {
         if (productId != null) {
             return ResponseEntity.ok(inventoryService.getMovementsByProductId(productId));
