@@ -57,20 +57,21 @@ public class FinanceController {
     @PostMapping("/expenses/{id}/approve")
     public ResponseEntity<Expense> approveExpense(
             @PathVariable Long id,
-            @Valid @RequestBody ExpenseApprovalRequest request,
+            @RequestBody(required = false) ExpenseApprovalRequest request,
             Authentication authentication) {
         String actor = authentication != null ? authentication.getName() : "Finance Lead";
-        Expense expense = financeService.approveExpense(id, request, actor);
+        Expense expense = financeService.approveExpense(id, actor);
         return ResponseEntity.ok(expense);
     }
 
     @PostMapping("/expenses/{id}/reject")
     public ResponseEntity<Expense> rejectExpense(
             @PathVariable Long id,
-            @Valid @RequestBody ExpenseApprovalRequest request,
+            @RequestBody(required = false) ExpenseApprovalRequest request,
             Authentication authentication) {
         String actor = authentication != null ? authentication.getName() : "Finance Lead";
-        Expense expense = financeService.rejectExpense(id, request, actor);
+        String reason = (request != null && request.getRejectionReason() != null) ? request.getRejectionReason() : "Rejected by Finance Controller";
+        Expense expense = financeService.rejectExpense(id, reason, actor);
         return ResponseEntity.ok(expense);
     }
 
