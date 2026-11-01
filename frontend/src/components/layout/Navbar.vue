@@ -7,15 +7,37 @@ import { Sun, LogOut, ShieldCheck } from 'lucide-vue-next';
 const authStore = useAuthStore();
 const router = useRouter();
 
-const roleOptions = [
-  { label: 'Admin (Full Access & Oversight)', username: 'admin' },
-  { label: 'Sales Lead', username: 'sales' },
-  { label: 'Warehouse Manager', username: 'warehouse' },
-  { label: 'Technician (Karthik Raja)', username: 'technician' },
-  { label: 'Technician (Ganesh Moorthy)', username: 'tech.ganesh' },
-  { label: 'Technician (Selvakumar R)', username: 'tech.selva' },
-  { label: 'Support Officer', username: 'support' },
-  { label: 'Finance Manager', username: 'finance' },
+const roleGroups = [
+  {
+    group: 'Department Heads & Operations',
+    options: [
+      { label: 'Admin (Full Access & Oversight)', username: 'admin' },
+      { label: 'Sales Lead', username: 'sales' },
+      { label: 'Warehouse Manager', username: 'warehouse' },
+      { label: 'Support Officer', username: 'support' },
+      { label: 'Finance Manager', username: 'finance' },
+    ],
+  },
+  {
+    group: 'Field Crew Technicians (15 Field Techs)',
+    options: [
+      { label: 'Tech 1: Karthik Raja', username: 'technician' },
+      { label: 'Tech 2: Ganesh Moorthy', username: 'tech.ganesh' },
+      { label: 'Tech 3: Selvakumar R', username: 'tech.selva' },
+      { label: 'Tech 4: Praveen Kumar', username: 'tech.praveen' },
+      { label: 'Tech 5: Dinesh Babu', username: 'tech.dinesh' },
+      { label: 'Tech 6: Manoj Prabhakar', username: 'tech.manoj' },
+      { label: 'Tech 7: Saravanan V', username: 'tech.saravanan' },
+      { label: 'Tech 8: Anand Raj', username: 'tech.anand' },
+      { label: 'Tech 9: Vijay Anand', username: 'tech.vijay' },
+      { label: 'Tech 10: Muthukumar K', username: 'tech.muthu' },
+      { label: 'Tech 11: Balamurugan P', username: 'tech.bala' },
+      { label: 'Tech 12: Senthil Nathan', username: 'tech.senthil' },
+      { label: 'Tech 13: Hariharan S', username: 'tech.hari' },
+      { label: 'Tech 14: Ravi Chandran', username: 'tech.ravi' },
+      { label: 'Tech 15: Vigneshwar M', username: 'tech.vignesh' },
+    ],
+  },
 ];
 
 const handleRoleSwitch = async (event: Event) => {
@@ -58,9 +80,11 @@ const handleLogout = () => {
             @change="handleRoleSwitch"
             class="bg-transparent font-medium text-slate-900 focus:outline-none cursor-pointer"
           >
-            <option v-for="opt in roleOptions" :key="opt.username" :value="opt.username">
-              {{ opt.label }}
-            </option>
+            <optgroup v-for="g in roleGroups" :key="g.group" :label="g.group">
+              <option v-for="opt in g.options" :key="opt.username" :value="opt.username">
+                {{ opt.label }}
+              </option>
+            </optgroup>
           </select>
         </div>
 
