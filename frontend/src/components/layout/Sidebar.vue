@@ -18,6 +18,7 @@ import {
   CheckCircle2,
   CalendarCheck2,
   PackageSearch,
+  TrendingUp,
 } from 'lucide-vue-next';
 
 const authStore = useAuthStore();

@@ -142,8 +142,14 @@ onMounted(() => {
       </div>
     </div>
 
+    <!-- Loading State -->
+    <div v-if="loading" class="py-16 flex flex-col items-center justify-center space-y-3">
+      <div class="w-8 h-8 border-3 border-emerald-600 border-t-transparent rounded-full animate-spin"></div>
+      <p class="text-xs text-slate-500 font-medium">Loading department dashboard metrics...</p>
+    </div>
+
     <!-- 1. ADMIN / EXECUTIVE DASHBOARD -->
-    <div v-if="isAdmin && adminData" class="space-y-6">
+    <div v-else-if="isAdmin && adminData" class="space-y-6">
       <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
         <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-xs">
           <span class="text-xs uppercase font-bold text-slate-400">Total Leads & Enquiries</span>
