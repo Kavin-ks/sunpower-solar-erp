@@ -1423,7 +1423,7 @@ public class DataInitializationService implements CommandLineRunner {
             e.setSystemType(SystemType.ON_GRID);
             e.setSubsidyRequired(true);
             e.setMonthlyElectricityBill(new BigDecimal("3500.00"));
-            e.setSource("CUSTOMER_PORTAL");
+            e.setSource(EnquirySource.CUSTOMER_PORTAL);
             e.setStatus(EnquiryStatus.QUOTED);
             return enquiryRepository.save(e);
         });
@@ -1448,7 +1448,7 @@ public class DataInitializationService implements CommandLineRunner {
         });
 
         if (quotationRepository.findByCustomerId(customer.getId()).isEmpty()) {
-            SolarPackage pkg = packageRepository.findByCapacityKw(new BigDecimal("3.00")).stream().findFirst().orElse(null);
+            SolarPackage pkg = packageRepository.findAll().stream().filter(p -> p.getCapacityKw() != null && p.getCapacityKw().compareTo(new BigDecimal("3.00")) == 0).findFirst().orElse(null);
             if (pkg == null) pkg = packageRepository.findAll().stream().findFirst().orElse(null);
 
             Quotation q = new Quotation();
