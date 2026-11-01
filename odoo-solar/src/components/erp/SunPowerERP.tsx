@@ -821,6 +821,14 @@ const SunPowerERP = () => {
     saveAll(updated);
     setSelectedEnquiryId(newId);
 
+    const enqName = newEnqName.trim();
+    const enqEmail = newEnqEmail.trim();
+    const enqAddr = newEnqAddress.trim();
+    const enqKw = Number(newEnqKw);
+    const enqType = newEnqType;
+    const enqSubsidy = newEnqSubsidy;
+    const enqSource = newEnqSource;
+
     // Reset fields
     setNewEnqName('');
     setNewEnqEmail('');
@@ -833,16 +841,16 @@ const SunPowerERP = () => {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        fullName: newEnqName.trim(),
+        fullName: enqName,
         phone: cleanPhone,
-        email: newEnqEmail.trim(),
-        address: newEnqAddress.trim(),
+        email: enqEmail,
+        address: enqAddr,
         city: 'Chennai',
         pincode: '600001',
-        requestedCapacityKw: Number(newEnqKw),
-        systemType: newEnqType === 'Off-Grid' ? 'OFF_GRID' : 'ON_GRID',
-        subsidyRequired: newEnqSubsidy,
-        notes: `Created via SunPowerERP UI. Source: ${newEnqSource}`
+        requestedCapacityKw: enqKw,
+        systemType: enqType === 'Off-Grid' ? 'OFF_GRID' : 'ON_GRID',
+        subsidyRequired: enqSubsidy,
+        notes: `Created via SunPowerERP UI. Source: ${enqSource}`
       })
     }).catch(e => console.warn('Background sync to Spring Boot notice:', e));
 

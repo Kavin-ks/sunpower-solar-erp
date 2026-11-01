@@ -33,7 +33,7 @@ public class EnquiryService {
     private EnquiryActivityRepository activityRepository;
 
     public List<Enquiry> getAllEnquiries() {
-        return enquiryRepository.findAll();
+        return enquiryRepository.findAll(org.springframework.data.domain.Sort.by(org.springframework.data.domain.Sort.Direction.DESC, "id"));
     }
 
     public Enquiry getEnquiryById(Long id) {
@@ -48,7 +48,7 @@ public class EnquiryService {
     public List<Enquiry> searchEnquiries(String query, EnquiryStatus status) {
         String trimmedQuery = (query != null && !query.trim().isEmpty()) ? query.trim() : null;
         if (trimmedQuery == null && status == null) {
-            return enquiryRepository.findAll();
+            return getAllEnquiries();
         }
         return enquiryRepository.searchEnquiriesWithStatus(trimmedQuery, status);
     }
@@ -214,26 +214,30 @@ public class EnquiryService {
                 .orElse(null);
 
         if (customer != null) {
-            // Update customer address details if they were previously missing
+            // Update customer details with latest submitted information
             boolean updated = false;
-            if ((customer.getAddress() == null || customer.getAddress().trim().isEmpty()) && request.getAddress() != null) {
+            if (request.getFullName() != null && !request.getFullName().trim().isEmpty()) {
+                customer.setFullName(request.getFullName().trim());
+                updated = true;
+            }
+            if (normalizedEmail != null && !normalizedEmail.trim().isEmpty()) {
+                customer.setEmail(normalizedEmail.trim());
+                updated = true;
+            }
+            if (request.getAddress() != null && !request.getAddress().trim().isEmpty()) {
                 customer.setAddress(request.getAddress().trim());
                 updated = true;
             }
-            if ((customer.getCity() == null || customer.getCity().trim().isEmpty()) && request.getCity() != null) {
+            if (request.getCity() != null && !request.getCity().trim().isEmpty()) {
                 customer.setCity(request.getCity().trim());
                 updated = true;
             }
-            if ((customer.getState() == null || customer.getState().trim().isEmpty()) && request.getState() != null) {
+            if (request.getState() != null && !request.getState().trim().isEmpty()) {
                 customer.setState(request.getState().trim());
                 updated = true;
             }
-            if ((customer.getPincode() == null || customer.getPincode().trim().isEmpty()) && request.getPincode() != null) {
+            if (request.getPincode() != null && !request.getPincode().trim().isEmpty()) {
                 customer.setPincode(request.getPincode().trim());
-                updated = true;
-            }
-            if ((customer.getEmail() == null || customer.getEmail().trim().isEmpty()) && normalizedEmail != null) {
-                customer.setEmail(normalizedEmail);
                 updated = true;
             }
             if (updated) {

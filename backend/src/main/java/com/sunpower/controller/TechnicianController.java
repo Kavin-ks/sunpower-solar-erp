@@ -38,8 +38,16 @@ public class TechnicianController {
     }
 
     @PutMapping("/{id}")
+    @PreAuthorize("hasAnyRole('ADMIN')")
     public ResponseEntity<Technician> updateTechnician(@PathVariable Long id, @RequestBody Technician technician) {
         Technician updated = technicianService.updateTechnician(id, technician);
         return ResponseEntity.ok(updated);
+    }
+
+    @DeleteMapping("/{id}")
+    @PreAuthorize("hasAnyRole('ADMIN')")
+    public ResponseEntity<Void> deleteTechnician(@PathVariable Long id) {
+        technicianService.deleteTechnician(id);
+        return ResponseEntity.noContent().build();
     }
 }
