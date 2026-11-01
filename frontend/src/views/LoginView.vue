@@ -104,13 +104,15 @@ const handleQuickSelect = async (u: string) => {
           <ShieldCheck class="w-4 h-4 text-emerald-600" />
           <span>Department Account Quick Fill:</span>
         </div>
-        <div class="grid grid-cols-3 gap-2">
+        <div class="grid grid-cols-4 gap-1.5">
           <button
             v-for="p in [
               { label: 'Admin', u: 'admin' },
+              { label: 'Director', u: 'director' },
               { label: 'Sales', u: 'sales' },
               { label: 'Warehouse', u: 'warehouse' },
               { label: 'Technician', u: 'technician' },
+              { label: 'Tech Ganesh', u: 'tech.ganesh' },
               { label: 'Support', u: 'support' },
               { label: 'Finance', u: 'finance' },
             ]"
@@ -118,16 +120,27 @@ const handleQuickSelect = async (u: string) => {
             type="button"
             @click="handleQuickSelect(p.u)"
             :class="[
-              'text-xs py-1.5 px-2 rounded-lg border transition cursor-pointer',
+              'text-[11px] py-1.5 px-1 rounded-lg border transition cursor-pointer font-medium truncate',
               username === p.u
-                ? 'bg-emerald-50 border-emerald-500 text-emerald-800 font-semibold'
+                ? 'bg-emerald-50 border-emerald-500 text-emerald-800 font-semibold shadow-xs'
                 : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
             ]"
           >
             {{ p.label }}
           </button>
         </div>
-        <p class="text-[11px] text-slate-400 mt-3">Initial setup password: <code class="text-slate-600 font-mono">password123</code></p>
+        <p class="text-[11px] text-slate-400 mt-2.5">Initial setup password: <code class="text-slate-600 font-mono">password123</code></p>
+        
+        <div class="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500">
+          <span>Customer & Warranty Portal:</span>
+          <a
+            href="http://localhost:3000/complaint"
+            target="_blank"
+            class="text-emerald-600 hover:text-emerald-700 font-semibold inline-flex items-center gap-1"
+          >
+            <span>Odoo Solar Portal (3000) ↗</span>
+          </a>
+        </div>
       </div>
     </div>
   </div>

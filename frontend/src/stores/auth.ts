@@ -12,8 +12,7 @@ export const useAuthStore = defineStore('auth', () => {
     if (savedUser && savedUser !== 'undefined' && savedUser !== 'null') {
       parsedUser = JSON.parse(savedUser);
     }
-  } catch (e) {
-    console.warn('Failed to parse cached user, clearing storage', e);
+  } catch (_e) {
     initialToken = null;
     parsedUser = null;
     localStorage.removeItem('sunpower_user');

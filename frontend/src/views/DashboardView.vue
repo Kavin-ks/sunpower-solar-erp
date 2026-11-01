@@ -35,7 +35,7 @@ const authStore = useAuthStore();
 const router = useRouter();
 
 const roles = computed(() => authStore.user?.roles || []);
-const isAdmin = computed(() => roles.value.includes('ROLE_ADMIN'));
+const isAdmin = computed(() => roles.value.includes('ROLE_ADMIN') || roles.value.includes('ROLE_DIRECTOR'));
 const isSales = computed(() => roles.value.includes('ROLE_SALES'));
 const isWarehouse = computed(() => roles.value.includes('ROLE_WAREHOUSE'));
 const isTechnician = computed(() => roles.value.includes('ROLE_TECHNICIAN'));

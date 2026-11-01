@@ -26,7 +26,7 @@ const route = useRoute();
 
 const config = computed(() => {
   const roles = authStore.user?.roles || [];
-  const isAdmin = roles.includes('ROLE_ADMIN');
+  const isAdmin = roles.includes('ROLE_ADMIN') || roles.includes('ROLE_DIRECTOR');
   const isSales = roles.includes('ROLE_SALES');
   const isWarehouse = roles.includes('ROLE_WAREHOUSE');
   const isTechnician = roles.includes('ROLE_TECHNICIAN');
