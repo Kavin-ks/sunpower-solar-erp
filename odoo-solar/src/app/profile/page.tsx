@@ -92,16 +92,16 @@ function formatDate(dateStr: string | null | undefined): string {
   } catch { return dateStr; }
 }
 
-// ─── Lifecycle Steps ──────────────────────────────────────────────
+// ─── Industrial Lifecycle Steps ──────────────────────────────────
 const LIFECYCLE_STEPS = [
-  { key: 'enquiry', label: 'Enquiry Submitted', icon: '📋' },
-  { key: 'verified', label: 'Enquiry Verified', icon: '✅' },
-  { key: 'survey', label: 'Site Survey', icon: '🏠' },
-  { key: 'quotation', label: 'Quotation Generated', icon: '💰' },
-  { key: 'accepted', label: 'Quotation Accepted', icon: '🤝' },
-  { key: 'order', label: 'Order Placed', icon: '📦' },
-  { key: 'installation', label: 'Installation', icon: '⚡' },
-  { key: 'completed', label: 'Project Completed', icon: '🎉' },
+  { key: 'enquiry', label: 'Enquiry Submitted', icon: 'bi-file-earmark-text' },
+  { key: 'verified', label: 'Enquiry Verified', icon: 'bi-patch-check' },
+  { key: 'survey', label: 'Site Survey', icon: 'bi-compass' },
+  { key: 'quotation', label: 'Quotation Generated', icon: 'bi-calculator' },
+  { key: 'accepted', label: 'Quotation Accepted', icon: 'bi-check2-circle' },
+  { key: 'order', label: 'Order Placed', icon: 'bi-box-seam' },
+  { key: 'installation', label: 'Installation', icon: 'bi-tools' },
+  { key: 'completed', label: 'Project Completed', icon: 'bi-award' },
 ];
 
 function getLifecycleProgress(data: PortalData): number {
@@ -120,7 +120,7 @@ function getLifecycleProgress(data: PortalData): number {
 const cardStyle: React.CSSProperties = {
   backgroundColor: '#ffffff',
   borderRadius: '16px',
-  padding: '28px 26px',
+  padding: '24px',
   boxShadow: '0 4px 20px rgba(0, 0, 0, 0.05)',
   border: '1px solid #e2e8f0',
   marginBottom: '24px',
@@ -164,23 +164,40 @@ const ProfilePage = () => {
   const [formCity, setFormCity] = useState('');
   const [formPincode, setFormPincode] = useState('');
 
-  // ─── Load Session ───────────────────────────────────────────────
+  // ─── Dual Storage Session Detection (Single Sign-On) ───────────
   useEffect(() => {
     try {
-      const stored = localStorage.getItem('sunpower_user');
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        if (parsed.token) {
-          setSession({
-            token: parsed.token,
-            fullName: parsed.fullName || parsed.name || 'Customer',
-            email: parsed.email || '',
-            phone: parsed.phone || '',
-            customerId: parsed.customerId || null,
-            userId: parsed.userId || parsed.id || null,
-            roles: parsed.roles || ['ROLE_CUSTOMER'],
-          });
-        }
+      let token = '';
+      let userObj: any = null;
+
+      const sessionStr = localStorage.getItem('odoo_erp_user_session');
+      if (sessionStr) {
+        try {
+          const s = JSON.parse(sessionStr);
+          if (s.token) token = s.token;
+          if (s.user) userObj = s.user;
+        } catch { /* ignore */ }
+      }
+
+      const userStr = localStorage.getItem('sunpower_user');
+      if (userStr) {
+        try {
+          const u = JSON.parse(userStr);
+          if (u.token) token = u.token;
+          userObj = { ...(userObj || {}), ...u };
+        } catch { /* ignore */ }
+      }
+
+      if (userObj && (userObj.email || userObj.fullName || userObj.name || userObj.phone)) {
+        setSession({
+          token: token || userObj.token || 'customer-session-token',
+          fullName: userObj.fullName || userObj.name || 'Customer',
+          email: userObj.email || '',
+          phone: userObj.phone || '',
+          customerId: userObj.customerId || null,
+          userId: userObj.userId || userObj.id || null,
+          roles: userObj.roles || [userObj.role || 'ROLE_CUSTOMER'],
+        });
       }
     } catch { /* ignore */ }
     setLoading(false);
@@ -201,6 +218,7 @@ const ProfilePage = () => {
         if (res.status === 401 || res.status === 403) {
           // Token expired — clear session
           localStorage.removeItem('sunpower_user');
+          localStorage.removeItem('odoo_erp_user_session');
           setSession(null);
           setError('Session expired. Please log in again.');
           return;
@@ -244,21 +262,15 @@ const ProfilePage = () => {
       if (data.success && data.token) {
         const userData = {
           ...data.user,
+          fullName: data.user.fullName || data.user.name || '',
           token: data.token,
         };
         localStorage.setItem('sunpower_user', JSON.stringify(userData));
-
-        // Also set in odoo_erp_user_session for api.ts compatibility
-        try {
-          const existing = localStorage.getItem('odoo_erp_user_session');
-          const s = existing ? JSON.parse(existing) : {};
-          s.token = data.token;
-          localStorage.setItem('odoo_erp_user_session', JSON.stringify(s));
-        } catch { /* ignore */ }
+        localStorage.setItem('odoo_erp_user_session', JSON.stringify({ token: data.token, user: userData }));
 
         setSession({
           token: data.token,
-          fullName: data.user.fullName,
+          fullName: data.user.fullName || data.user.name,
           email: data.user.email,
           phone: data.user.phone,
           customerId: data.user.customerId,
@@ -266,7 +278,7 @@ const ProfilePage = () => {
           roles: data.user.roles || ['ROLE_CUSTOMER'],
         });
       } else {
-        setAuthError(data.message || 'Login failed.');
+        setAuthError(data.message || 'Login failed. Please verify credentials.');
       }
     } catch (err: any) {
       setAuthError('Unable to connect. Please try again.');
@@ -300,24 +312,19 @@ const ProfilePage = () => {
       if (data.success && data.token) {
         const userData = {
           ...data.user,
+          fullName: data.user.fullName || formName.trim(),
           token: data.token,
         };
         localStorage.setItem('sunpower_user', JSON.stringify(userData));
-
-        try {
-          const existing = localStorage.getItem('odoo_erp_user_session');
-          const s = existing ? JSON.parse(existing) : {};
-          s.token = data.token;
-          localStorage.setItem('odoo_erp_user_session', JSON.stringify(s));
-        } catch { /* ignore */ }
+        localStorage.setItem('odoo_erp_user_session', JSON.stringify({ token: data.token, user: userData }));
 
         setSession({
           token: data.token,
-          fullName: data.user.fullName,
+          fullName: data.user.fullName || formName.trim(),
           email: data.user.email,
           phone: data.user.phone,
           customerId: data.user.customerId,
-          userId: data.user.userId,
+          userId: data.user.userId || data.user.id,
           roles: data.user.roles || ['ROLE_CUSTOMER'],
         });
       } else {
@@ -332,6 +339,7 @@ const ProfilePage = () => {
 
   const handleLogout = () => {
     localStorage.removeItem('sunpower_user');
+    localStorage.removeItem('odoo_erp_user_session');
     setSession(null);
     setPortalData(null);
     router.push('/');
@@ -351,7 +359,7 @@ const ProfilePage = () => {
         },
       });
       if (res.ok) {
-        alert('✅ Quotation accepted! A sales order has been created.');
+        alert('Quotation accepted! A sales order has been created.');
         fetchPortalData(session.token);
       } else {
         const errData = await res.json().catch(() => ({}));
@@ -371,7 +379,7 @@ const ProfilePage = () => {
           <Breadcrumb top_title="My Profile" title="Customer Dashboard" />
           <div style={{ backgroundColor: '#f8fafc', padding: '80px 0', textAlign: 'center', fontFamily: "'Jost', sans-serif" }}>
             <div className="spinner-border text-danger" role="status" />
-            <p style={{ marginTop: '16px', color: '#64748b' }}>Loading...</p>
+            <p style={{ marginTop: '16px', color: '#64748b' }}>Loading dashboard...</p>
           </div>
         </main>
         <FooterOne />
@@ -405,18 +413,18 @@ const ProfilePage = () => {
                   <button type="button" onClick={() => { setAuthMode('login'); setAuthError(''); }}
                     style={{ flex: 1, padding: '12px', fontSize: '14px', fontWeight: 700, border: 'none', cursor: 'pointer',
                       backgroundColor: authMode === 'login' ? '#e63a27' : '#f8fafc', color: authMode === 'login' ? '#fff' : '#64748b', }}>
-                    🔑 Sign In
+                    <i className="bi bi-shield-lock me-2"></i>Sign In
                   </button>
                   <button type="button" onClick={() => { setAuthMode('register'); setAuthError(''); }}
                     style={{ flex: 1, padding: '12px', fontSize: '14px', fontWeight: 700, border: 'none', cursor: 'pointer',
                       backgroundColor: authMode === 'register' ? '#e63a27' : '#f8fafc', color: authMode === 'register' ? '#fff' : '#64748b', }}>
-                    📝 Create Account
+                    <i className="bi bi-person-plus me-2"></i>Create Account
                   </button>
                 </div>
 
                 {authError && (
                   <div style={{ padding: '12px 16px', borderRadius: '10px', backgroundColor: '#fef2f2', border: '1px solid #fecaca', color: '#dc2626', fontSize: '13px', fontWeight: 600, marginBottom: '20px' }}>
-                    ⚠️ {authError}
+                    <i className="bi bi-exclamation-triangle-fill me-2"></i>{authError}
                   </div>
                 )}
 
@@ -433,7 +441,7 @@ const ProfilePage = () => {
                     </div>
                     <button type="submit" disabled={authLoading}
                       style={{ width: '100%', padding: '14px', borderRadius: '10px', border: 'none', backgroundColor: '#e63a27', color: '#fff', fontSize: '15px', fontWeight: 700, cursor: authLoading ? 'not-allowed' : 'pointer', opacity: authLoading ? 0.7 : 1 }}>
-                      {authLoading ? '⏳ Signing in...' : '🔓 Sign In to My Dashboard'}
+                      {authLoading ? 'Signing in...' : 'Sign In to Customer Dashboard'}
                     </button>
                     <p style={{ textAlign: 'center', marginTop: '20px', fontSize: '13px', color: '#64748b' }}>
                       Don&apos;t have an account?{' '}
@@ -474,7 +482,7 @@ const ProfilePage = () => {
                     </div>
                     <button type="submit" disabled={authLoading}
                       style={{ width: '100%', padding: '14px', borderRadius: '10px', border: 'none', backgroundColor: '#e63a27', color: '#fff', fontSize: '15px', fontWeight: 700, cursor: authLoading ? 'not-allowed' : 'pointer', opacity: authLoading ? 0.7 : 1 }}>
-                      {authLoading ? '⏳ Creating account...' : '🚀 Create Account & View Dashboard'}
+                      {authLoading ? 'Creating account...' : 'Create Account & View Dashboard'}
                     </button>
                     <p style={{ textAlign: 'center', marginTop: '20px', fontSize: '13px', color: '#64748b' }}>
                       Already have an account?{' '}
@@ -485,7 +493,7 @@ const ProfilePage = () => {
               </div>
               <div style={{ maxWidth: '520px', margin: '24px auto 0', padding: '16px 20px', borderRadius: '12px', backgroundColor: '#eff6ff', border: '1px solid #bfdbfe', textAlign: 'center' }}>
                 <p style={{ margin: 0, fontSize: '13px', color: '#1e40af', fontWeight: 600 }}>
-                  🌞 Track your solar enquiry, view quotations from our sales team, accept proposals, and monitor your installation — all from your personal dashboard.
+                  <i className="bi bi-info-circle-fill me-2"></i>Track your solar enquiry, view quotations from our sales team, accept proposals, and monitor your installation — all from your personal dashboard.
                 </p>
               </div>
             </div>
@@ -503,13 +511,13 @@ const ProfilePage = () => {
   const initials = displayName.split(' ').filter(Boolean).map((w) => w[0]).slice(0, 2).join('').toUpperCase() || 'CU';
   const lifecycleStep = portalData ? getLifecycleProgress(portalData) : 0;
 
-  // Tab config
+  // Tab config with industrial icons
   const tabs = [
-    { key: 'overview', label: '📊 Overview', count: null },
-    { key: 'enquiries', label: '📋 Enquiries', count: portalData?.enquiries?.length || 0 },
-    { key: 'quotations', label: '💰 Quotations', count: portalData?.quotations?.length || 0 },
-    { key: 'orders', label: '📦 Orders', count: portalData?.orders?.length || 0 },
-    { key: 'support', label: '🛠️ Support', count: portalData?.serviceTickets?.length || 0 },
+    { key: 'overview', label: 'Overview', icon: 'bi-grid-1x2', count: null },
+    { key: 'enquiries', label: 'Enquiries', icon: 'bi-clipboard2-data', count: portalData?.enquiries?.length || 0 },
+    { key: 'quotations', label: 'Quotations', icon: 'bi-file-earmark-spreadsheet', count: portalData?.quotations?.length || 0 },
+    { key: 'orders', label: 'Orders', icon: 'bi-box-seam', count: portalData?.orders?.length || 0 },
+    { key: 'support', label: 'Support & Warranty', icon: 'bi-shield-check', count: portalData?.serviceTickets?.length || 0 },
   ];
 
   return (
@@ -530,15 +538,30 @@ const ProfilePage = () => {
                   </div>
                   <h4 style={{ fontSize: '18px', fontWeight: 800, color: '#0f172a', margin: '0 0 6px 0' }}>{displayName}</h4>
                   <span style={{ display: 'inline-block', padding: '3px 10px', borderRadius: '9999px', backgroundColor: '#ecfdf5', color: '#059669', fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', marginBottom: '16px' }}>
-                    ✓ Verified Customer
+                    <i className="bi bi-patch-check-fill me-1"></i>Verified Customer
                   </span>
                   <div style={{ borderTop: '1px solid #f1f5f9', paddingTop: '14px', textAlign: 'left', fontSize: '13px', color: '#475569' }}>
-                    {session.email && <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>📧 <span style={{ wordBreak: 'break-all' }}>{session.email}</span></div>}
-                    {session.phone && <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>📱 {session.phone}</div>}
-                    {portalData?.customer?.address && <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>📍 {portalData.customer.address}, {portalData.customer.city}</div>}
+                    {session.email && (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+                        <i className="bi bi-envelope text-primary"></i>
+                        <span style={{ wordBreak: 'break-all' }}>{session.email}</span>
+                      </div>
+                    )}
+                    {session.phone && (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+                        <i className="bi bi-telephone text-primary"></i>
+                        <span>{session.phone}</span>
+                      </div>
+                    )}
+                    {portalData?.customer?.address && (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+                        <i className="bi bi-geo-alt text-primary"></i>
+                        <span>{portalData.customer.address}, {portalData.customer.city}</span>
+                      </div>
+                    )}
                   </div>
                   <button type="button" onClick={handleLogout} style={{ width: '100%', marginTop: '16px', padding: '10px', borderRadius: '8px', border: '1.5px solid #fee2e2', backgroundColor: '#fff5f5', color: '#dc2626', fontSize: '13px', fontWeight: 700, cursor: 'pointer' }}>
-                    🚪 Log Out
+                    <i className="bi bi-box-arrow-right me-2"></i>Log Out
                   </button>
                 </div>
 
@@ -546,14 +569,17 @@ const ProfilePage = () => {
                 <div style={cardStyle}>
                   <h5 style={{ fontSize: '14px', fontWeight: 800, color: '#0f172a', marginBottom: '14px' }}>Quick Actions</h5>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                    <Link href="/contact" style={{ padding: '10px 14px', borderRadius: '8px', backgroundColor: '#e63a27', color: '#fff', textDecoration: 'none', fontSize: '13px', fontWeight: 600, textAlign: 'center' }}>
-                      ☀️ Submit New Enquiry
+                    <Link href="/contact" style={{ padding: '10px 14px', borderRadius: '8px', backgroundColor: '#e63a27', color: '#fff', textDecoration: 'none', fontSize: '13px', fontWeight: 600, textAlign: 'center', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                      <i className="bi bi-plus-circle"></i>
+                      <span>Submit New Enquiry</span>
                     </Link>
-                    <Link href="/complaint" style={{ padding: '10px 14px', borderRadius: '8px', backgroundColor: '#f8fafc', color: '#475569', border: '1px solid #e2e8f0', textDecoration: 'none', fontSize: '13px', fontWeight: 600, textAlign: 'center' }}>
-                      🛠️ Raise Support Ticket
+                    <Link href="/complaint" style={{ padding: '10px 14px', borderRadius: '8px', backgroundColor: '#f8fafc', color: '#475569', border: '1px solid #e2e8f0', textDecoration: 'none', fontSize: '13px', fontWeight: 600, textAlign: 'center', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                      <i className="bi bi-wrench-adjustable"></i>
+                      <span>Raise Support Ticket</span>
                     </Link>
-                    <Link href="/service" style={{ padding: '10px 14px', borderRadius: '8px', backgroundColor: '#f8fafc', color: '#475569', border: '1px solid #e2e8f0', textDecoration: 'none', fontSize: '13px', fontWeight: 600, textAlign: 'center' }}>
-                      📦 View Solar Packages
+                    <Link href="/service" style={{ padding: '10px 14px', borderRadius: '8px', backgroundColor: '#f8fafc', color: '#475569', border: '1px solid #e2e8f0', textDecoration: 'none', fontSize: '13px', fontWeight: 600, textAlign: 'center', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                      <i className="bi bi-grid-3x3-gap"></i>
+                      <span>View Solar Packages</span>
                     </Link>
                   </div>
                 </div>
@@ -565,7 +591,7 @@ const ProfilePage = () => {
                 {/* Error Banner */}
                 {error && (
                   <div style={{ padding: '14px 20px', borderRadius: '12px', backgroundColor: '#fef2f2', border: '1px solid #fecaca', color: '#dc2626', fontSize: '13px', fontWeight: 600, marginBottom: '20px' }}>
-                    ⚠️ {error}
+                    <i className="bi bi-exclamation-circle-fill me-2"></i>{error}
                     <button onClick={() => session?.token && fetchPortalData(session.token)} style={{ marginLeft: '12px', background: 'none', border: 'none', color: '#dc2626', textDecoration: 'underline', cursor: 'pointer', fontSize: '13px' }}>
                       Retry
                     </button>
@@ -585,7 +611,7 @@ const ProfilePage = () => {
                     {/* ─── PROJECT LIFECYCLE PROGRESS ──────────────── */}
                     <div style={cardStyle}>
                       <div style={sectionHeaderStyle}>
-                        <div style={iconBoxStyle('#eff6ff', '#2563eb')}><i className="bi bi-graph-up-arrow" /></div>
+                        <div style={iconBoxStyle('#eff6ff', '#2563eb')}><i className="bi bi-diagram-3-fill" /></div>
                         <div>
                           <h4 style={{ margin: 0, fontSize: '17px', fontWeight: 800, color: '#0f172a' }}>Your Solar Project Progress</h4>
                           <p style={{ margin: 0, fontSize: '12px', color: '#64748b' }}>Track every step of your solar installation journey</p>
@@ -596,16 +622,17 @@ const ProfilePage = () => {
                           const isComplete = i < lifecycleStep;
                           const isCurrent = i === lifecycleStep;
                           return (
-                            <div key={step.key} style={{ display: 'flex', alignItems: 'center', flex: 1, minWidth: '90px' }}>
+                            <div key={step.key} style={{ display: 'flex', alignItems: 'center', flex: 1, minWidth: '95px' }}>
                               <div style={{ textAlign: 'center', flex: 1 }}>
                                 <div style={{
-                                  width: '40px', height: '40px', borderRadius: '50%', margin: '0 auto 6px auto',
-                                  display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px',
+                                  width: '42px', height: '42px', borderRadius: '50%', margin: '0 auto 6px auto',
+                                  display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '17px',
                                   backgroundColor: isComplete ? '#ecfdf5' : isCurrent ? '#eff6ff' : '#f8fafc',
-                                  border: `2px solid ${isComplete ? '#059669' : isCurrent ? '#2563eb' : '#e2e8f0'}`,
+                                  border: `2px solid ${isComplete ? '#059669' : isCurrent ? '#2563eb' : '#cbd5e1'}`,
                                   boxShadow: isCurrent ? '0 0 0 4px rgba(37,99,235,0.15)' : 'none',
+                                  color: isComplete ? '#059669' : isCurrent ? '#2563eb' : '#64748b',
                                 }}>
-                                  {isComplete ? '✅' : step.icon}
+                                  <i className={`bi ${isComplete ? 'bi-check2' : step.icon}`}></i>
                                 </div>
                                 <div style={{ fontSize: '10px', fontWeight: isComplete || isCurrent ? 700 : 500, color: isComplete ? '#059669' : isCurrent ? '#2563eb' : '#94a3b8', lineHeight: 1.3 }}>
                                   {step.label}
@@ -629,8 +656,13 @@ const ProfilePage = () => {
                             backgroundColor: activeTab === tab.key ? '#ffffff' : 'transparent',
                             color: activeTab === tab.key ? '#0f172a' : '#64748b',
                             boxShadow: activeTab === tab.key ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+                            display: 'flex', alignItems: 'center', gap: '8px',
                           }}>
-                          {tab.label} {tab.count !== null && tab.count > 0 && <span style={{ marginLeft: '4px', padding: '1px 6px', borderRadius: '9999px', backgroundColor: '#e63a27', color: '#fff', fontSize: '10px' }}>{tab.count}</span>}
+                          <i className={`bi ${tab.icon}`}></i>
+                          <span>{tab.label}</span>
+                          {tab.count !== null && tab.count > 0 && (
+                            <span style={{ padding: '1px 7px', borderRadius: '9999px', backgroundColor: '#e63a27', color: '#fff', fontSize: '10px' }}>{tab.count}</span>
+                          )}
                         </button>
                       ))}
                     </div>
@@ -641,14 +673,16 @@ const ProfilePage = () => {
                         {/* Summary Cards */}
                         <div className="row g-3" style={{ marginBottom: '24px' }}>
                           {[
-                            { label: 'Enquiries', count: portalData.enquiries.length, icon: '📋', color: '#2563eb', bg: '#eff6ff' },
-                            { label: 'Quotations', count: portalData.quotations.length, icon: '💰', color: '#059669', bg: '#ecfdf5' },
-                            { label: 'Orders', count: portalData.orders.length, icon: '📦', color: '#ca8a04', bg: '#fefce8' },
-                            { label: 'Installations', count: portalData.installations.length, icon: '⚡', color: '#dc2626', bg: '#fef2f2' },
+                            { label: 'Enquiries', count: portalData.enquiries.length, icon: 'bi-clipboard2-data', color: '#2563eb', bg: '#eff6ff' },
+                            { label: 'Quotations', count: portalData.quotations.length, icon: 'bi-file-earmark-spreadsheet', color: '#059669', bg: '#ecfdf5' },
+                            { label: 'Orders', count: portalData.orders.length, icon: 'bi-box-seam', color: '#d97706', bg: '#fefce8' },
+                            { label: 'Installations', count: portalData.installations.length, icon: 'bi-tools', color: '#dc2626', bg: '#fef2f2' },
                           ].map(item => (
                             <div key={item.label} className="col-6 col-md-3">
                               <div style={{ ...cardStyle, textAlign: 'center', marginBottom: 0, padding: '20px 12px' }}>
-                                <div style={{ fontSize: '28px', marginBottom: '4px' }}>{item.icon}</div>
+                                <div style={{ fontSize: '24px', marginBottom: '8px', color: item.color }}>
+                                  <i className={`bi ${item.icon}`}></i>
+                                </div>
                                 <div style={{ fontSize: '28px', fontWeight: 900, color: item.color }}>{item.count}</div>
                                 <div style={{ fontSize: '12px', fontWeight: 600, color: '#64748b' }}>{item.label}</div>
                               </div>
@@ -660,7 +694,7 @@ const ProfilePage = () => {
                         {portalData.enquiries.length > 0 && (
                           <div style={cardStyle}>
                             <div style={sectionHeaderStyle}>
-                              <div style={iconBoxStyle('#eff6ff', '#2563eb')}>📋</div>
+                              <div style={iconBoxStyle('#eff6ff', '#2563eb')}><i className="bi bi-clipboard2-check"></i></div>
                               <div>
                                 <h4 style={{ margin: 0, fontSize: '17px', fontWeight: 800, color: '#0f172a' }}>Latest Enquiry Status</h4>
                                 <p style={{ margin: 0, fontSize: '12px', color: '#64748b' }}>Your most recent solar enquiry</p>
@@ -682,7 +716,9 @@ const ProfilePage = () => {
                                   </div>
                                   {['CONTACTED', 'QUALIFIED', 'SURVEY_SCHEDULED', 'SURVEY_APPROVED', 'QUOTED', 'CONVERTED'].includes(e.status) && (
                                     <div style={{ marginTop: '12px', padding: '10px 14px', borderRadius: '8px', backgroundColor: '#ecfdf5', border: '1px solid #a7f3d0' }}>
-                                      <span style={{ fontSize: '13px', fontWeight: 700, color: '#059669' }}>✅ Your enquiry has been verified and accepted by our sales team!</span>
+                                      <span style={{ fontSize: '13px', fontWeight: 700, color: '#059669' }}>
+                                        <i className="bi bi-patch-check-fill me-2"></i>Your enquiry has been verified and accepted by our sales team!
+                                      </span>
                                     </div>
                                   )}
                                 </div>
@@ -695,7 +731,7 @@ const ProfilePage = () => {
                         {portalData.quotations.length > 0 && (
                           <div style={cardStyle}>
                             <div style={sectionHeaderStyle}>
-                              <div style={iconBoxStyle('#ecfdf5', '#059669')}>💰</div>
+                              <div style={iconBoxStyle('#ecfdf5', '#059669')}><i className="bi bi-file-earmark-spreadsheet"></i></div>
                               <div>
                                 <h4 style={{ margin: 0, fontSize: '17px', fontWeight: 800, color: '#0f172a' }}>Latest Quotation from Sales Team</h4>
                                 <p style={{ margin: 0, fontSize: '12px', color: '#64748b' }}>Review and accept your solar system quotation</p>
@@ -717,7 +753,7 @@ const ProfilePage = () => {
                                   </div>
                                   {q.validUntil && (
                                     <div style={{ fontSize: '12px', color: '#64748b', marginBottom: '10px' }}>
-                                      📅 Valid until: <strong>{formatDate(q.validUntil)}</strong>
+                                      <i className="bi bi-calendar3 me-1"></i>Valid until: <strong>{formatDate(q.validUntil)}</strong>
                                     </div>
                                   )}
                                   {/* Line Items */}
@@ -748,17 +784,24 @@ const ProfilePage = () => {
                                       </div>
                                     </div>
                                   )}
-                                  {q.notes && <div style={{ fontSize: '12px', color: '#64748b', marginBottom: '12px', fontStyle: 'italic' }}>📝 {q.notes}</div>}
+                                  {q.notes && (
+                                    <div style={{ fontSize: '12px', color: '#64748b', marginBottom: '12px', fontStyle: 'italic' }}>
+                                      <i className="bi bi-info-circle me-1"></i>{q.notes}
+                                    </div>
+                                  )}
                                   {/* Accept Button */}
                                   {(q.status === 'SENT' || q.status === 'DRAFT') && (
                                     <button type="button" onClick={() => handleAcceptQuotation(q.id)}
                                       style={{ padding: '12px 24px', borderRadius: '10px', border: 'none', backgroundColor: '#059669', color: '#fff', fontSize: '14px', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                      🤝 Accept Quotation & Proceed
+                                      <i className="bi bi-check2-circle"></i>
+                                      <span>Accept Quotation & Proceed</span>
                                     </button>
                                   )}
                                   {q.status === 'ACCEPTED' && (
                                     <div style={{ padding: '10px 14px', borderRadius: '8px', backgroundColor: '#ecfdf5', border: '1px solid #a7f3d0' }}>
-                                      <span style={{ fontSize: '13px', fontWeight: 700, color: '#059669' }}>✅ You have accepted this quotation. A sales order has been created.</span>
+                                      <span style={{ fontSize: '13px', fontWeight: 700, color: '#059669' }}>
+                                        <i className="bi bi-check-circle-fill me-2"></i>You have accepted this quotation. A sales order has been created.
+                                      </span>
                                     </div>
                                   )}
                                 </div>
@@ -770,11 +813,14 @@ const ProfilePage = () => {
                         {/* No Data State */}
                         {portalData.enquiries.length === 0 && portalData.quotations.length === 0 && (
                           <div style={{ ...cardStyle, textAlign: 'center', padding: '40px' }}>
-                            <div style={{ fontSize: '48px', marginBottom: '16px' }}>🌞</div>
+                            <div style={{ fontSize: '44px', marginBottom: '16px', color: '#e63a27' }}>
+                              <i className="bi bi-sun"></i>
+                            </div>
                             <h4 style={{ fontSize: '18px', fontWeight: 800, color: '#0f172a', marginBottom: '8px' }}>No Enquiries Yet</h4>
                             <p style={{ fontSize: '14px', color: '#64748b', marginBottom: '20px' }}>Submit your first solar enquiry to get started. Our sales team will review and send you a quotation.</p>
-                            <Link href="/contact" style={{ display: 'inline-block', padding: '12px 24px', borderRadius: '10px', backgroundColor: '#e63a27', color: '#fff', textDecoration: 'none', fontSize: '14px', fontWeight: 700 }}>
-                              ☀️ Submit Solar Enquiry
+                            <Link href="/contact" style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '12px 24px', borderRadius: '10px', backgroundColor: '#e63a27', color: '#fff', textDecoration: 'none', fontSize: '14px', fontWeight: 700 }}>
+                              <i className="bi bi-plus-circle"></i>
+                              <span>Submit Solar Enquiry</span>
                             </Link>
                           </div>
                         )}
@@ -785,7 +831,7 @@ const ProfilePage = () => {
                     {activeTab === 'enquiries' && (
                       <div style={cardStyle}>
                         <div style={sectionHeaderStyle}>
-                          <div style={iconBoxStyle('#eff6ff', '#2563eb')}>📋</div>
+                          <div style={iconBoxStyle('#eff6ff', '#2563eb')}><i className="bi bi-clipboard2-data"></i></div>
                           <h4 style={{ margin: 0, fontSize: '17px', fontWeight: 800, color: '#0f172a' }}>All Enquiries</h4>
                         </div>
                         {portalData.enquiries.length === 0 ? (
@@ -798,14 +844,16 @@ const ProfilePage = () => {
                                   <span style={{ fontSize: '14px', fontWeight: 700, color: '#0f172a' }}>Enquiry #{e.id}</span>
                                   <StatusBadge status={e.status} />
                                 </div>
-                                <div style={{ fontSize: '12px', color: '#475569' }}>
-                                  {e.systemSize && <span style={{ marginRight: '16px' }}>🔋 {e.systemSize} kW</span>}
-                                  {e.monthlyBill && <span style={{ marginRight: '16px' }}>💡 {formatCurrency(e.monthlyBill)}/mo</span>}
-                                  {e.roofType && <span style={{ marginRight: '16px' }}>🏠 {e.roofType}</span>}
-                                  <span>📅 {formatDate(e.createdAt)}</span>
+                                <div style={{ fontSize: '12px', color: '#475569', display: 'flex', flexWrap: 'wrap', gap: '16px' }}>
+                                  {e.systemSize && <span><i className="bi bi-battery-charging me-1 text-primary"></i>{e.systemSize} kW</span>}
+                                  {e.monthlyBill && <span><i className="bi bi-currency-rupee me-1 text-primary"></i>{formatCurrency(e.monthlyBill)}/mo</span>}
+                                  {e.roofType && <span><i className="bi bi-house-gear me-1 text-primary"></i>{e.roofType}</span>}
+                                  <span><i className="bi bi-calendar3 me-1 text-primary"></i>{formatDate(e.createdAt)}</span>
                                 </div>
                                 {['CONTACTED', 'QUALIFIED', 'SURVEY_SCHEDULED', 'SURVEY_APPROVED', 'QUOTED', 'CONVERTED'].includes(e.status) && (
-                                  <div style={{ marginTop: '8px', fontSize: '12px', fontWeight: 700, color: '#059669' }}>✅ Verified & Accepted by Sales Team</div>
+                                  <div style={{ marginTop: '8px', fontSize: '12px', fontWeight: 700, color: '#059669' }}>
+                                    <i className="bi bi-patch-check-fill me-1"></i>Verified & Accepted by Sales Team
+                                  </div>
                                 )}
                               </div>
                             ))}
@@ -818,7 +866,7 @@ const ProfilePage = () => {
                     {activeTab === 'quotations' && (
                       <div style={cardStyle}>
                         <div style={sectionHeaderStyle}>
-                          <div style={iconBoxStyle('#ecfdf5', '#059669')}>💰</div>
+                          <div style={iconBoxStyle('#ecfdf5', '#059669')}><i className="bi bi-file-earmark-spreadsheet"></i></div>
                           <h4 style={{ margin: 0, fontSize: '17px', fontWeight: 800, color: '#0f172a' }}>All Quotations</h4>
                         </div>
                         {portalData.quotations.length === 0 ? (
@@ -839,7 +887,9 @@ const ProfilePage = () => {
                                 </div>
                                 {q.items && q.items.length > 0 && (
                                   <details style={{ marginBottom: '10px' }}>
-                                    <summary style={{ cursor: 'pointer', fontSize: '12px', fontWeight: 700, color: '#2563eb' }}>📄 View {q.items.length} Line Items</summary>
+                                    <summary style={{ cursor: 'pointer', fontSize: '12px', fontWeight: 700, color: '#2563eb' }}>
+                                      <i className="bi bi-file-earmark-text me-1"></i>View {q.items.length} Line Items
+                                    </summary>
                                     <div style={{ marginTop: '8px', overflowX: 'auto' }}>
                                       <table style={{ width: '100%', fontSize: '12px', borderCollapse: 'collapse' }}>
                                         <thead><tr style={{ backgroundColor: '#f1f5f9' }}>
@@ -860,15 +910,20 @@ const ProfilePage = () => {
                                     </div>
                                   </details>
                                 )}
-                                {q.validUntil && <div style={{ fontSize: '11px', color: '#64748b', marginBottom: '8px' }}>📅 Valid until: {formatDate(q.validUntil)}</div>}
+                                {q.validUntil && (
+                                  <div style={{ fontSize: '11px', color: '#64748b', marginBottom: '8px' }}>
+                                    <i className="bi bi-calendar3 me-1"></i>Valid until: {formatDate(q.validUntil)}
+                                  </div>
+                                )}
                                 {(q.status === 'SENT' || q.status === 'DRAFT') && (
-                                  <button type="button" onClick={() => handleAcceptQuotation(q.id)} style={{ padding: '10px 20px', borderRadius: '8px', border: 'none', backgroundColor: '#059669', color: '#fff', fontSize: '13px', fontWeight: 700, cursor: 'pointer' }}>
-                                    🤝 Accept This Quotation
+                                  <button type="button" onClick={() => handleAcceptQuotation(q.id)} style={{ padding: '10px 20px', borderRadius: '8px', border: 'none', backgroundColor: '#059669', color: '#fff', fontSize: '13px', fontWeight: 700, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                                    <i className="bi bi-check2-circle"></i>
+                                    <span>Accept This Quotation</span>
                                   </button>
                                 )}
                                 {q.status === 'ACCEPTED' && (
                                   <div style={{ padding: '8px 12px', borderRadius: '8px', backgroundColor: '#ecfdf5', border: '1px solid #a7f3d0', fontSize: '12px', fontWeight: 700, color: '#059669' }}>
-                                    ✅ Accepted — Sales order created
+                                    <i className="bi bi-check-circle-fill me-1"></i>Accepted — Sales order created
                                   </div>
                                 )}
                               </div>
@@ -882,7 +937,7 @@ const ProfilePage = () => {
                     {activeTab === 'orders' && (
                       <div style={cardStyle}>
                         <div style={sectionHeaderStyle}>
-                          <div style={iconBoxStyle('#fefce8', '#ca8a04')}>📦</div>
+                          <div style={iconBoxStyle('#fefce8', '#d97706')}><i className="bi bi-box-seam"></i></div>
                           <h4 style={{ margin: 0, fontSize: '17px', fontWeight: 800, color: '#0f172a' }}>Orders & Payments</h4>
                         </div>
                         {portalData.orders.length === 0 ? (
@@ -912,7 +967,9 @@ const ProfilePage = () => {
                         {/* Payments */}
                         {portalData.payments.length > 0 && (
                           <div style={{ marginTop: '24px' }}>
-                            <h5 style={{ fontSize: '15px', fontWeight: 800, color: '#0f172a', marginBottom: '12px' }}>💳 Payment History</h5>
+                            <h5 style={{ fontSize: '15px', fontWeight: 800, color: '#0f172a', marginBottom: '12px' }}>
+                              <i className="bi bi-credit-card-2-front me-2"></i>Payment History
+                            </h5>
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                               {portalData.payments.map((p: any) => (
                                 <div key={p.id} style={{ padding: '12px 16px', backgroundColor: '#f8fafc', borderRadius: '10px', border: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
@@ -939,7 +996,7 @@ const ProfilePage = () => {
                         {portalData.installations.length > 0 && (
                           <div style={cardStyle}>
                             <div style={sectionHeaderStyle}>
-                              <div style={iconBoxStyle('#fef2f2', '#dc2626')}>⚡</div>
+                              <div style={iconBoxStyle('#fef2f2', '#dc2626')}><i className="bi bi-tools"></i></div>
                               <h4 style={{ margin: 0, fontSize: '17px', fontWeight: 800, color: '#0f172a' }}>Installations</h4>
                             </div>
                             {portalData.installations.map((inst: any) => (
@@ -949,8 +1006,8 @@ const ProfilePage = () => {
                                   <StatusBadge status={inst.status} />
                                 </div>
                                 <div style={{ fontSize: '12px', color: '#475569' }}>
-                                  {inst.scheduledDate && <span>📅 Scheduled: {formatDate(inst.scheduledDate)} </span>}
-                                  {inst.completedDate && <span> ✅ Completed: {formatDate(inst.completedDate)}</span>}
+                                  {inst.scheduledDate && <span><i className="bi bi-calendar-event me-1"></i>Scheduled: {formatDate(inst.scheduledDate)} </span>}
+                                  {inst.completedDate && <span> <i className="bi bi-check-circle-fill text-success ms-2 me-1"></i>Completed: {formatDate(inst.completedDate)}</span>}
                                 </div>
                               </div>
                             ))}
@@ -961,7 +1018,7 @@ const ProfilePage = () => {
                         {portalData.warranties.length > 0 && (
                           <div style={cardStyle}>
                             <div style={sectionHeaderStyle}>
-                              <div style={iconBoxStyle('#ecfdf5', '#059669')}>🛡️</div>
+                              <div style={iconBoxStyle('#ecfdf5', '#059669')}><i className="bi bi-shield-check"></i></div>
                               <h4 style={{ margin: 0, fontSize: '17px', fontWeight: 800, color: '#0f172a' }}>Warranties</h4>
                             </div>
                             {portalData.warranties.map((w: any) => (
@@ -981,7 +1038,7 @@ const ProfilePage = () => {
                         {/* Service Tickets */}
                         <div style={cardStyle}>
                           <div style={sectionHeaderStyle}>
-                            <div style={iconBoxStyle('#fefce8', '#ca8a04')}>🛠️</div>
+                            <div style={iconBoxStyle('#fefce8', '#d97706')}><i className="bi bi-wrench-adjustable"></i></div>
                             <h4 style={{ margin: 0, fontSize: '17px', fontWeight: 800, color: '#0f172a' }}>Service Tickets</h4>
                           </div>
                           {portalData.serviceTickets.length === 0 ? (

@@ -17,17 +17,37 @@ const UserProfileDropdown: React.FC = () => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
 
   useEffect(() => {
-    // Check sunpower_user session (customer portal session)
-    const storedUser = localStorage.getItem('sunpower_user');
-    if (storedUser) {
-      try {
-        const parsed = JSON.parse(storedUser);
-        setUser(parsed);
-        setIsLoggedIn(!!parsed.token);
-      } catch (e) {
+    try {
+      const storedUser = localStorage.getItem('sunpower_user');
+      const storedSession = localStorage.getItem('odoo_erp_user_session');
+      let token = '';
+      let userObj: any = null;
+
+      if (storedSession) {
+        try {
+          const s = JSON.parse(storedSession);
+          if (s.token) token = s.token;
+          if (s.user) userObj = s.user;
+        } catch { /* ignore */ }
+      }
+      if (storedUser) {
+        try {
+          const u = JSON.parse(storedUser);
+          if (u.token) token = u.token;
+          userObj = { ...(userObj || {}), ...u };
+        } catch { /* ignore */ }
+      }
+
+      if (userObj && (userObj.email || userObj.fullName || userObj.name)) {
+        setUser({ ...userObj, token });
+        setIsLoggedIn(true);
+      } else {
         setUser(null);
         setIsLoggedIn(false);
       }
+    } catch {
+      setUser(null);
+      setIsLoggedIn(false);
     }
   }, []);
 
