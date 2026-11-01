@@ -21,8 +21,12 @@ const roleOptions = [
 
 const handleRoleSwitch = async (event: Event) => {
   const target = event.target as HTMLSelectElement;
-  await authStore.switchRole(target.value);
-  router.push('/');
+  try {
+    await authStore.switchRole(target.value);
+    window.location.href = '/';
+  } catch (err) {
+    console.error('Failed to switch role', err);
+  }
 };
 
 const handleLogout = () => {

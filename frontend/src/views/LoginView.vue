@@ -111,8 +111,9 @@ const handleQuickSelect = async (u: string) => {
               { label: 'Director', u: 'director' },
               { label: 'Sales', u: 'sales' },
               { label: 'Warehouse', u: 'warehouse' },
-              { label: 'Technician', u: 'technician' },
-              { label: 'Tech Ganesh', u: 'tech.ganesh' },
+              { label: 'Karthik (Tech)', u: 'technician' },
+              { label: 'Ganesh (Tech)', u: 'tech.ganesh' },
+              { label: 'Selva (Tech)', u: 'tech.selva' },
               { label: 'Support', u: 'support' },
               { label: 'Finance', u: 'finance' },
             ]"

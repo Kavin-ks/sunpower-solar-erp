@@ -43,6 +43,9 @@ public class ServiceTicketService {
     private TechnicianRepository technicianRepository;
 
     @Autowired
+    private TechnicianService technicianService;
+
+    @Autowired
     private ProductRepository productRepository;
 
     @Autowired
@@ -255,13 +258,10 @@ public class ServiceTicketService {
     }
 
     public List<ServiceTicket> getTicketsForTechnician(String username) {
-        if (username == null || username.equalsIgnoreCase("admin") || username.equalsIgnoreCase("technician")) {
+        if (username == null || username.equalsIgnoreCase("admin")) {
             return serviceTicketRepository.findAll();
         }
-        Optional<Technician> techOpt = technicianRepository.findByUserUsername(username);
-        if (techOpt.isEmpty()) {
-            techOpt = technicianRepository.findByNameContainingIgnoreCase(username);
-        }
+        Optional<Technician> techOpt = technicianService.resolveTechnician(username);
         if (techOpt.isPresent()) {
             return serviceTicketRepository.findByAssignedTechnicianId(techOpt.get().getId());
         }
@@ -273,8 +273,8 @@ public class ServiceTicketService {
         ServiceTicket ticket = getTicketById(ticketId);
 
         // Security validation: Technician cannot start another technician's job
-        if (technicianName != null && !technicianName.equalsIgnoreCase("admin") && !technicianName.equalsIgnoreCase("technician")) {
-            Optional<Technician> callerTech = technicianRepository.findByUserUsername(technicianName);
+        if (technicianName != null && !technicianName.equalsIgnoreCase("admin")) {
+            Optional<Technician> callerTech = technicianService.resolveTechnician(technicianName);
             if (callerTech.isPresent() && ticket.getAssignedTechnician() != null) {
                 if (!ticket.getAssignedTechnician().getId().equals(callerTech.get().getId())) {
                     throw new org.springframework.security.access.AccessDeniedException(
@@ -302,8 +302,8 @@ public class ServiceTicketService {
         ServiceTicket ticket = getTicketById(ticketId);
 
         // Security validation: Technician cannot complete another technician's job
-        if (completedBy != null && !completedBy.equalsIgnoreCase("admin") && !completedBy.equalsIgnoreCase("technician")) {
-            Optional<Technician> callerTech = technicianRepository.findByUserUsername(completedBy);
+        if (completedBy != null && !completedBy.equalsIgnoreCase("admin")) {
+            Optional<Technician> callerTech = technicianService.resolveTechnician(completedBy);
             if (callerTech.isPresent() && ticket.getAssignedTechnician() != null) {
                 if (!ticket.getAssignedTechnician().getId().equals(callerTech.get().getId())) {
                     throw new org.springframework.security.access.AccessDeniedException(

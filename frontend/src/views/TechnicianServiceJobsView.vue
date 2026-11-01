@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, watch } from 'vue';
 import api from '../api/client';
 import StatusBadge from '../components/ui/StatusBadge.vue';
 import CameraPhotoUpload from '../components/common/CameraPhotoUpload.vue';
@@ -167,6 +167,11 @@ const filteredJobs = computed(() => {
 
     return matchesSearch && matchesStatus;
   });
+});
+
+watch(() => authStore.user?.username, () => {
+  fetchJobs();
+  fetchProducts();
 });
 
 onMounted(() => {
