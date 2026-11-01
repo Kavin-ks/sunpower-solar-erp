@@ -87,7 +87,6 @@ const config = computed(() => {
         { name: 'Warehouse Dashboard', path: '/', icon: LayoutDashboard },
         { name: 'Inventory Catalogue & Stock', path: '/inventory', icon: Boxes },
         { name: 'Order Picking & Barcode Dispatch', path: '/dispatch', icon: Truck },
-        { name: 'Confirmed Orders Queue', path: '/orders', icon: ShoppingCart },
         { name: 'Serial & Barcode Verification', path: '/warranties', icon: PackageSearch },
       ],
     };
