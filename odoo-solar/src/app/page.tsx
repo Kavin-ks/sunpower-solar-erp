@@ -70,9 +70,15 @@ const AuthWelcomePage = () => {
         }),
       });
 
-      const data = await res.json();
+      let data: any = null;
+      try {
+        data = await res.json();
+      } catch (jsonErr) {
+        throw new Error('Customer portal service is initializing or unreachable. Please retry in a moment.');
+      }
+
       if (!res.ok || !data.success) {
-        throw new Error(data.message || 'Invalid email or password. Please verify credentials.');
+        throw new Error(data?.message || 'Invalid email or password. Please verify credentials.');
       }
 
       const sessionUser = {
