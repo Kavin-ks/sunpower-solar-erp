@@ -5,9 +5,11 @@ import com.sunpower.dto.InstallationDTOs.CompleteInstallationRequest;
 import com.sunpower.dto.InstallationDTOs.ScheduleInstallationRequest;
 import com.sunpower.dto.InstallationDTOs.TechnicianHoursRequest;
 import com.sunpower.entity.*;
+import com.sunpower.entity.enums.Enums.DispatchStatus;
 import com.sunpower.entity.enums.Enums.ExpenseCategory;
 import com.sunpower.entity.enums.Enums.InstallationStatus;
 import com.sunpower.entity.enums.Enums.OrderStatus;
+import com.sunpower.entity.enums.Enums.SerialNumberStatus;
 import com.sunpower.repository.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -33,6 +35,9 @@ public class InstallationService {
 
     @Autowired
     private SalesOrderRepository salesOrderRepository;
+
+    @Autowired
+    private DispatchRepository dispatchRepository;
 
     @Autowired
     private TechnicianRepository technicianRepository;
@@ -260,6 +265,9 @@ public class InstallationService {
         if (request.getCustomerSigneeName() == null || request.getCustomerSigneeName().trim().isEmpty()) {
             throw new IllegalStateException("Validation Error: Customer signee name is mandatory for signoff.");
         }
+        if (request.getCustomerSignatureUrl() == null || request.getCustomerSignatureUrl().trim().isEmpty()) {
+            throw new IllegalStateException("Validation Error: Customer digital signature is mandatory for commissioning signoff and warranty activation submission.");
+        }
 
         // Check for completed rooftop photo evidence
         boolean hasCompletedPhoto = false;
@@ -291,8 +299,11 @@ public class InstallationService {
         installation.setTestingPassed(request.isTestingPassed());
         installation.setTestingNotes(request.getTestingNotes());
         installation.setCustomerSigneeName(request.getCustomerSigneeName());
-        if (request.getCustomerSignatureUrl() != null) {
-            installation.setCustomerSignatureUrl(request.getCustomerSignatureUrl());
+        installation.setCustomerSignatureUrl(request.getCustomerSignatureUrl());
+        if (request.getCompletionReportPdfUrl() != null && !request.getCompletionReportPdfUrl().trim().isEmpty()) {
+            installation.setCompletionReportPdfUrl(request.getCompletionReportPdfUrl());
+        } else {
+            installation.setCompletionReportPdfUrl("/reports/commissioning-ins-" + installation.getId() + ".pdf");
         }
         installation.setCustomerAcceptanceNote(request.getCustomerAcceptanceNote());
         installation.setCustomerSignedAt(LocalDateTime.now());
@@ -347,38 +358,83 @@ public class InstallationService {
 
         SalesOrder order = installation.getSalesOrder();
         
-        // Update all individual serialized products to INSTALLED and activate warranties on completion date
+        // Record technician lead submission on serial numbers history (submitted for warehouse manager warranty activation)
         List<SerialNumber> serials = serialNumberRepository.findBySalesOrderId(order.getId());
         for (SerialNumber sn : serials) {
-            sn.setStatus(com.sunpower.entity.enums.Enums.SerialNumberStatus.INSTALLED);
             sn.setInstallationCompletedAt(finishTime);
             sn.setInstallationId(installation.getId());
             serialNumberRepository.save(sn);
 
             SerialNumberHistory history = new SerialNumberHistory(
                     sn,
-                    com.sunpower.entity.enums.Enums.SerialNumberStatus.INSTALLED,
-                    "Fully installed, tested, and commissioned on rooftop. Customer signee: " + request.getCustomerSigneeName(),
+                    sn.getStatus(),
+                    "Installation completed on site by Technician Team Lead (" + completedBy + "). Dossier (rooftop photos, timeframe, commissioning report PDF, and customer digital signature) submitted to Warehouse Manager for warranty activation.",
                     installation.getCustomer().getAddress(),
                     completedBy
             );
             serialNumberHistoryRepository.save(history);
-
-            // Link installation completion separately without overriding warranty start date (which starts on delivery!)
-            warrantyService.activateWarranty(installation.getCustomer(), order, sn.getProduct(), sn, null, installation.getId(), finishTime.toLocalDate());
         }
 
-        warrantyService.recordInstallationCompletion(order, installation.getId(), finishTime.toLocalDate());
+        return installation;
+    }
 
-        // Also link non-serialized components like solar panels
+    @Transactional
+    public Installation activateWarranty(Long installationId, String actor) {
+        Installation installation = getInstallationById(installationId);
+        if (installation.getStatus() != InstallationStatus.COMPLETED) {
+            throw new IllegalStateException("Warranty cannot be activated: Installation status is " + installation.getStatus() + ". It must be COMPLETED by technician lead first.");
+        }
+        if (installation.getCustomerSignatureUrl() == null || installation.getCustomerSignatureUrl().trim().isEmpty()) {
+            throw new IllegalStateException("Warranty cannot be activated: Customer digital signature is missing from technician dossier.");
+        }
+
+        SalesOrder order = installation.getSalesOrder();
+        LocalDate installationDate = installation.getActualFinishTime() != null ?
+                installation.getActualFinishTime().toLocalDate() : LocalDate.now();
+
+        // 1. Update all serial numbers to INSTALLED and activate warranty
+        List<SerialNumber> serials = serialNumberRepository.findBySalesOrderId(order.getId());
+        for (SerialNumber sn : serials) {
+            sn.setStatus(SerialNumberStatus.INSTALLED);
+            sn.setInstallationCompletedAt(installation.getActualFinishTime());
+            sn.setInstallationId(installation.getId());
+            serialNumberRepository.save(sn);
+
+            SerialNumberHistory history = new SerialNumberHistory(
+                    sn,
+                    SerialNumberStatus.INSTALLED,
+                    "Warranty officially activated by Warehouse Manager (" + actor + "). Equipment status changed to INSTALLED upon review of technician lead dossier (photos, timeframe, commissioning report PDF, and customer digital signature).",
+                    installation.getCustomer().getAddress(),
+                    actor
+            );
+            serialNumberHistoryRepository.save(history);
+
+            warrantyService.activateWarranty(installation.getCustomer(), order, sn.getProduct(), sn, installationDate, installation.getId(), installationDate);
+        }
+
+        // 2. Also activate non-serialized components like solar panels
         if (order.getItems() != null) {
             for (OrderItem oi : order.getItems()) {
                 if (oi.getProduct().getCategory() != null && oi.getProduct().getCategory().getName().toUpperCase().contains("PANEL")) {
-                    warrantyService.activateWarranty(installation.getCustomer(), order, oi.getProduct(), null, null, installation.getId(), finishTime.toLocalDate());
+                    warrantyService.activateWarranty(installation.getCustomer(), order, oi.getProduct(), null, installationDate, installation.getId(), installationDate);
                 }
             }
         }
 
+        // 3. Update Dispatches to INSTALLED
+        List<Dispatch> dispatches = dispatchRepository.findBySalesOrderId(order.getId());
+        for (Dispatch d : dispatches) {
+            d.setStatus(DispatchStatus.INSTALLED);
+            dispatchRepository.save(d);
+        }
+
+        // 4. Mark installation warrantyActivated = true
+        installation.setWarrantyActivated(true);
+        installation.setWarrantyActivatedAt(LocalDateTime.now());
+        installation.setWarrantyActivatedBy(actor);
+        installation = installationRepository.save(installation);
+
+        // 5. Update sales order status
         order.setStatus(OrderStatus.INSTALLED);
         if (order.getRemainingBalance().compareTo(BigDecimal.ZERO) == 0) {
             order.setStatus(OrderStatus.COMPLETED);
