@@ -1,17 +1,17 @@
 package com.sunpower.controller;
 
 import com.sunpower.dto.FinanceDTOs.*;
-import com.sunpower.entity.Expense;
-import com.sunpower.entity.Invoice;
-import com.sunpower.entity.SubsidyApplication;
-import com.sunpower.entity.TechnicianPayment;
+import com.sunpower.entity.*;
 import com.sunpower.service.FinanceService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
@@ -42,6 +42,24 @@ public class FinanceController {
     public ResponseEntity<Expense> createExpense(@Valid @RequestBody ExpenseCreateRequest request) {
         Expense expense = financeService.createExpense(request);
         return ResponseEntity.status(HttpStatus.CREATED).body(expense);
+    }
+
+    @PostMapping("/expenses/{id}/approve")
+    public ResponseEntity<Expense> approveExpense(
+            @PathVariable Long id,
+            Authentication authentication) {
+        String approvedBy = authentication != null ? authentication.getName() : "Finance Officer";
+        return ResponseEntity.ok(financeService.approveExpense(id, approvedBy));
+    }
+
+    @PostMapping("/expenses/{id}/reject")
+    public ResponseEntity<Expense> rejectExpense(
+            @PathVariable Long id,
+            @RequestBody(required = false) ExpenseApprovalRequest request,
+            Authentication authentication) {
+        String reason = request != null && request.getRejectionReason() != null ? request.getRejectionReason() : "Disapproved by Finance";
+        String rejectedBy = authentication != null ? authentication.getName() : "Finance Officer";
+        return ResponseEntity.ok(financeService.rejectExpense(id, reason, rejectedBy));
     }
 
     @GetMapping("/invoices")
@@ -95,8 +113,84 @@ public class FinanceController {
         return ResponseEntity.status(HttpStatus.CREATED).body(payout);
     }
 
+    // --- Supplier Invoices and Payments ---
+
+    @GetMapping("/suppliers/purchases")
+    public ResponseEntity<List<Purchase>> getAllSupplierPurchases() {
+        return ResponseEntity.ok(financeService.getAllSupplierPurchases());
+    }
+
+    @GetMapping("/suppliers/payments")
+    public ResponseEntity<List<SupplierPayment>> getAllSupplierPayments() {
+        return ResponseEntity.ok(financeService.getAllSupplierPayments());
+    }
+
+    @PostMapping("/suppliers/payments")
+    public ResponseEntity<SupplierPayment> recordSupplierPayment(@Valid @RequestBody SupplierPaymentRequest request) {
+        SupplierPayment payment = financeService.recordSupplierPayment(request);
+        return ResponseEntity.status(HttpStatus.CREATED).body(payment);
+    }
+
+    // --- Financial Reports ---
+
+    @GetMapping("/reports/profit-and-loss")
+    public ResponseEntity<ProfitAndLossReportDTO> getProfitAndLossReport(
+            @RequestParam(required = false, defaultValue = "THIS_MONTH") String period) {
+        return ResponseEntity.ok(financeService.getProfitAndLossReport(period));
+    }
+
+    @GetMapping("/reports/cash-flow")
+    public ResponseEntity<CashFlowReportDTO> getCashFlowReport(
+            @RequestParam(required = false, defaultValue = "THIS_MONTH") String period) {
+        return ResponseEntity.ok(financeService.getCashFlowReport(period));
+    }
+
+    @GetMapping("/reports/gst")
+    public ResponseEntity<GstReportDTO> getGstReport(
+            @RequestParam(required = false, defaultValue = "THIS_MONTH") String period) {
+        return ResponseEntity.ok(financeService.getGstReport(period));
+    }
+
     @GetMapping("/job-profitability")
     public ResponseEntity<List<JobProfitabilityDTO>> getJobProfitability() {
         return ResponseEntity.ok(financeService.calculateAllJobProfitability());
+    }
+
+    // --- CSV Exports ---
+
+    @GetMapping("/export/job-profitability")
+    public ResponseEntity<byte[]> exportJobProfitabilityCsv() {
+        byte[] csvBytes = financeService.generateJobProfitabilityCsv();
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=SunPower_Job_Profitability.csv")
+                .contentType(MediaType.parseMediaType("text/csv; charset=UTF-8"))
+                .body(csvBytes);
+    }
+
+    @GetMapping("/export/invoices")
+    public ResponseEntity<byte[]> exportInvoicesCsv() {
+        byte[] csvBytes = financeService.generateInvoicesCsv();
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=SunPower_Invoices.csv")
+                .contentType(MediaType.parseMediaType("text/csv; charset=UTF-8"))
+                .body(csvBytes);
+    }
+
+    @GetMapping("/export/expenses")
+    public ResponseEntity<byte[]> exportExpensesCsv() {
+        byte[] csvBytes = financeService.generateExpensesCsv();
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=SunPower_Expenses.csv")
+                .contentType(MediaType.parseMediaType("text/csv; charset=UTF-8"))
+                .body(csvBytes);
+    }
+
+    @GetMapping("/export/suppliers")
+    public ResponseEntity<byte[]> exportSupplierPurchasesCsv() {
+        byte[] csvBytes = financeService.generateSupplierPurchasesCsv();
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=SunPower_Supplier_Purchases.csv")
+                .contentType(MediaType.parseMediaType("text/csv; charset=UTF-8"))
+                .body(csvBytes);
     }
 }

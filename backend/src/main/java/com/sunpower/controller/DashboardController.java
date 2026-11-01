@@ -1,6 +1,6 @@
 package com.sunpower.controller;
 
-import com.sunpower.dto.DashboardDTOs.DashboardSummaryDTO;
+import com.sunpower.dto.DashboardDTOs.*;
 import com.sunpower.dto.FinanceDTOs.JobProfitabilityDTO;
 import com.sunpower.service.DashboardService;
 import com.sunpower.service.FinanceService;
@@ -8,6 +8,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -29,6 +30,42 @@ public class DashboardController {
     @GetMapping
     public ResponseEntity<DashboardSummaryDTO> getDashboardMetrics(@RequestParam(defaultValue = "all") String period) {
         return ResponseEntity.ok(dashboardService.getDashboardMetrics(period));
+    }
+
+    @GetMapping("/admin")
+    public ResponseEntity<AdminDashboardDTO> getAdminDashboard() {
+        return ResponseEntity.ok(dashboardService.getAdminDashboard());
+    }
+
+    @GetMapping("/sales")
+    public ResponseEntity<SalesDashboardDTO> getSalesDashboard() {
+        return ResponseEntity.ok(dashboardService.getSalesDashboard());
+    }
+
+    @GetMapping("/warehouse")
+    public ResponseEntity<WarehouseDashboardDTO> getWarehouseDashboard() {
+        return ResponseEntity.ok(dashboardService.getWarehouseDashboard());
+    }
+
+    @GetMapping("/technician")
+    public ResponseEntity<TechnicianDashboardDTO> getTechnicianDashboard(Authentication authentication) {
+        String username = authentication != null ? authentication.getName() : null;
+        return ResponseEntity.ok(dashboardService.getTechnicianDashboard(username));
+    }
+
+    @GetMapping("/support")
+    public ResponseEntity<SupportDashboardDTO> getSupportDashboard() {
+        return ResponseEntity.ok(dashboardService.getSupportDashboard());
+    }
+
+    @GetMapping("/finance")
+    public ResponseEntity<FinanceDashboardDTO> getFinanceDashboard() {
+        return ResponseEntity.ok(dashboardService.getFinanceDashboard());
+    }
+
+    @GetMapping("/job-profitability")
+    public ResponseEntity<List<JobProfitabilityDTO>> getJobProfitability() {
+        return ResponseEntity.ok(financeService.calculateAllJobProfitability());
     }
 
     @GetMapping("/export-profitability-csv")

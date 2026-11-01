@@ -13,6 +13,9 @@ import java.util.Optional;
 @Repository
 public interface SalesOrderRepository extends JpaRepository<SalesOrder, Long> {
     Optional<SalesOrder> findByOrderNumber(String orderNumber);
+    boolean existsByOrderNumber(String orderNumber);
+    Optional<SalesOrder> findByQuotationId(Long quotationId);
+    boolean existsByQuotationId(Long quotationId);
     List<SalesOrder> findByCustomerId(Long customerId);
     List<SalesOrder> findByStatus(OrderStatus status);
     long countByStatus(OrderStatus status);

@@ -17,8 +17,12 @@ public class Invoice {
     private String invoiceNumber;
 
     @ManyToOne(fetch = FetchType.EAGER)
-    @JoinColumn(name = "sales_order_id", nullable = false)
+    @JoinColumn(name = "sales_order_id", nullable = true)
     private SalesOrder salesOrder;
+
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "service_ticket_id", nullable = true)
+    private ServiceTicket serviceTicket;
 
     @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "customer_id", nullable = false)
@@ -55,7 +59,7 @@ public class Invoice {
     private BigDecimal balanceAmount = BigDecimal.ZERO;
 
     @Column(nullable = false, length = 30)
-    private String status = "ISSUED"; // ISSUED, PAID, PARTIALLY_PAID, CANCELLED
+    private String status = "UNPAID"; // UNPAID, PARTIALLY_PAID, PAID, OVERDUE, CANCELLED
 
     @Column(length = 50)
     private String gstin = "33AAACS1234F1Z5";
@@ -89,6 +93,7 @@ public class Invoice {
         }
         balanceAmount = totalAmount.subtract(paidAmount != null ? paidAmount : BigDecimal.ZERO);
         calculateTaxBreakdown();
+        updateStatus();
     }
 
     @PreUpdate
@@ -98,6 +103,22 @@ public class Invoice {
             balanceAmount = totalAmount.subtract(paidAmount);
         }
         calculateTaxBreakdown();
+        updateStatus();
+    }
+
+    public void updateStatus() {
+        if ("CANCELLED".equals(status)) {
+            return;
+        }
+        if (balanceAmount != null && balanceAmount.compareTo(BigDecimal.ZERO) <= 0) {
+            status = "PAID";
+        } else if (paidAmount != null && paidAmount.compareTo(BigDecimal.ZERO) > 0) {
+            status = "PARTIALLY_PAID";
+        } else if (dueDate != null && dueDate.isBefore(LocalDate.now())) {
+            status = "OVERDUE";
+        } else {
+            status = "ISSUED".equalsIgnoreCase(status) ? "ISSUED" : "UNPAID";
+        }
     }
 
     private void calculateTaxBreakdown() {
@@ -129,6 +150,8 @@ public class Invoice {
     public void setInvoiceNumber(String invoiceNumber) { this.invoiceNumber = invoiceNumber; }
     public SalesOrder getSalesOrder() { return salesOrder; }
     public void setSalesOrder(SalesOrder salesOrder) { this.salesOrder = salesOrder; }
+    public ServiceTicket getServiceTicket() { return serviceTicket; }
+    public void setServiceTicket(ServiceTicket serviceTicket) { this.serviceTicket = serviceTicket; }
     public Customer getCustomer() { return customer; }
     public void setCustomer(Customer customer) { this.customer = customer; }
     public LocalDate getInvoiceDate() { return invoiceDate; }

@@ -71,7 +71,7 @@ public class QuotationService {
 
         // CRITICAL BUSINESS RULE: Verify Site Survey is APPROVED!
         if (survey.getStatus() != SurveyStatus.APPROVED) {
-            throw new IllegalStateException("Business Rule Violation: A quotation cannot be generated until the site survey has been APPROVED. Current survey status is " + survey.getStatus());
+            throw new IllegalStateException("Site survey must be approved before generating a quotation. Current status: " + survey.getStatus());
         }
 
         SolarPackage solarPackage = solarPackageRepository.findById(request.getSolarPackageId())
@@ -113,10 +113,26 @@ public class QuotationService {
         } else {
             // Automatically populate from Package BOM
             List<PackageBOM> bomList = packageBOMRepository.findBySolarPackageId(solarPackage.getId());
+            QuotationItem cableItem = null;
             for (PackageBOM bom : bomList) {
                 QuotationItem item = new QuotationItem(quotation, bom.getProduct(), bom.getQuantity(), bom.getProduct().getSellingPrice());
                 subtotal = subtotal.add(item.getTotalPrice());
                 items.add(item);
+                if ((bom.getProduct().getProductCode() != null && bom.getProduct().getProductCode().toUpperCase().contains("CAB")) ||
+                    (bom.getProduct().getName() != null && bom.getProduct().getName().toLowerCase().contains("cable"))) {
+                    cableItem = item;
+                }
+            }
+
+            // EDGE CASE 1 (Blueprint): Survey Cable Distance Auto-Adjusting the BOM
+            // If technician logged > 15m during survey (e.g. 28m), auto-append extra DC wire to quotation
+            if (survey.getCableDistanceMeters() != null && survey.getCableDistanceMeters().compareTo(BigDecimal.valueOf(15)) > 0) {
+                int extraMeters = survey.getCableDistanceMeters().subtract(BigDecimal.valueOf(15)).intValue();
+                if (cableItem != null) {
+                    cableItem.setQuantity(cableItem.getQuantity() + extraMeters);
+                    cableItem.setTotalPrice(cableItem.getUnitPrice().multiply(BigDecimal.valueOf(cableItem.getQuantity())));
+                    subtotal = subtotal.add(cableItem.getUnitPrice().multiply(BigDecimal.valueOf(extraMeters)));
+                }
             }
         }
 

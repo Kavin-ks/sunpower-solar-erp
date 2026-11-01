@@ -36,6 +36,11 @@ public class Enquiry {
     @Column(precision = 10, scale = 2)
     private BigDecimal monthlyElectricityBill;
 
+    @Column(precision = 8, scale = 2)
+    private BigDecimal shadowFreeAreaSqFt;
+
+    private Boolean gridSuitable = true;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 30)
     private EnquirySource source = EnquirySource.MANUAL;
@@ -88,6 +93,12 @@ public class Enquiry {
     public void setSubsidyRequired(boolean subsidyRequired) { this.subsidyRequired = subsidyRequired; }
     public BigDecimal getMonthlyElectricityBill() { return monthlyElectricityBill; }
     public void setMonthlyElectricityBill(BigDecimal monthlyElectricityBill) { this.monthlyElectricityBill = monthlyElectricityBill; }
+    public BigDecimal getShadowFreeAreaSqFt() { return shadowFreeAreaSqFt; }
+    public void setShadowFreeAreaSqFt(BigDecimal shadowFreeAreaSqFt) { this.shadowFreeAreaSqFt = shadowFreeAreaSqFt; }
+    public Boolean getGridSuitable() {
+        return gridSuitable != null ? gridSuitable : Boolean.TRUE;
+    }
+    public void setGridSuitable(Boolean gridSuitable) { this.gridSuitable = gridSuitable; }
     public EnquirySource getSource() { return source; }
     public void setSource(EnquirySource source) { this.source = source; }
     public EnquiryStatus getStatus() { return status; }

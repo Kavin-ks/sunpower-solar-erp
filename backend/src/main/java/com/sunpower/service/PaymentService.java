@@ -1,6 +1,8 @@
 package com.sunpower.service;
 
+import com.sunpower.dto.PaymentDTOs.PaymentReceiptDTO;
 import com.sunpower.dto.PaymentDTOs.PaymentRecordRequest;
+import com.sunpower.entity.Customer;
 import com.sunpower.entity.Invoice;
 import com.sunpower.entity.Payment;
 import com.sunpower.entity.SalesOrder;
@@ -29,6 +31,9 @@ public class PaymentService {
 
     @Autowired
     private InvoiceRepository invoiceRepository;
+
+    @Autowired
+    private OrderService orderService;
 
     public List<Payment> getAllPayments() {
         return paymentRepository.findAllByOrderByPaymentDateDesc();
@@ -65,6 +70,23 @@ public class PaymentService {
             }
         }
 
+        // Validate invoice if specified
+        Invoice targetInvoice = null;
+        if (request.getInvoiceId() != null) {
+            targetInvoice = invoiceRepository.findById(request.getInvoiceId())
+                    .orElseThrow(() -> new IllegalArgumentException("Invoice not found with id: " + request.getInvoiceId()));
+            if ("CANCELLED".equals(targetInvoice.getStatus())) {
+                throw new IllegalArgumentException("Cannot record payment against a cancelled invoice: " + targetInvoice.getInvoiceNumber());
+            }
+            if (request.getAmount().compareTo(targetInvoice.getBalanceAmount()) > 0) {
+                throw new IllegalArgumentException("Overpayment error: Payment amount (₹" + request.getAmount() +
+                        ") exceeds invoice balance (₹" + targetInvoice.getBalanceAmount() + ")");
+            }
+        } else {
+            // Find existing invoice for this sales order if available
+            targetInvoice = invoiceRepository.findBySalesOrderId(order.getId()).orElse(null);
+        }
+
         BigDecimal remaining = order.getRemainingBalance() != null ? order.getRemainingBalance() : order.getTotalAmount();
         if (request.getAmount().compareTo(remaining) > 0) {
             throw new IllegalArgumentException("Overpayment error: Payment amount (₹" + request.getAmount() +
@@ -74,6 +96,9 @@ public class PaymentService {
         Payment payment = new Payment();
         payment.setSalesOrder(order);
         payment.setCustomer(order.getCustomer());
+        if (targetInvoice != null) {
+            payment.setInvoice(targetInvoice);
+        }
         payment.setAmount(request.getAmount());
         payment.setPaymentDate(request.getPaymentDate() != null ? request.getPaymentDate() : LocalDate.now());
         payment.setMethod(request.getMethod());
@@ -95,22 +120,29 @@ public class PaymentService {
         order.setRemainingBalance(order.getTotalAmount().subtract(newTotalPaid));
 
         // Business rule: If advance requirement is satisfied, confirm order
-        if (order.getStatus() == OrderStatus.PENDING_PAYMENT && newTotalPaid.compareTo(order.getAdvanceRequired()) >= 0) {
-            order.setStatus(OrderStatus.CONFIRMED);
-        }
-        salesOrderRepository.save(order);
+        boolean newlyConfirmed = false;
+        boolean advanceSatisfied = order.getAdvanceRequired() != null &&
+                (newTotalPaid.compareTo(order.getAdvanceRequired()) >= 0 ||
+                 order.getAdvanceRequired().subtract(newTotalPaid).compareTo(new BigDecimal("0.05")) <= 0);
 
-        // Update corresponding Invoice
-        invoiceRepository.findBySalesOrderId(order.getId()).ifPresent(invoice -> {
-            invoice.setPaidAmount(newTotalPaid);
-            invoice.setBalanceAmount(order.getRemainingBalance());
-            if (invoice.getBalanceAmount().compareTo(BigDecimal.ZERO) <= 0) {
-                invoice.setStatus("PAID");
-            } else if (newTotalPaid.compareTo(BigDecimal.ZERO) > 0) {
-                invoice.setStatus("PARTIALLY_PAID");
-            }
-            invoiceRepository.save(invoice);
-        });
+        if (order.getStatus() == OrderStatus.PENDING_PAYMENT && advanceSatisfied) {
+            order.setStatus(OrderStatus.CONFIRMED);
+            newlyConfirmed = true;
+        }
+        SalesOrder savedOrder = salesOrderRepository.save(order);
+
+        if (newlyConfirmed || savedOrder.getStatus() == OrderStatus.CONFIRMED) {
+            orderService.ensureDispatchAndInstallation(savedOrder);
+        }
+
+        // Update target invoice if present
+        if (targetInvoice != null) {
+            BigDecimal invPaid = targetInvoice.getPaidAmount() != null ? targetInvoice.getPaidAmount() : BigDecimal.ZERO;
+            targetInvoice.setPaidAmount(invPaid.add(request.getAmount()));
+            targetInvoice.setBalanceAmount(targetInvoice.getTotalAmount().subtract(targetInvoice.getPaidAmount()));
+            targetInvoice.updateStatus();
+            invoiceRepository.save(targetInvoice);
+        }
 
         return payment;
     }
@@ -149,22 +181,57 @@ public class PaymentService {
                 order.setStatus(OrderStatus.PENDING_PAYMENT);
             }
             salesOrderRepository.save(order);
+        }
 
-            // Adjust Invoice
-            invoiceRepository.findBySalesOrderId(order.getId()).ifPresent(invoice -> {
-                invoice.setPaidAmount(order.getTotalPaid());
-                invoice.setBalanceAmount(order.getRemainingBalance());
-                if (invoice.getBalanceAmount().compareTo(BigDecimal.ZERO) <= 0) {
-                    invoice.setStatus("PAID");
-                } else if (invoice.getPaidAmount().compareTo(BigDecimal.ZERO) > 0) {
-                    invoice.setStatus("PARTIALLY_PAID");
-                } else {
-                    invoice.setStatus("ISSUED");
-                }
-                invoiceRepository.save(invoice);
-            });
+        // Adjust Invoice balances
+        Invoice invoice = payment.getInvoice();
+        if (invoice == null && order != null) {
+            invoice = invoiceRepository.findBySalesOrderId(order.getId()).orElse(null);
+        }
+        if (invoice != null && !"CANCELLED".equals(invoice.getStatus())) {
+            BigDecimal invPaid = invoice.getPaidAmount() != null ? invoice.getPaidAmount() : BigDecimal.ZERO;
+            BigDecimal newInvPaid = invPaid.subtract(payment.getAmount());
+            if (newInvPaid.compareTo(BigDecimal.ZERO) < 0) {
+                newInvPaid = BigDecimal.ZERO;
+            }
+            invoice.setPaidAmount(newInvPaid);
+            invoice.setBalanceAmount(invoice.getTotalAmount().subtract(newInvPaid));
+            if (invoice.getBalanceAmount().compareTo(BigDecimal.ZERO) <= 0) {
+                invoice.setStatus("PAID");
+            } else if (invoice.getPaidAmount().compareTo(BigDecimal.ZERO) > 0) {
+                invoice.setStatus("PARTIALLY_PAID");
+            } else {
+                invoice.setStatus("ISSUED");
+            }
+            invoiceRepository.save(invoice);
         }
 
         return payment;
+    }
+
+    public PaymentReceiptDTO getPaymentReceipt(Long paymentId) {
+        Payment payment = getPaymentById(paymentId);
+        Customer customer = payment.getCustomer();
+        SalesOrder order = payment.getSalesOrder();
+        Invoice invoice = payment.getInvoice();
+
+        PaymentReceiptDTO receipt = new PaymentReceiptDTO();
+        receipt.setReceiptNumber("REC-" + String.format("%05d", payment.getId()));
+        receipt.setPaymentNumber(payment.getPaymentNumber());
+        receipt.setCustomerName(customer != null ? customer.getFullName() : "Customer");
+        receipt.setCustomerPhone(customer != null ? customer.getPhone() : null);
+        receipt.setCustomerEmail(customer != null ? customer.getEmail() : null);
+        receipt.setOrderNumber(order != null ? order.getOrderNumber() : null);
+        receipt.setInvoiceNumber(invoice != null ? invoice.getInvoiceNumber() : (order != null ? "INV-FOR-" + order.getOrderNumber() : null));
+        receipt.setAmountPaid(payment.getAmount());
+        receipt.setPaymentDate(payment.getPaymentDate());
+        receipt.setPaymentMethod(payment.getMethod());
+        receipt.setPaymentType(payment.getType());
+        receipt.setReferenceNumber(payment.getReferenceNumber());
+        receipt.setOrderTotalAmount(order != null ? order.getTotalAmount() : payment.getAmount());
+        receipt.setTotalPaidToDate(order != null ? order.getTotalPaid() : payment.getAmount());
+        receipt.setRemainingBalance(order != null ? order.getRemainingBalance() : BigDecimal.ZERO);
+
+        return receipt;
     }
 }

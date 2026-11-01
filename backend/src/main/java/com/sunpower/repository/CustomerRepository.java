@@ -7,9 +7,12 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface CustomerRepository extends JpaRepository<Customer, Long> {
+    Optional<Customer> findByPhone(String phone);
+    Optional<Customer> findByEmail(String email);
     List<Customer> findByFullNameContainingIgnoreCaseOrPhoneContainingOrEmailContainingIgnoreCase(
             String fullName, String phone, String email);
 
@@ -17,4 +20,9 @@ public interface CustomerRepository extends JpaRepository<Customer, Long> {
            "OR c.phone LIKE CONCAT('%', :query, '%') " +
            "OR LOWER(c.email) LIKE LOWER(CONCAT('%', :query, '%'))")
     List<Customer> searchCustomers(@Param("query") String query);
+
+    // Customer portal lookups
+    Optional<Customer> findByUserId(Long userId);
+    Optional<Customer> findFirstByPhoneOrderByIdDesc(String phone);
+    Optional<Customer> findFirstByEmailIgnoreCaseOrderByIdDesc(String email);
 }

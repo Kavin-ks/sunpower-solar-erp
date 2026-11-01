@@ -43,6 +43,15 @@ public class InstallationService {
     @Autowired
     private TechnicianPaymentRepository technicianPaymentRepository;
 
+    @Autowired
+    private SerialNumberRepository serialNumberRepository;
+
+    @Autowired
+    private SerialNumberHistoryRepository serialNumberHistoryRepository;
+
+    @Autowired
+    private WarrantyService warrantyService;
+
     public List<Installation> getAllInstallations() {
         return installationRepository.findAll();
     }
@@ -54,6 +63,73 @@ public class InstallationService {
 
     public List<Installation> getInstallationsByStatus(InstallationStatus status) {
         return installationRepository.findByStatus(status);
+    }
+
+    @Transactional
+    public SerialNumber verifyDispatchedProduct(Long installationId, String barcode, String technicianName) {
+        Installation installation = getInstallationById(installationId);
+        if (barcode == null || barcode.trim().isEmpty()) {
+            throw new IllegalArgumentException("Scanned barcode cannot be empty");
+        }
+        String cleanBarcode = barcode.trim();
+        SerialNumber sn = serialNumberRepository.findBySerialCode(cleanBarcode)
+                .orElseThrow(() -> new IllegalArgumentException("Validation Error: Scanned barcode/serial '" + cleanBarcode + "' not recognized in system registry"));
+
+        if (sn.getSalesOrder() == null || !sn.getSalesOrder().getId().equals(installation.getSalesOrder().getId())) {
+            throw new IllegalStateException("Security / Validation Rejection: Product " + cleanBarcode +
+                    " does NOT belong to Order " + installation.getSalesOrder().getOrderNumber() +
+                    " (Belongs to: " + (sn.getSalesOrder() != null ? sn.getSalesOrder().getOrderNumber() : "Unassigned") + "). Rejected!");
+        }
+
+        sn.setStatus(com.sunpower.entity.enums.Enums.SerialNumberStatus.SITE_RECEIVED);
+        sn.setSiteReceivedAt(LocalDateTime.now());
+        sn.setInstallationId(installation.getId());
+        sn = serialNumberRepository.save(sn);
+
+        SerialNumberHistory history = new SerialNumberHistory(
+                sn,
+                com.sunpower.entity.enums.Enums.SerialNumberStatus.SITE_RECEIVED,
+                "Physical barcode scanned and site-verified at customer rooftop by technician " + technicianName,
+                installation.getCustomer().getAddress(),
+                technicianName
+        );
+        serialNumberHistoryRepository.save(history);
+
+        return sn;
+    }
+
+    @Transactional
+    public Installation startInstallation(Long installationId, String technicianName) {
+        Installation installation = getInstallationById(installationId);
+        if (installation.getActualStartTime() == null) {
+            installation.setActualStartTime(LocalDateTime.now());
+        }
+        installation.setStatus(InstallationStatus.IN_PROGRESS);
+        installation = installationRepository.save(installation);
+
+        SalesOrder order = installation.getSalesOrder();
+        order.setStatus(OrderStatus.IN_INSTALLATION);
+        salesOrderRepository.save(order);
+
+        List<SerialNumber> serials = serialNumberRepository.findBySalesOrderId(order.getId());
+        for (SerialNumber sn : serials) {
+            if (sn.getInstallationStartedAt() == null) {
+                sn.setInstallationStartedAt(LocalDateTime.now());
+                sn.setInstallationId(installation.getId());
+                serialNumberRepository.save(sn);
+
+                SerialNumberHistory history = new SerialNumberHistory(
+                        sn,
+                        sn.getStatus(),
+                        "Rooftop physical installation commenced by technician " + technicianName,
+                        installation.getCustomer().getAddress(),
+                        technicianName
+                );
+                serialNumberHistoryRepository.save(history);
+            }
+        }
+
+        return installation;
     }
 
     @Transactional
@@ -104,8 +180,11 @@ public class InstallationService {
     public Installation completeInstallation(Long installationId, CompleteInstallationRequest request, String completedBy) {
         Installation installation = getInstallationById(installationId);
 
-        installation.setActualStartTime(request.getActualStartTime() != null ? request.getActualStartTime() : LocalDateTime.now().minusHours(6));
-        installation.setActualFinishTime(request.getActualFinishTime() != null ? request.getActualFinishTime() : LocalDateTime.now());
+        LocalDateTime finishTime = request.getActualFinishTime() != null ? request.getActualFinishTime() : LocalDateTime.now();
+        if (installation.getActualStartTime() == null) {
+            installation.setActualStartTime(request.getActualStartTime() != null ? request.getActualStartTime() : finishTime.minusHours(5));
+        }
+        installation.setActualFinishTime(finishTime);
         installation.setInstalledCapacityKw(request.getInstalledCapacityKw());
         installation.setPanelMountingConfirmed(request.isPanelMountingConfirmed());
         installation.setWiringConfirmed(request.isWiringConfirmed());
@@ -113,6 +192,9 @@ public class InstallationService {
         installation.setTestingPassed(request.isTestingPassed());
         installation.setTestingNotes(request.getTestingNotes());
         installation.setCustomerSigneeName(request.getCustomerSigneeName());
+        if (request.getCustomerSignatureUrl() != null) {
+            installation.setCustomerSignatureUrl(request.getCustomerSignatureUrl());
+        }
         installation.setCustomerAcceptanceNote(request.getCustomerAcceptanceNote());
         installation.setCustomerSignedAt(LocalDateTime.now());
         installation.setStatus(InstallationStatus.COMPLETED);
@@ -126,8 +208,10 @@ public class InstallationService {
                 for (InstallationTechnician it : installation.getAssignedTechnicians()) {
                     if (it.getTechnician().getId().equals(hoursReq.getTechnicianId())) {
                         it.setHoursWorked(hoursReq.getHoursWorked());
+                        BigDecimal rate = it.getTechnician().getHourlyRate() != null ?
+                                it.getTechnician().getHourlyRate() : BigDecimal.valueOf(250.00);
                         BigDecimal payout = hoursReq.getPayoutAmount() != null ?
-                                hoursReq.getPayoutAmount() : hoursReq.getHoursWorked().multiply(BigDecimal.valueOf(250.00)); // Default ₹250/hr
+                                hoursReq.getPayoutAmount() : hoursReq.getHoursWorked().multiply(rate);
                         it.setPayoutAmount(payout);
                         installationTechnicianRepository.save(it);
 
@@ -160,6 +244,37 @@ public class InstallationService {
         installation = installationRepository.save(installation);
 
         SalesOrder order = installation.getSalesOrder();
+        
+        // Update all individual serialized products to INSTALLED and activate warranties on completion date
+        List<SerialNumber> serials = serialNumberRepository.findBySalesOrderId(order.getId());
+        for (SerialNumber sn : serials) {
+            sn.setStatus(com.sunpower.entity.enums.Enums.SerialNumberStatus.INSTALLED);
+            sn.setInstallationCompletedAt(finishTime);
+            sn.setInstallationId(installation.getId());
+            serialNumberRepository.save(sn);
+
+            SerialNumberHistory history = new SerialNumberHistory(
+                    sn,
+                    com.sunpower.entity.enums.Enums.SerialNumberStatus.INSTALLED,
+                    "Fully installed, tested, and commissioned on rooftop. Customer signee: " + request.getCustomerSigneeName(),
+                    installation.getCustomer().getAddress(),
+                    completedBy
+            );
+            serialNumberHistoryRepository.save(history);
+
+            // Warranty activates strictly on completion date!
+            warrantyService.activateWarranty(installation.getCustomer(), order, sn.getProduct(), sn, finishTime.toLocalDate(), installation.getId());
+        }
+
+        // Also activate warranties for non-serialized components like solar panels
+        if (order.getItems() != null) {
+            for (OrderItem oi : order.getItems()) {
+                if (oi.getProduct().getCategory() != null && oi.getProduct().getCategory().getName().toUpperCase().contains("PANEL")) {
+                    warrantyService.activateWarranty(installation.getCustomer(), order, oi.getProduct(), null, finishTime.toLocalDate(), installation.getId());
+                }
+            }
+        }
+
         order.setStatus(OrderStatus.INSTALLED);
         if (order.getRemainingBalance().compareTo(BigDecimal.ZERO) == 0) {
             order.setStatus(OrderStatus.COMPLETED);

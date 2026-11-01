@@ -10,4 +10,5 @@ import java.util.List;
 public interface TechnicianRepository extends JpaRepository<Technician, Long> {
     List<Technician> findByActiveTrue();
     List<Technician> findByAvailableTrueAndActiveTrue();
+    java.util.Optional<Technician> findByNameContainingIgnoreCase(String name);
 }

@@ -19,6 +19,7 @@ public interface ServiceTicketRepository extends JpaRepository<ServiceTicket, Lo
     List<ServiceTicket> findByInstallationSalesOrderId(Long salesOrderId);
     List<ServiceTicket> findByWarrantySalesOrderId(Long salesOrderId);
     long countByStatus(TicketStatus status);
+    long countByCustomerIdAndStatusNot(Long customerId, TicketStatus status);
 
     @Query("SELECT t FROM ServiceTicket t WHERE LOWER(t.ticketNumber) LIKE LOWER(CONCAT('%', :query, '%')) " +
            "OR LOWER(t.customer.fullName) LIKE LOWER(CONCAT('%', :query, '%')) " +

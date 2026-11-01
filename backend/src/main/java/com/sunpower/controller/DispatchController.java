@@ -3,12 +3,14 @@ package com.sunpower.controller;
 import com.sunpower.dto.DispatchDTOs.AssignSerialNumberRequest;
 import com.sunpower.dto.DispatchDTOs.ConfirmDeliveryRequest;
 import com.sunpower.dto.DispatchDTOs.DispatchCreateRequest;
+import com.sunpower.dto.DispatchDTOs.ScanBarcodeRequest;
 import com.sunpower.entity.Dispatch;
 import com.sunpower.service.DispatchService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 

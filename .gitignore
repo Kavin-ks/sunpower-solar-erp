@@ -1,8 +1,29 @@
-# Java / Maven build output
+# OS & IDE
+.DS_Store
+.idea/
+*.iml
+.vscode/
+
+# Backend Build & Logs
+backend/target/
 target/
 **/target/
+*.class
+*.log
+backend/uploads/*
+!backend/uploads/.gitkeep
+uploads/*
+!uploads/.gitkeep
 
-# Environment files
+# Frontend Build & Dependencies
+frontend/node_modules/
+frontend/dist/
+frontend/dist-ssr/
+frontend/*.local
+
+# Docker & Temp
+*.pid
 .env
 .env.*
 !.env.example
+backend/data/

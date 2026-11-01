@@ -17,6 +17,9 @@ public class WarrantyService {
     @Autowired
     private WarrantyRepository warrantyRepository;
 
+    @Autowired
+    private com.sunpower.repository.SerialNumberRepository serialNumberRepository;
+
     public List<Warranty> getAllWarranties() {
         return warrantyRepository.findAll();
     }
@@ -35,12 +38,32 @@ public class WarrantyService {
     }
 
     @Transactional
-    public Warranty activateWarranty(Customer customer, SalesOrder order, Product product, SerialNumber serialNumber, LocalDate deliveryDate) {
+    public Warranty activateWarranty(Customer customer, SalesOrder order, Product product, SerialNumber serialNumber, LocalDate completionDate) {
+        return activateWarranty(customer, order, product, serialNumber, completionDate, null);
+    }
+
+    @Transactional
+    public Warranty activateWarranty(Customer customer, SalesOrder order, Product product, SerialNumber serialNumber, LocalDate completionDate, Long installationId) {
+        LocalDate startDate = completionDate != null ? completionDate : LocalDate.now();
+
         // Prevent duplicate warranty activation for the same serial number
         if (serialNumber != null) {
             Optional<Warranty> existing = warrantyRepository.findBySerialNumberId(serialNumber.getId());
             if (existing.isPresent()) {
-                return existing.get();
+                Warranty w = existing.get();
+                if (completionDate != null) {
+                    w.setDeliveryDate(completionDate);
+                    w.setWarrantyStartDate(completionDate);
+                    int dur = w.getDurationMonths() != null ? w.getDurationMonths() :
+                            (product.getDefaultWarrantyMonths() != null ? product.getDefaultWarrantyMonths() : 24);
+                    w.setWarrantyEndDate(completionDate.plusMonths(dur));
+                    w.setStatus(WarrantyStatus.ACTIVE);
+                    if (installationId != null) {
+                        w.setInstallationId(installationId);
+                    }
+                    return warrantyRepository.save(w);
+                }
+                return w;
             }
         }
 
@@ -50,21 +73,25 @@ public class WarrantyService {
 
         // Explicit rule overrides from business requirements:
         // Inverter: 2 years (24 months), Battery: 2 years (24 months), Solar panels: 20 years (240 months)
-        String catName = product.getCategory().getName().toUpperCase();
+        String catName = product.getCategory() != null && product.getCategory().getName() != null ?
+                product.getCategory().getName().toUpperCase() : "";
         if (catName.contains("PANEL")) {
             durationMonths = 240; // 20 years
         } else if (catName.contains("INVERTER") || catName.contains("BATTERY")) {
             durationMonths = 24; // 2 years
         }
 
+        LocalDate endDate = startDate.plusMonths(durationMonths);
+
         Warranty warranty = new Warranty();
         warranty.setCustomer(customer);
         warranty.setSalesOrder(order);
         warranty.setProduct(product);
         warranty.setSerialNumber(serialNumber);
-        warranty.setDeliveryDate(deliveryDate);
-        warranty.setWarrantyStartDate(deliveryDate);
-        warranty.setWarrantyEndDate(deliveryDate.plusMonths(durationMonths));
+        warranty.setInstallationId(installationId);
+        warranty.setDeliveryDate(startDate);
+        warranty.setWarrantyStartDate(startDate);
+        warranty.setWarrantyEndDate(endDate);
         warranty.setDurationMonths(durationMonths);
         warranty.setStatus(WarrantyStatus.ACTIVE);
         warranty.setTermsAndConditions("Full manufacturer comprehensive warranty covering defects and performance standards.");
@@ -73,6 +100,15 @@ public class WarrantyService {
         if (warranty.getWarrantyNumber() == null) {
             warranty.setWarrantyNumber("WR-" + String.format("%05d", warranty.getId()));
             warranty = warrantyRepository.save(warranty);
+        }
+
+        if (serialNumber != null) {
+            serialNumber.setWarrantyStartDate(startDate);
+            serialNumber.setWarrantyExpiryDate(endDate);
+            if (installationId != null) {
+                serialNumber.setInstallationId(installationId);
+            }
+            serialNumberRepository.save(serialNumber);
         }
 
         return warranty;

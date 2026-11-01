@@ -39,6 +39,9 @@ public class PaymentServiceTest {
     @Mock
     private InvoiceRepository invoiceRepository;
 
+    @Mock
+    private OrderService orderService;
+
     @InjectMocks
     private PaymentService paymentService;
 

@@ -22,6 +22,9 @@ public class Technician {
     @Column(length = 255)
     private String skills;
 
+    @Column(precision = 10, scale = 2)
+    private java.math.BigDecimal hourlyRate = new java.math.BigDecimal("250.00");
+
     private boolean available = true;
     private boolean active = true;
 
@@ -58,6 +61,10 @@ public class Technician {
     public void setEmail(String email) { this.email = email; }
     public String getSkills() { return skills; }
     public void setSkills(String skills) { this.skills = skills; }
+    public java.math.BigDecimal getHourlyRate() {
+        return hourlyRate != null ? hourlyRate : new java.math.BigDecimal("250.00");
+    }
+    public void setHourlyRate(java.math.BigDecimal hourlyRate) { this.hourlyRate = hourlyRate; }
     public boolean isAvailable() { return available; }
     public void setAvailable(boolean available) { this.available = available; }
     public boolean isActive() { return active; }

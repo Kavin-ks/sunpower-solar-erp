@@ -10,6 +10,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.*;
 
 @Service
@@ -48,11 +50,54 @@ public class DataInitializationService implements CommandLineRunner {
     @Autowired
     private SerialNumberHistoryRepository serialNumberHistoryRepository;
 
+    @Autowired
+    private CustomerRepository customerRepository;
+
+    @Autowired
+    private SalesOrderRepository salesOrderRepository;
+
+    @Autowired
+    private SiteSurveyRepository siteSurveyRepository;
+
+    @Autowired
+    private QuotationRepository quotationRepository;
+
+    @Autowired
+    private OrderItemRepository orderItemRepository;
+
+    @Autowired
+    private PaymentRepository paymentRepository;
+
+    @Autowired
+    private DispatchRepository dispatchRepository;
+
+    @Autowired
+    private DispatchItemRepository dispatchItemRepository;
+
+    @Autowired
+    private InstallationRepository installationRepository;
+
+    @Autowired
+    private WarrantyRepository warrantyRepository;
+
+    @Autowired
+    private ExpenseRepository expenseRepository;
+
+    @Autowired
+    private SubsidyApplicationRepository subsidyApplicationRepository;
+
+    @Autowired
+    private InvoiceRepository invoiceRepository;
+
     @Override
     @Transactional
     public void run(String... args) throws Exception {
         if (roleRepository.count() > 0) {
-            return; // Already initialized
+            ensureAllSolarPackagesExist();
+            ensurePickingDispatchExists();
+            ensurePanelSerializationAndStockSerials();
+            ensureDemoHistoricalDataExists();
+            return; // Already initialized roles/users
         }
 
         // 1. Roles
@@ -105,7 +150,7 @@ public class DataInitializationService implements CommandLineRunner {
         // 5. Products
         Product pPanel = createProduct("PANEL-MONO-540W", "Mono PERC Half-Cut 540W Solar Panel", catPanels,
                 "Tier-1 540W High Efficiency Monocrystalline Module", "pcs", new BigDecimal("10500.00"), new BigDecimal("13200.00"),
-                180, 20, false, 240);
+                180, 20, true, 240);
 
         Product pInv3k = createProduct("INV-OG-3KW-GROWATT", "Growatt 3 kW Single Phase On-Grid Inverter", catInverters,
                 "Dual MPPT, IP65 protection, Wi-Fi smart monitoring", "unit", new BigDecimal("26000.00"), new BigDecimal("34500.00"),
@@ -239,6 +284,12 @@ public class DataInitializationService implements CommandLineRunner {
         registerSerial("BAT-LITH-5K-3002", pBattery, "PO-2026-05", "Battery Bay - Slot 2");
         registerSerial("CC-MPPT-60A-4001", pController, "PO-2026-06", "Electronics Rack 1");
         registerSerial("CC-MPPT-60A-4002", pController, "PO-2026-06", "Electronics Rack 2");
+
+        // Execute all master ensuring blocks for full 10-package catalog, panel serialization, and demo history
+        ensureAllSolarPackagesExist();
+        ensurePickingDispatchExists();
+        ensurePanelSerializationAndStockSerials();
+        ensureDemoHistoricalDataExists();
     }
 
     private void createUser(String username, String fullName, String email, String phone, Role role) {
@@ -303,6 +354,10 @@ public class DataInitializationService implements CommandLineRunner {
     }
 
     private SerialNumber registerSerial(String code, Product product, String purchaseRef, String location) {
+        Optional<SerialNumber> existing = serialNumberRepository.findBySerialCode(code);
+        if (existing.isPresent()) {
+            return existing.get();
+        }
         SerialNumber sn = new SerialNumber(code, product, purchaseRef, location);
         sn = serialNumberRepository.save(sn);
 

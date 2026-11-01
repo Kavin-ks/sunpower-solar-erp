@@ -27,6 +27,11 @@ public class Payment {
     private SalesOrder salesOrder;
 
     @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "invoice_id", nullable = true)
+    @JsonIgnore
+    private Invoice invoice;
+
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "customer_id", nullable = false)
     private Customer customer;
 
@@ -86,12 +91,26 @@ public class Payment {
         return salesOrder != null ? salesOrder.getId() : null;
     }
 
+    @Transient
+    @JsonProperty("invoiceNumber")
+    public String getInvoiceNumber() {
+        return invoice != null ? invoice.getInvoiceNumber() : null;
+    }
+
+    @Transient
+    @JsonProperty("invoiceId")
+    public Long getInvoiceId() {
+        return invoice != null ? invoice.getId() : null;
+    }
+
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
     public String getPaymentNumber() { return paymentNumber; }
     public void setPaymentNumber(String paymentNumber) { this.paymentNumber = paymentNumber; }
     public SalesOrder getSalesOrder() { return salesOrder; }
     public void setSalesOrder(SalesOrder salesOrder) { this.salesOrder = salesOrder; }
+    public Invoice getInvoice() { return invoice; }
+    public void setInvoice(Invoice invoice) { this.invoice = invoice; }
     public Customer getCustomer() { return customer; }
     public void setCustomer(Customer customer) { this.customer = customer; }
     public BigDecimal getAmount() { return amount; }

@@ -1,6 +1,7 @@
 package com.sunpower.service;
 
 import com.sunpower.dto.SiteSurveyDTOs.SurveyApprovalRequest;
+import com.sunpower.dto.SiteSurveyDTOs.SurveyInspectionReportRequest;
 import com.sunpower.dto.SiteSurveyDTOs.SurveyScheduleRequest;
 import com.sunpower.entity.*;
 import com.sunpower.entity.enums.Enums.EnquiryStatus;
@@ -63,14 +64,16 @@ public class SiteSurveyService {
         survey.setCustomer(customer);
         survey.setTechnician(technician);
         survey.setScheduledDate(request.getScheduledDate());
-        survey.setRoofDirection(request.getRoofDirection());
-        survey.setRoofTilt(request.getRoofTilt());
-        survey.setAvailableRoofAreaSqFt(request.getAvailableRoofAreaSqFt());
-        survey.setCableDistanceMeters(request.getCableDistanceMeters());
-        survey.setShadingAssessment(request.getShadingAssessment());
-        survey.setGridSuitability(request.getGridSuitability());
         survey.setSurveyNotes(request.getSurveyNotes());
         survey.setStatus(SurveyStatus.SCHEDULED);
+
+        // Technical fields are intentionally left blank for the technician's physical inspection
+        if (request.getRoofDirection() != null) survey.setRoofDirection(request.getRoofDirection());
+        if (request.getRoofTilt() != null) survey.setRoofTilt(request.getRoofTilt());
+        if (request.getAvailableRoofAreaSqFt() != null) survey.setAvailableRoofAreaSqFt(request.getAvailableRoofAreaSqFt());
+        if (request.getCableDistanceMeters() != null) survey.setCableDistanceMeters(request.getCableDistanceMeters());
+        if (request.getShadingAssessment() != null) survey.setShadingAssessment(request.getShadingAssessment());
+        if (request.getGridSuitability() != null) survey.setGridSuitability(request.getGridSuitability());
 
         if (request.getEnquiryId() != null) {
             Enquiry enquiry = enquiryRepository.findById(request.getEnquiryId()).orElse(null);
@@ -82,7 +85,8 @@ public class SiteSurveyService {
                 EnquiryActivity act = new EnquiryActivity(
                         enquiry,
                         "SURVEY_SCHEDULED",
-                        "Site survey scheduled for " + request.getScheduledDate() + " with technician " + technician.getName(),
+                        "Site survey scheduled for " + request.getScheduledDate() + " with technician " + technician.getName() +
+                                (request.getSurveyNotes() != null ? " (Instructions: " + request.getSurveyNotes() + ")" : ""),
                         scheduledBy
                 );
                 enquiryActivityRepository.save(act);
@@ -93,6 +97,45 @@ public class SiteSurveyService {
         if (survey.getSurveyNumber() == null) {
             survey.setSurveyNumber("SRV-" + String.format("%05d", survey.getId()));
             survey = siteSurveyRepository.save(survey);
+        }
+
+        return survey;
+    }
+
+    @Transactional
+    public SiteSurvey submitInspectionReport(Long id, SurveyInspectionReportRequest request, String technicianName) {
+        SiteSurvey survey = getSurveyById(id);
+
+        if (request.getRoofDirection() != null) survey.setRoofDirection(request.getRoofDirection());
+        if (request.getRoofTilt() != null) survey.setRoofTilt(request.getRoofTilt());
+        if (request.getRoofCondition() != null) survey.setRoofCondition(request.getRoofCondition());
+        if (request.getAvailableRoofAreaSqFt() != null) survey.setAvailableRoofAreaSqFt(request.getAvailableRoofAreaSqFt());
+        if (request.getCableDistanceMeters() != null) survey.setCableDistanceMeters(request.getCableDistanceMeters());
+        if (request.getShadingAssessment() != null) survey.setShadingAssessment(request.getShadingAssessment());
+        if (request.getGridSuitability() != null) survey.setGridSuitability(request.getGridSuitability());
+        if (request.getStructuralObservations() != null) survey.setStructuralObservations(request.getStructuralObservations());
+        if (request.getSurveyNotes() != null) survey.setSurveyNotes(request.getSurveyNotes());
+        if (request.getInspectionRecommendation() != null) survey.setInspectionRecommendation(request.getInspectionRecommendation());
+
+        if (request.isDraft()) {
+            survey.setStatus(SurveyStatus.IN_PROGRESS);
+        } else {
+            survey.setStatus(SurveyStatus.REPORT_SUBMITTED);
+            survey.setReportSubmittedAt(LocalDateTime.now());
+        }
+
+        survey = siteSurveyRepository.save(survey);
+
+        if (survey.getEnquiry() != null && !request.isDraft()) {
+            Enquiry enquiry = survey.getEnquiry();
+            EnquiryActivity act = new EnquiryActivity(
+                    enquiry,
+                    "INSPECTION_REPORT_SUBMITTED",
+                    "Technician " + technicianName + " submitted site inspection report. Recommendation: " +
+                            (survey.getInspectionRecommendation() != null ? survey.getInspectionRecommendation() : "Pending Sales Review"),
+                    technicianName
+            );
+            enquiryActivityRepository.save(act);
         }
 
         return survey;

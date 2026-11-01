@@ -54,6 +54,17 @@ public class SiteSurvey {
     @Column(columnDefinition = "TEXT")
     private String surveyNotes;
 
+    @Column(length = 255)
+    private String roofCondition;
+
+    @Column(columnDefinition = "TEXT")
+    private String structuralObservations;
+
+    @Column(length = 50)
+    private String inspectionRecommendation;
+
+    private LocalDateTime reportSubmittedAt;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 30)
     private SurveyStatus status = SurveyStatus.SCHEDULED;
@@ -104,6 +115,8 @@ public class SiteSurvey {
     public void setRoofDirection(String roofDirection) { this.roofDirection = roofDirection; }
     public String getRoofTilt() { return roofTilt; }
     public void setRoofTilt(String roofTilt) { this.roofTilt = roofTilt; }
+    public String getRoofCondition() { return roofCondition; }
+    public void setRoofCondition(String roofCondition) { this.roofCondition = roofCondition; }
     public BigDecimal getAvailableRoofAreaSqFt() { return availableRoofAreaSqFt; }
     public void setAvailableRoofAreaSqFt(BigDecimal availableRoofAreaSqFt) { this.availableRoofAreaSqFt = availableRoofAreaSqFt; }
     public BigDecimal getCableDistanceMeters() { return cableDistanceMeters; }
@@ -114,6 +127,12 @@ public class SiteSurvey {
     public void setGridSuitability(String gridSuitability) { this.gridSuitability = gridSuitability; }
     public String getSurveyNotes() { return surveyNotes; }
     public void setSurveyNotes(String surveyNotes) { this.surveyNotes = surveyNotes; }
+    public String getStructuralObservations() { return structuralObservations; }
+    public void setStructuralObservations(String structuralObservations) { this.structuralObservations = structuralObservations; }
+    public String getInspectionRecommendation() { return inspectionRecommendation; }
+    public void setInspectionRecommendation(String inspectionRecommendation) { this.inspectionRecommendation = inspectionRecommendation; }
+    public LocalDateTime getReportSubmittedAt() { return reportSubmittedAt; }
+    public void setReportSubmittedAt(LocalDateTime reportSubmittedAt) { this.reportSubmittedAt = reportSubmittedAt; }
     public SurveyStatus getStatus() { return status; }
     public void setStatus(SurveyStatus status) { this.status = status; }
     public String getApprovedBy() { return approvedBy; }

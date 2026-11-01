@@ -22,6 +22,7 @@ public class Enums {
     }
 
     public enum EnquirySource {
+        CUSTOMER_PORTAL,
         WEBSITE,
         WHATSAPP,
         PHONE,
@@ -43,8 +44,10 @@ public class Enums {
         PENDING,
         SCHEDULED,
         IN_PROGRESS,
+        REPORT_SUBMITTED,
         APPROVED,
-        REJECTED
+        REJECTED,
+        REVISIT_REQUIRED
     }
 
     public enum QuotationStatus {
@@ -96,8 +99,11 @@ public class Enums {
 
     public enum SerialNumberStatus {
         IN_STOCK,
+        RESERVED,
         ALLOCATED,
+        PICKED,
         DISPATCHED,
+        SITE_RECEIVED,
         INSTALLED,
         DEFECTIVE,
         REPLACED
@@ -119,6 +125,7 @@ public class Enums {
     }
 
     public enum WarrantyStatus {
+        NOT_STARTED,
         ACTIVE,
         EXPIRED,
         VOIDED
@@ -146,12 +153,24 @@ public class Enums {
     }
 
     public enum ExpenseCategory {
-        PRODUCT_PURCHASE,
-        INSTALLATION,
-        TECHNICIAN_PAYOUT,
-        SERVICE_REPAIR,
+        SALARY,
         TRANSPORT,
+        ELECTRICITY,
+        MAINTENANCE,
+        OFFICE,
+        EQUIPMENT,
+        INSTALLATION,
+        SERVICE_REPAIR,
+        TECHNICIAN_PAYOUT,
+        PRODUCT_PURCHASE,
         OTHER
+    }
+
+    public enum ExpenseStatus {
+        PENDING,
+        APPROVED,
+        REJECTED,
+        PAID
     }
 
     public enum TechnicianPayoutStatus {

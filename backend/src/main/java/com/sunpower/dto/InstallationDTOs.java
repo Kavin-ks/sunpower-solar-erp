@@ -59,6 +59,7 @@ public class InstallationDTOs {
 
         private String testingNotes; // e.g. "Generating 4.9 kW at 1:15 PM, voltage stable"
         private String customerSigneeName;
+        private String customerSignatureUrl;
         private String customerAcceptanceNote;
         private String workNotes;
 
@@ -85,12 +86,24 @@ public class InstallationDTOs {
         public void setTestingNotes(String testingNotes) { this.testingNotes = testingNotes; }
         public String getCustomerSigneeName() { return customerSigneeName; }
         public void setCustomerSigneeName(String customerSigneeName) { this.customerSigneeName = customerSigneeName; }
+        public String getCustomerSignatureUrl() { return customerSignatureUrl; }
+        public void setCustomerSignatureUrl(String customerSignatureUrl) { this.customerSignatureUrl = customerSignatureUrl; }
         public String getCustomerAcceptanceNote() { return customerAcceptanceNote; }
         public void setCustomerAcceptanceNote(String customerAcceptanceNote) { this.customerAcceptanceNote = customerAcceptanceNote; }
         public String getWorkNotes() { return workNotes; }
         public void setWorkNotes(String workNotes) { this.workNotes = workNotes; }
         public List<TechnicianHoursRequest> getTechnicianHours() { return technicianHours; }
         public void setTechnicianHours(List<TechnicianHoursRequest> technicianHours) { this.technicianHours = technicianHours; }
+    }
+
+    public static class VerifyProductRequest {
+        @NotNull(message = "Scanned barcode or serial code is required")
+        private String barcode;
+
+        public VerifyProductRequest() {}
+        public VerifyProductRequest(String barcode) { this.barcode = barcode; }
+        public String getBarcode() { return barcode; }
+        public void setBarcode(String barcode) { this.barcode = barcode; }
     }
 
     public static class TechnicianHoursRequest {

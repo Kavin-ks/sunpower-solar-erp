@@ -1,0 +1,616 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SunPower Solutions — Complete Database Architecture & ER Diagram</title>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/svg-pan-zoom@3.6.1/dist/svg-pan-zoom.min.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0b1120;
+      --card-bg: rgba(15, 23, 42, 0.85);
+      --border: #1e293b;
+      --accent: #10b981;
+      --accent-glow: rgba(16, 185, 129, 0.25);
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--bg);
+      color: var(--text-main);
+      font-family: 'Inter', sans-serif;
+      overflow-x: hidden;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* HEADER */
+    header {
+      background: rgba(15, 23, 42, 0.95);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+      padding: 1rem 2rem;
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 0.85rem;
+    }
+
+    .brand-icon {
+      width: 42px;
+      height: 42px;
+      background: linear-gradient(135deg, #f59e0b, #10b981);
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 22px;
+      box-shadow: 0 0 16px var(--accent-glow);
+    }
+
+    .brand-title h1 {
+      font-size: 1.25rem;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      background: linear-gradient(90deg, #ffffff, #cbd5e1);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .brand-title p {
+      font-size: 0.75rem;
+      color: var(--accent);
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    /* CONTROLS */
+    .controls {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .btn {
+      background: #1e293b;
+      border: 1px solid #334155;
+      color: #f1f5f9;
+      font-size: 0.8rem;
+      font-weight: 600;
+      padding: 0.5rem 0.85rem;
+      border-radius: 8px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      transition: all 0.2s ease;
+    }
+
+    .btn:hover {
+      background: #334155;
+      border-color: #475569;
+      color: #ffffff;
+      transform: translateY(-1px);
+    }
+
+    .btn-primary {
+      background: #059669;
+      border-color: #10b981;
+      color: #ffffff;
+    }
+
+    .btn-primary:hover {
+      background: #10b981;
+      box-shadow: 0 0 12px var(--accent-glow);
+    }
+
+    /* LEGEND BADGES */
+    .legend-bar {
+      background: #0f172a;
+      border-bottom: 1px solid var(--border);
+      padding: 0.65rem 2rem;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.65rem;
+      font-size: 0.75rem;
+    }
+
+    .legend-label {
+      color: var(--text-muted);
+      font-weight: 600;
+      margin-right: 0.5rem;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      padding: 0.25rem 0.6rem;
+      border-radius: 6px;
+      font-weight: 600;
+      border: 1px solid transparent;
+    }
+
+    .badge-amber  { background: rgba(245, 158, 11, 0.15); color: #fbbf24; border-color: rgba(245, 158, 11, 0.3); }
+    .badge-cyan   { background: rgba(6, 182, 212, 0.15); color: #22d3ee; border-color: rgba(6, 182, 212, 0.3); }
+    .badge-purple { background: rgba(168, 85, 247, 0.15); color: #c084fc; border-color: rgba(168, 85, 247, 0.3); }
+    .badge-emerald{ background: rgba(16, 185, 129, 0.15); color: #34d399; border-color: rgba(16, 185, 129, 0.3); }
+    .badge-blue   { background: rgba(59, 130, 246, 0.15); color: #60a5fa; border-color: rgba(59, 130, 246, 0.3); }
+    .badge-indigo { background: rgba(99, 102, 241, 0.15); color: #818cf8; border-color: rgba(99, 102, 241, 0.3); }
+    .badge-rose   { background: rgba(244, 63, 94, 0.15); color: #fb7185; border-color: rgba(244, 63, 94, 0.3); }
+    .badge-slate  { background: rgba(148, 163, 184, 0.15); color: #cbd5e1; border-color: rgba(148, 163, 184, 0.3); }
+
+    /* DIAGRAM CANVAS */
+    #diagram-container {
+      flex: 1;
+      position: relative;
+      background: radial-gradient(circle at center, #131d33 0%, #0b1120 100%);
+      overflow: hidden;
+      min-height: calc(100vh - 120px);
+    }
+
+    #mermaid-render {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 800px;
+    }
+
+    svg {
+      width: 100% !important;
+      height: 100% !important;
+      max-height: 100vh;
+    }
+
+    /* FLOATING HINT */
+    .floating-hint {
+      position: absolute;
+      bottom: 1.5rem;
+      left: 1.5rem;
+      background: rgba(15, 23, 42, 0.85);
+      backdrop-filter: blur(8px);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 0.6rem 1rem;
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      pointer-events: none;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    }
+
+    .kbd {
+      background: #1e293b;
+      border: 1px solid #334155;
+      padding: 0.1rem 0.35rem;
+      border-radius: 4px;
+      font-family: 'JetBrains Mono', monospace;
+      color: #e2e8f0;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- HEADER -->
+  <header>
+    <div class="brand">
+      <div class="brand-icon">☀️</div>
+      <div class="brand-title">
+        <h1>SunPower Solutions ERP</h1>
+        <p>Complete 36-Table Relational Schema Architecture</p>
+      </div>
+    </div>
+    <div class="controls">
+      <button class="btn" onclick="zoomIn()" title="Zoom In">🔍 +</button>
+      <button class="btn" onclick="zoomOut()" title="Zoom Out">🔍 −</button>
+      <button class="btn" onclick="resetZoom()" title="Reset View">↺ Reset View</button>
+      <button class="btn btn-primary" onclick="downloadSVG()" title="Export Vector SVG">📥 Download SVG</button>
+      <button class="btn btn-primary" onclick="downloadPNG()" title="Export High-Res PNG Photo">📷 Download PNG</button>
+    </div>
+  </header>
+
+  <!-- LEGEND -->
+  <div class="legend-bar">
+    <span class="legend-label">Modules:</span>
+    <span class="badge badge-amber">● CRM & Enquiries</span>
+    <span class="badge badge-cyan">● Site Surveys & Engineering</span>
+    <span class="badge badge-purple">● Catalog & Package BOM</span>
+    <span class="badge badge-emerald">● Quotations & Orders</span>
+    <span class="badge badge-blue">● Finance, GST & Subsidy</span>
+    <span class="badge badge-indigo">● Serialized Warehouse & Dispatch</span>
+    <span class="badge badge-rose">● Installations & Warranties</span>
+    <span class="badge badge-slate">● RBAC & User Management</span>
+  </div>
+
+  <!-- CANVAS -->
+  <div id="diagram-container">
+    <div id="mermaid-render">
+      <pre class="mermaid">
+erDiagram
+    %% ========================================================
+    %% 1. CORE AUTH & IDENTITY
+    %% ========================================================
+    USERS ||--o{ USER_ROLES : "assigned_role"
+    ROLES ||--o{ USER_ROLES : "defines_permissions"
+    USERS ||--o{ ENQUIRIES : "assigned_sales_consultant"
+
+    %% ========================================================
+    %% 2. CRM, CUSTOMER LEADS & SITE SURVEYS
+    %% ========================================================
+    CUSTOMERS ||--o{ ENQUIRIES : "submits"
+    ENQUIRIES ||--o{ ENQUIRY_ACTIVITIES : "tracks_audit_history"
+    CUSTOMERS ||--o{ SITE_SURVEYS : "site_property"
+    ENQUIRIES ||--o{ SITE_SURVEYS : "schedules_inspection"
+    TECHNICIANS ||--o{ SITE_SURVEYS : "conducts_survey"
+    SITE_SURVEYS ||--o{ SURVEY_PHOTOS : "upload_site_photos"
+
+    %% ========================================================
+    %% 3. CATALOG & DYNAMIC BILL OF MATERIALS (BOM)
+    %% ========================================================
+    PRODUCT_CATEGORIES ||--o{ PRODUCTS : "categorizes"
+    SOLAR_PACKAGES ||--o{ PACKAGE_BOMS : "hardware_recipe"
+    PRODUCTS ||--o{ PACKAGE_BOMS : "required_component"
+
+    %% ========================================================
+    %% 4. QUOTATIONS & SALES ORDERS
+    %% ========================================================
+    CUSTOMERS ||--o{ QUOTATIONS : "presented_to"
+    SITE_SURVEYS ||--o{ QUOTATIONS : "verified_feasibility_gate"
+    SOLAR_PACKAGES ||--o{ QUOTATIONS : "configures"
+    QUOTATIONS ||--o{ QUOTATION_ITEMS : "breakdown"
+    PRODUCTS ||--o{ QUOTATION_ITEMS : "quoted_product"
+
+    CUSTOMERS ||--o{ SALES_ORDERS : "purchaser"
+    QUOTATIONS ||--|| SALES_ORDERS : "accepted_quote_conversion"
+    SOLAR_PACKAGES ||--o{ SALES_ORDERS : "selected_system"
+    SALES_ORDERS ||--o{ ORDER_ITEMS : "bill_of_materials"
+    PRODUCTS ||--o{ ORDER_ITEMS : "allocated_item"
+
+    %% ========================================================
+    %% 5. FINANCE, REVENUE, GST & SUBSIDIES
+    %% ========================================================
+    SALES_ORDERS ||--o{ PAYMENTS : "30pct_advance_and_milestones"
+    CUSTOMERS ||--o{ PAYMENTS : "remits_funds"
+    SALES_ORDERS ||--o{ INVOICES : "gst_tax_invoice"
+    CUSTOMERS ||--o{ INVOICES : "billed_to"
+    SERVICE_TICKETS ||--o{ INVOICES : "maintenance_invoice"
+
+    SALES_ORDERS ||--o{ SUBSIDY_APPLICATIONS : "pm_surya_ghar_claim"
+    CUSTOMERS ||--o{ SUBSIDY_APPLICATIONS : "beneficiary_bank_dbt"
+
+    SALES_ORDERS ||--o{ EXPENSES : "project_costs"
+    SERVICE_TICKETS ||--o{ EXPENSES : "parts_labor_expenses"
+
+    %% ========================================================
+    %% 6. WAREHOUSE, SERIAL NUMBERS & DISPATCH
+    %% ========================================================
+    PRODUCTS ||--|| INVENTORY_STOCKS : "tracks_available_reserved"
+    PRODUCTS ||--o{ STOCK_MOVEMENTS : "logs_ledger_adjustment"
+    PRODUCTS ||--o{ SERIAL_NUMBERS : "individual_hardware_barcodes"
+    SALES_ORDERS ||--o{ SERIAL_NUMBERS : "assigned_customer_units"
+    CUSTOMERS ||--o{ SERIAL_NUMBERS : "installed_asset"
+    SERIAL_NUMBERS ||--o{ SERIAL_NUMBER_HISTORIES : "lifecycle_events"
+
+    SALES_ORDERS ||--o{ DISPATCHES : "staging_and_shipping"
+    CUSTOMERS ||--o{ DISPATCHES : "destination"
+    DISPATCHES ||--o{ DISPATCH_ITEMS : "shipping_manifest"
+    PRODUCTS ||--o{ DISPATCH_ITEMS : "manifest_item"
+    SERIAL_NUMBERS ||--o{ DISPATCH_ITEMS : "scanned_barcode_gate"
+
+    PURCHASES ||--o{ PURCHASE_ITEMS : "vendor_purchase_order"
+    PRODUCTS ||--o{ PURCHASE_ITEMS : "warehouse_restock"
+
+    %% ========================================================
+    %% 7. FIELD INSTALLATION & COMMISSIONING
+    %% ========================================================
+    SALES_ORDERS ||--|| INSTALLATIONS : "field_execution_project"
+    CUSTOMERS ||--o{ INSTALLATIONS : "site_signoff"
+    INSTALLATIONS ||--o{ INSTALLATION_TECHNICIANS : "crew_assignment"
+    TECHNICIANS ||--o{ INSTALLATION_TECHNICIANS : "hourly_labor"
+    INSTALLATIONS ||--o{ INSTALLATION_PHOTOS : "completion_evidence"
+    INSTALLATIONS ||--o{ TECHNICIAN_PAYMENTS : "commission_payroll"
+    TECHNICIANS ||--o{ TECHNICIAN_PAYMENTS : "credited_to"
+
+    %% ========================================================
+    %% 8. WARRANTIES & AFTER-SALES SERVICE DESK
+    %% ========================================================
+    SERIAL_NUMBERS ||--|| WARRANTIES : "hardware_warranty_card"
+    SALES_ORDERS ||--o{ WARRANTIES : "originating_order"
+    CUSTOMERS ||--o{ WARRANTIES : "warranty_beneficiary"
+    PRODUCTS ||--o{ WARRANTIES : "component_guarantee"
+
+    CUSTOMERS ||--o{ SERVICE_TICKETS : "customer_complaint"
+    SERIAL_NUMBERS ||--o{ SERVICE_TICKETS : "defective_device_scan"
+    INSTALLATIONS ||--o{ SERVICE_TICKETS : "plant_location"
+    WARRANTIES ||--o{ SERVICE_TICKETS : "warranty_validation_check"
+    TECHNICIANS ||--o{ SERVICE_TICKETS : "field_troubleshooter"
+    SERVICE_TICKETS ||--o{ SERVICE_ACTIVITIES : "action_timeline"
+    SERVICE_TICKETS ||--o{ SERVICE_PARTS : "replaced_spares"
+    PRODUCTS ||--o{ SERVICE_PARTS : "spare_inventory_item"
+
+    %% ========================================================
+    %% TABLE SCHEMAS (CORE ATTRIBUTES)
+    %% ========================================================
+    CUSTOMERS {
+        bigint id PK
+        varchar full_name
+        varchar phone
+        varchar email
+        varchar city
+        varchar customer_type
+    }
+    ENQUIRIES {
+        bigint id PK
+        varchar enquiry_number UK
+        bigint customer_id FK
+        decimal requested_capacity_kw
+        varchar system_type
+        varchar status
+        bigint assigned_to_user_id FK
+    }
+    SITE_SURVEYS {
+        bigint id PK
+        varchar survey_number UK
+        bigint customer_id FK
+        bigint enquiry_id FK
+        bigint technician_id FK
+        decimal available_roof_area_sq_ft
+        varchar status
+        varchar approved_by
+    }
+    SOLAR_PACKAGES {
+        bigint id PK
+        varchar name
+        varchar system_type
+        decimal capacity_kw
+        decimal base_price
+    }
+    PACKAGE_BOMS {
+        bigint id PK
+        bigint package_id FK
+        bigint product_id FK
+        int quantity
+    }
+    PRODUCTS {
+        bigint id PK
+        varchar product_code UK
+        varchar name
+        bigint category_id FK
+        decimal purchase_price
+        decimal selling_price
+        int current_stock
+        boolean serialized
+    }
+    QUOTATIONS {
+        bigint id PK
+        varchar quotation_number UK
+        bigint customer_id FK
+        bigint site_survey_id FK
+        bigint solar_package_id FK
+        decimal subtotal
+        decimal tax_amount
+        decimal total_amount
+        varchar status
+    }
+    SALES_ORDERS {
+        bigint id PK
+        varchar order_number UK
+        bigint customer_id FK
+        bigint quotation_id FK
+        decimal total_amount
+        decimal advance_required
+        decimal total_paid
+        decimal remaining_balance
+        varchar status
+    }
+    PAYMENTS {
+        bigint id PK
+        varchar payment_number UK
+        bigint order_id FK
+        bigint customer_id FK
+        decimal amount
+        varchar method
+        varchar reference_number
+        varchar status
+    }
+    INVENTORY_STOCKS {
+        bigint id PK
+        bigint product_id FK
+        int available_quantity
+        int reserved_quantity
+        varchar warehouse_location
+    }
+    DISPATCHES {
+        bigint id PK
+        varchar dispatch_number UK
+        bigint sales_order_id FK
+        bigint customer_id FK
+        varchar status
+    }
+    SERIAL_NUMBERS {
+        bigint id PK
+        varchar serial_code UK
+        bigint product_id FK
+        varchar status
+        bigint sales_order_id FK
+        bigint customer_id FK
+    }
+    INSTALLATIONS {
+        bigint id PK
+        varchar installation_number UK
+        bigint sales_order_id FK
+        bigint customer_id FK
+        boolean testing_passed
+        varchar customer_signature_url
+        varchar status
+    }
+    WARRANTIES {
+        bigint id PK
+        varchar warranty_number UK
+        bigint serial_number_id FK
+        bigint customer_id FK
+        bigint sales_order_id FK
+        date warranty_start_date
+        date warranty_end_date
+        varchar status
+    }
+    SERVICE_TICKETS {
+        bigint id PK
+        varchar ticket_number UK
+        bigint customer_id FK
+        bigint serial_number_id FK
+        bigint warranty_id FK
+        varchar status
+        boolean under_warranty
+    }
+    INVOICES {
+        bigint id PK
+        varchar invoice_number UK
+        bigint sales_order_id FK
+        bigint customer_id FK
+        decimal total_amount
+        decimal paid_amount
+        decimal balance_amount
+        varchar status
+    }
+      </pre>
+    </div>
+
+    <div class="floating-hint">
+      <span>💡 Pan: Click & Drag</span> • <span>Zoom: Mouse Wheel or <span class="kbd">+</span> / <span class="kbd">−</span></span> • <span>Export: Top Right</span>
+    </div>
+  </div>
+
+  <script>
+    mermaid.initialize({
+      startOnLoad: true,
+      theme: 'dark',
+      themeVariables: {
+        darkMode: true,
+        background: 'transparent',
+        primaryColor: '#1e293b',
+        primaryTextColor: '#f8fafc',
+        primaryBorderColor: '#38bdf8',
+        lineColor: '#10b981',
+        secondaryColor: '#0f172a',
+        tertiaryColor: '#1e293b'
+      },
+      er: {
+        useMaxWidth: false,
+        layoutDirection: 'TB',
+        entityPadding: 16
+      }
+    });
+
+    let panZoomInstance = null;
+
+    window.addEventListener('load', () => {
+      setTimeout(() => {
+        const svgElement = document.querySelector('#mermaid-render svg');
+        if (svgElement) {
+          svgElement.setAttribute('id', 'er-diagram-svg');
+          panZoomInstance = svgPanZoom('#er-diagram-svg', {
+            zoomEnabled: true,
+            controlIconsEnabled: false,
+            fit: true,
+            center: true,
+            minZoom: 0.2,
+            maxZoom: 10
+          });
+        }
+      }, 800);
+    });
+
+    function zoomIn() {
+      if (panZoomInstance) panZoomInstance.zoomIn();
+    }
+
+    function zoomOut() {
+      if (panZoomInstance) panZoomInstance.zoomOut();
+    }
+
+    function resetZoom() {
+      if (panZoomInstance) {
+        panZoomInstance.resetZoom();
+        panZoomInstance.center();
+      }
+    }
+
+    function downloadSVG() {
+      const svg = document.querySelector('#mermaid-render svg');
+      if (!svg) return alert('Diagram is still rendering, please wait a moment.');
+      const serializer = new XMLSerializer();
+      let source = serializer.serializeToString(svg);
+      if (!source.match(/^<svg[^>]+xmlns="http\:\/\/www\.w3\.org\/2000\/svg"/)) {
+        source = source.replace(/^<svg/, '<svg xmlns="http://www.w3.org/2000/svg"');
+      }
+      const url = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(source);
+      const downloadLink = document.createElement("a");
+      downloadLink.href = url;
+      downloadLink.download = "sunpower_database_architecture.svg";
+      document.body.appendChild(downloadLink);
+      downloadLink.click();
+      document.body.removeChild(downloadLink);
+    }
+
+    function downloadPNG() {
+      const svg = document.querySelector('#mermaid-render svg');
+      if (!svg) return alert('Diagram is still rendering, please wait a moment.');
+      
+      const serializer = new XMLSerializer();
+      const svgString = serializer.serializeToString(svg);
+      const svgBlob = new Blob([svgString], { type: 'image/svg+xml;charset=utf-8' });
+      const URL = window.URL || window.webkitURL || window;
+      const blobURL = URL.createObjectURL(svgBlob);
+
+      const image = new Image();
+      image.onload = () => {
+        const canvas = document.createElement('canvas');
+        const scale = 2; // High DPI 2x resolution
+        canvas.width = svg.getBoundingClientRect().width * scale || 3840;
+        canvas.height = svg.getBoundingClientRect().height * scale || 2160;
+        const context = canvas.getContext('2d');
+        context.fillStyle = '#0b1120';
+        context.fillRect(0, 0, canvas.width, canvas.height);
+        context.drawImage(image, 0, 0, canvas.width, canvas.height);
+
+        const pngUrl = canvas.toDataURL('image/png');
+        const downloadLink = document.createElement('a');
+        downloadLink.href = pngUrl;
+        downloadLink.download = 'sunpower_database_architecture.png';
+        document.body.appendChild(downloadLink);
+        downloadLink.click();
+        document.body.removeChild(downloadLink);
+      };
+      image.src = blobURL;
+    }
+  </script>
+</body>
+</html>

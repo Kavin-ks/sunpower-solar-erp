@@ -1,0 +1,93 @@
+services:
+  # MySQL 8.0 Relational Database
+  mysql:
+    image: mysql:8.0
+    container_name: sunpower-mysql
+    restart: unless-stopped
+    command: --default-authentication-plugin=mysql_native_password
+    environment:
+      MYSQL_DATABASE: solar_db
+      MYSQL_ROOT_PASSWORD: MyNewPassword@123
+      MYSQL_USER: solar
+      MYSQL_PASSWORD: solarpassword
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -uroot -pMyNewPassword@123 || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 15s
+    networks:
+      - sunpower-network
+
+  # Spring Boot 3.4.3 Backend API
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: sunpower-backend
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/solar_db?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: MyNewPassword@123
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
+      APP_UPLOAD_DIR: /app/uploads
+      APP_JWT_SECRET: 404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970
+      APP_JWT_EXPIRATION_MS: 86400000
+    ports:
+      - "8080:8080"
+    volumes:
+      - backend_uploads:/app/uploads
+    networks:
+      - sunpower-network
+
+  # React 19 + Vite + Nginx Staff Dashboard
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: sunpower-frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "80:80"
+      - "5173:80"
+    networks:
+      - sunpower-network
+
+  # Next.js 13.5 Customer Portal & Marketing Website
+  odoo-solar:
+    build:
+      context: ./odoo-solar
+      dockerfile: Dockerfile
+    container_name: sunpower-odoo-solar
+    restart: unless-stopped
+    depends_on:
+      - backend
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:8080
+      BACKEND_API_URL: http://backend:8080
+      PORT: 3000
+    ports:
+      - "3000:3000"
+    networks:
+      - sunpower-network
+
+volumes:
+  mysql_data:
+    name: sunpower_mysql_data
+  backend_uploads:
+    name: sunpower_backend_uploads
+
+networks:
+  sunpower-network:
+    name: sunpower-network
+    driver: bridge

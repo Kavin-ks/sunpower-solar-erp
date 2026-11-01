@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SunPower Solutions — Solar ERP Workflow Architecture</title>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #090d16;
+      --surface: #111827;
+      --card: #1e293b;
+      --border: #334155;
+      --emerald: #10b981;
+      --amber: #f59e0b;
+      --cyan: #06b6d4;
+      --blue: #3b82f6;
+      --purple: #a855f7;
+      --rose: #f43f5e;
+      --text: #f8fafc;
+      --muted: #94a3b8;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--bg);
+      color: var(--text);
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      line-height: 1.5;
+      padding-bottom: 4rem;
+    }
+
+    /* HEADER */
+    header {
+      background: rgba(17, 24, 39, 0.9);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+      padding: 1.25rem 2rem;
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .logo-badge {
+      width: 44px;
+      height: 44px;
+      background: linear-gradient(135deg, #f59e0b, #10b981);
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px;
+      box-shadow: 0 0 20px rgba(16, 185, 129, 0.3);
+    }
+
+    .brand h1 {
+      font-size: 1.25rem;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+    }
+
+    .brand p {
+      font-size: 0.8rem;
+      color: var(--emerald);
+      font-weight: 600;
+    }
+
+    .actions {
+      display: flex;
+      gap: 0.75rem;
+    }
+
+    .btn {
+      background: #1e293b;
+      color: white;
+      border: 1px solid #475569;
+      padding: 0.5rem 1rem;
+      border-radius: 8px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      transition: all 0.2s;
+    }
+
+    .btn:hover {
+      background: #334155;
+      border-color: #64748b;
+    }
+
+    .btn-primary {
+      background: var(--emerald);
+      border-color: #059669;
+    }
+
+    .btn-primary:hover {
+      background: #059669;
+    }
+
+    /* CONTAINER */
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 2rem;
+    }
+
+    .section-title {
+      font-size: 1.5rem;
+      font-weight: 800;
+      margin-bottom: 0.5rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .section-desc {
+      color: var(--muted);
+      font-size: 0.95rem;
+      margin-bottom: 2rem;
+    }
+
+    /* WORKFLOW GRAPH CARD */
+    .graph-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 2rem 1.5rem;
+      margin-bottom: 3rem;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+      overflow-x: auto;
+    }
+
+    .graph-card #workflow-render {
+      display: flex;
+      justify-content: center;
+      min-width: 900px;
+    }
+
+    /* STEP CARDS GRID */
+    .steps-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+      gap: 1.5rem;
+    }
+
+    .step-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 1.5rem;
+      position: relative;
+      transition: transform 0.2s, border-color 0.2s;
+    }
+
+    .step-card:hover {
+      transform: translateY(-2px);
+      border-color: #475569;
+    }
+
+    .step-num {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 28px;
+      height: 28px;
+      border-radius: 8px;
+      font-size: 0.8rem;
+      font-weight: 800;
+      margin-bottom: 1rem;
+    }
+
+    .badge-amber  { background: rgba(245, 158, 11, 0.2); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.4); }
+    .badge-cyan   { background: rgba(6, 182, 212, 0.2); color: #22d3ee; border: 1px solid rgba(6, 182, 212, 0.4); }
+    .badge-purple { background: rgba(168, 85, 247, 0.2); color: #c084fc; border: 1px solid rgba(168, 85, 247, 0.4); }
+    .badge-emerald{ background: rgba(16, 185, 129, 0.2); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.4); }
+    .badge-indigo { background: rgba(99, 102, 241, 0.2); color: #818cf8; border: 1px solid rgba(99, 102, 241, 0.4); }
+    .badge-blue   { background: rgba(59, 130, 246, 0.2); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.4); }
+    .badge-rose   { background: rgba(244, 63, 94, 0.2); color: #fb7185; border: 1px solid rgba(244, 63, 94, 0.4); }
+
+    .step-title {
+      font-size: 1.1rem;
+      font-weight: 700;
+      margin-bottom: 0.35rem;
+    }
+
+    .step-dept {
+      font-size: 0.75rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      font-weight: 600;
+      margin-bottom: 0.75rem;
+    }
+
+    .step-body {
+      font-size: 0.85rem;
+      color: #cbd5e1;
+      margin-bottom: 1rem;
+    }
+
+    .gate-box {
+      background: rgba(15, 23, 42, 0.8);
+      border-left: 3px solid var(--amber);
+      border-radius: 4px;
+      padding: 0.6rem 0.8rem;
+      font-size: 0.78rem;
+      margin-bottom: 0.75rem;
+    }
+
+    .gate-box.green {
+      border-left-color: var(--emerald);
+    }
+
+    .gate-label {
+      font-weight: 700;
+      color: white;
+      display: block;
+      margin-bottom: 0.2rem;
+    }
+
+    .db-tag {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.75rem;
+      color: #38bdf8;
+      background: rgba(56, 189, 248, 0.1);
+      padding: 0.2rem 0.45rem;
+      border-radius: 4px;
+      display: inline-block;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- HEADER -->
+  <header>
+    <div class="brand">
+      <div class="logo-badge">☀️</div>
+      <div>
+        <h1>SunPower Solutions ERP</h1>
+        <p>Operational Architecture & Workflow Pipeline</p>
+      </div>
+    </div>
+    <div class="actions">
+      <a href="/database_architecture.html" class="btn">View Detailed 36-Table ERD ➔</a>
+      <button onclick="window.print()" class="btn btn-primary">🖨️ Print / Save PDF</button>
+    </div>
+  </header>
+
+  <div class="container">
+
+    <h2 class="section-title">⚡ End-to-End Operational Pipeline</h2>
+    <p class="section-desc">The 7 sequential operational stages connecting Customers, Sales, Field Engineering, Finance, Warehouse, and Installation.</p>
+
+    <!-- WORKFLOW DIAGRAM -->
+    <div class="graph-card">
+      <div id="workflow-render">
+        <pre class="mermaid">
+flowchart LR
+    %% STYLING
+    classDef default fill:#1e293b,stroke:#334155,stroke-width:2px,color:#fff;
+    classDef gate fill:#78350f,stroke:#f59e0b,stroke-width:2px,color:#fff;
+    classDef success fill:#064e3b,stroke:#10b981,stroke-width:2px,color:#fff;
+    classDef finance fill:#1e1b4b,stroke:#6366f1,stroke-width:2px,color:#fff;
+
+    %% NODES
+    S1["<b>1. Customer Enquiry</b><br/>Lead Captured ($0)<br/>Web Portal / Sales"]:::default
+    
+    S2["<b>2. Site Survey</b><br/>Field Engineer Dispatched<br/>Roof & Feasibility Check"]:::default
+    
+    G1{"<b>GATE 1</b><br/>Survey Status == APPROVED?"}:::gate
+
+    S3["<b>3. Quotation & BOM</b><br/>Inventory Costs Joined<br/>Discount & System Sizing"]:::default
+
+    G2{"<b>GATE 2</b><br/>Customer Accepted?"}:::gate
+
+    S4["<b>4. Sales Order & Advance</b><br/>Finance Verifies UTR<br/>Order Status: PENDING_PAYMENT"]:::finance
+
+    G3{"<b>GATE 3</b><br/>Paid >= 30% Advance?"}:::gate
+
+    S5["<b>5. Warehouse Dispatch</b><br/>Order CONFIRMED<br/>Barcodes Scanned"]:::success
+
+    S6["<b>6. Field Installation</b><br/>Mounting, Grid Sync &<br/>Customer Digital Signature"]:::default
+
+    S7["<b>7. Warranty & Support</b><br/>Warranties Generated<br/>Service Tickets: ₹0 Spares"]:::default
+
+    %% FLOW CONNECTIONS
+    S1 -->|Sales Qualifies| S2
+    S2 -->|Submit Inspection| G1
+    G1 -->|YES| S3
+    G1 -->|REJECTED| R1[Lead Closed / Re-examine]
+    S3 -->|Send Quote| G2
+    G2 -->|YES| S4
+    S4 -->|Customer Transfers Advance| G3
+    G3 -->|YES: 30%+ Verified| S5
+    S5 -->|Hardware Delivered| S6
+    S6 -->|Handover Signed| S7
+        </pre>
+      </div>
+    </div>
+
+    <h2 class="section-title">📋 Clear Stage-by-Stage Breakdown</h2>
+    <p class="section-desc">Each stage enforces strict business gates before advancing to prevent financial losses and installation failures.</p>
+
+    <div class="steps-grid">
+
+      <!-- STAGE 1 -->
+      <div class="step-card">
+        <span class="step-num badge-amber">1</span>
+        <h3 class="step-title">Customer Enquiry</h3>
+        <p class="step-dept">Department: Sales & Customer Portal</p>
+        <p class="step-body">Lead is captured from the website enquiry form or manually keyed in by sales. Captures contact details, address, desired capacity (1kW–5kW), and electricity bill.</p>
+        <div class="gate-box">
+          <span class="gate-label">Pre-Condition:</span>
+          Zero cost ($0). No payment is ever required at the enquiry stage.
+        </div>
+        <div>
+          <span class="db-tag">customers</span> &nbsp; <span class="db-tag">enquiries</span> &nbsp; <span class="db-tag">enquiry_activities</span>
+        </div>
+      </div>
+
+      <!-- STAGE 2 -->
+      <div class="step-card">
+        <span class="step-num badge-cyan">2</span>
+        <h3 class="step-title">Site Feasibility Survey</h3>
+        <p class="step-dept">Department: Field Engineering / Technicians</p>
+        <p class="step-body">A certified field technician visits the site. Measures shadow-free roof area (sq.ft), tilt angle, roof orientation, transformer capacity, and uploads photo evidence.</p>
+        <div class="gate-box">
+          <span class="gate-label">Strict Business Gate:</span>
+          A quotation CANNOT be created unless the site survey is officially <b>APPROVED</b>.
+        </div>
+        <div>
+          <span class="db-tag">site_surveys</span> &nbsp; <span class="db-tag">survey_photos</span> &nbsp; <span class="db-tag">technicians</span>
+        </div>
+      </div>
+
+      <!-- STAGE 3 -->
+      <div class="step-card">
+        <span class="step-num badge-purple">3</span>
+        <h3 class="step-title">BOM & Quotation</h3>
+        <p class="step-dept">Department: Sales & Pricing Engine</p>
+        <p class="step-body">System builds an automated Bill of Materials (BOM) based on approved survey measurements. Pulls live inventory purchase costs to calculate exact gross profit margins.</p>
+        <div class="gate-box">
+          <span class="gate-label">Approval Gate:</span>
+          Discounts &gt; 10% require Managing Director sign-off before customer dispatch.
+        </div>
+        <div>
+          <span class="db-tag">solar_packages</span> &nbsp; <span class="db-tag">package_boms</span> &nbsp; <span class="db-tag">quotations</span>
+        </div>
+      </div>
+
+      <!-- STAGE 4 -->
+      <div class="step-card">
+        <span class="step-num badge-blue">4</span>
+        <h3 class="step-title">30% Advance Deposit</h3>
+        <p class="step-dept">Department: Finance & Accounts</p>
+        <p class="step-body">Customer accepts quotation. Quotation converts into a Sales Order with status <code>PENDING_PAYMENT</code>. Customer remits 30% advance via NEFT/UPI.</p>
+        <div class="gate-box green">
+          <span class="gate-label">Finance Verification Gate:</span>
+          Finance verifies Bank UTR and records payment. Order moves to <code>CONFIRMED</code> only when <b>Total Paid &ge; 30% Advance</b>.
+        </div>
+        <div>
+          <span class="db-tag">sales_orders</span> &nbsp; <span class="db-tag">payments</span> &nbsp; <span class="db-tag">invoices</span>
+        </div>
+      </div>
+
+      <!-- STAGE 5 -->
+      <div class="step-card">
+        <span class="step-num badge-indigo">5</span>
+        <h3 class="step-title">Warehouse & Barcode Dispatch</h3>
+        <p class="step-dept">Department: Warehouse & Logistics</p>
+        <p class="step-body">Order confirmation automatically stages a Dispatch ticket and reserves stock. Warehouse picks equipment and scans individual serial number barcodes.</p>
+        <div class="gate-box">
+          <span class="gate-label">Traceability Gate:</span>
+          Dispatch cannot be marked <code>DELIVERED</code> without 100% verified barcode scans for high-value components.
+        </div>
+        <div>
+          <span class="db-tag">inventory_stocks</span> &nbsp; <span class="db-tag">dispatches</span> &nbsp; <span class="db-tag">serial_numbers</span>
+        </div>
+      </div>
+
+      <!-- STAGE 6 -->
+      <div class="step-card">
+        <span class="step-num badge-emerald">6</span>
+        <h3 class="step-title">Field Installation</h3>
+        <p class="step-dept">Department: Field Installation Crew</p>
+        <p class="step-body">Technician crew mounts panels, runs DC/AC cabling, verifies chemical earthing (&lt; 5 Ohms), and synchronizes inverter with the DISCOM electrical grid.</p>
+        <div class="gate-box green">
+          <span class="gate-label">Commissioning Sign-off:</span>
+          5-point electrical safety checklist completed and customer digital signature captured on-site.
+        </div>
+        <div>
+          <span class="db-tag">installations</span> &nbsp; <span class="db-tag">installation_technicians</span> &nbsp; <span class="db-tag">installation_photos</span>
+        </div>
+      </div>
+
+      <!-- STAGE 7 -->
+      <div class="step-card">
+        <span class="step-num badge-rose">7</span>
+        <h3 class="step-title">Warranty & Service Desk</h3>
+        <p class="step-dept">Department: Customer Support & Service</p>
+        <p class="step-body">Handover auto-generates 20-year solar panel and 2-year inverter warranties. Breakdown service tickets cross-reference hardware barcodes to waive replacement charges.</p>
+        <div class="gate-box green">
+          <span class="gate-label">Warranty Automation:</span>
+          Defective parts under active warranty automatically billed at <b>₹0</b> to the customer.
+        </div>
+        <div>
+          <span class="db-tag">warranties</span> &nbsp; <span class="db-tag">service_tickets</span> &nbsp; <span class="db-tag">service_parts</span>
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+
+  <script>
+    mermaid.initialize({
+      startOnLoad: true,
+      theme: 'dark',
+      themeVariables: {
+        darkMode: true,
+        background: 'transparent',
+        primaryColor: '#1e293b',
+        lineColor: '#10b981',
+        primaryTextColor: '#f8fafc',
+        primaryBorderColor: '#38bdf8'
+      }
+    });
+  </script>
+</body>
+</html>

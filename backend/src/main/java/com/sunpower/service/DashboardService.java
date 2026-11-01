@@ -1,12 +1,8 @@
 package com.sunpower.service;
 
-import com.sunpower.dto.DashboardDTOs.CapacityDistribution;
-import com.sunpower.dto.DashboardDTOs.DashboardSummaryDTO;
-import com.sunpower.dto.DashboardDTOs.MonthlyRevenueTrend;
+import com.sunpower.dto.DashboardDTOs.*;
 import com.sunpower.dto.FinanceDTOs.JobProfitabilityDTO;
-import com.sunpower.entity.InventoryStock;
-import com.sunpower.entity.Payment;
-import com.sunpower.entity.SalesOrder;
+import com.sunpower.entity.*;
 import com.sunpower.entity.enums.Enums.*;
 import com.sunpower.repository.*;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -53,6 +49,30 @@ public class DashboardService {
 
     @Autowired
     private FinanceService financeService;
+
+    @Autowired
+    private CustomerRepository customerRepository;
+
+    @Autowired
+    private SerialNumberRepository serialNumberRepository;
+
+    @Autowired
+    private DispatchRepository dispatchRepository;
+
+    @Autowired
+    private WarrantyRepository warrantyRepository;
+
+    @Autowired
+    private TechnicianRepository technicianRepository;
+
+    @Autowired
+    private InstallationTechnicianRepository installationTechnicianRepository;
+
+    @Autowired
+    private InvoiceRepository invoiceRepository;
+
+    @Autowired
+    private SubsidyApplicationRepository subsidyApplicationRepository;
 
     public DashboardSummaryDTO getDashboardMetrics(String period) {
         DashboardSummaryDTO summary = new DashboardSummaryDTO();
