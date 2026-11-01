@@ -24,6 +24,7 @@ import {
   Home,
   Check,
   User as UserIcon,
+  RefreshCw,
 } from 'lucide-vue-next';
 
 const enquiries = ref<Enquiry[]>([]);
@@ -169,6 +170,8 @@ const getRoofFeasibility = (capacityKw: number | string | undefined | null, area
   };
 };
 
+const lastUpdated = ref(new Date().toLocaleTimeString());
+
 const fetchEnquiries = async (showLoading = true) => {
   if (showLoading) loading.value = true;
   try {
@@ -176,7 +179,8 @@ const fetchEnquiries = async (showLoading = true) => {
     if (search.value) url += `search=${encodeURIComponent(search.value)}&`;
     if (statusFilter.value) url += `status=${statusFilter.value}&`;
     const res = await api.get(url);
-    enquiries.value = res.data;
+    enquiries.value = (res.data || []).sort((a: Enquiry, b: Enquiry) => (b.id || 0) - (a.id || 0));
+    lastUpdated.value = new Date().toLocaleTimeString();
   } catch (err) {
     console.error(err);
   } finally {
@@ -426,6 +430,16 @@ onBeforeUnmount(() => {
 
       <div class="flex items-center space-x-2">
         <button
+          type="button"
+          @click="fetchEnquiries(true)"
+          title="Refresh leads list immediately"
+          class="flex items-center space-x-1.5 px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-semibold shadow-xs transition cursor-pointer"
+        >
+          <RefreshCw class="w-3.5 h-3.5" :class="{ 'animate-spin': loading }" />
+          <span>Refresh</span>
+          <span class="text-[10px] text-slate-400 hidden md:inline ml-1">({{ lastUpdated }})</span>
+        </button>
+        <button
           v-if="isSales || isAdmin"
           type="button"
           @click="showManualModal = true"
@@ -495,15 +509,15 @@ onBeforeUnmount(() => {
               <td class="py-3 px-4 font-mono font-bold text-slate-900">
                 {{ enq.enquiryNumber }}
                 <span class="block text-[10px] font-normal text-slate-400 uppercase font-sans">
-                  {{ enq.source.replace('_', ' ') }}
+                  {{ (enq.source || 'PORTAL').replace('_', ' ') }}
                 </span>
               </td>
               <td class="py-3 px-4">
-                <div class="font-semibold text-slate-800">{{ enq.customer.fullName }}</div>
+                <div class="font-semibold text-slate-800">{{ enq.customer?.fullName || 'Anonymous Customer' }}</div>
                 <div class="text-[11px] text-slate-400 flex items-center space-x-1">
                   <Phone class="w-3 h-3 text-slate-400" />
-                  <span>{{ enq.customer.phone }}</span>
-                  <span v-if="enq.customer.city">• {{ enq.customer.city }}</span>
+                  <span>{{ enq.customer?.phone || '-' }}</span>
+                  <span v-if="enq.customer?.city">• {{ enq.customer.city }}</span>
                 </div>
               </td>
               <td class="py-3 px-4">
