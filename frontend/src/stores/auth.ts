@@ -6,10 +6,19 @@ import type { User } from '../types';
 export const useAuthStore = defineStore('auth', () => {
   const token = ref<string | null>(localStorage.getItem('sunpower_token'));
   
-  const savedUser = localStorage.getItem('sunpower_user');
-  const user = ref<User | null>(savedUser ? JSON.parse(savedUser) : null);
+  let initialUser: User | null = null;
+  try {
+    const raw = localStorage.getItem('sunpower_user');
+    if (raw && raw !== 'undefined' && raw !== 'null') {
+      initialUser = JSON.parse(raw);
+    }
+  } catch (_e) {
+    localStorage.removeItem('sunpower_user');
+    localStorage.removeItem('sunpower_token');
+  }
+  const user = ref<User | null>(initialUser);
 
-  const isAuthenticated = computed(() => !!token.value);
+  const isAuthenticated = computed(() => !!token.value && !!user.value);
 
   const login = async (username: string, password: string = 'password123') => {
     const res = await api.post('/auth/login', { username, password });
