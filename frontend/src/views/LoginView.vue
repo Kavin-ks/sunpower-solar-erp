@@ -25,9 +25,10 @@ const handleSubmit = async () => {
   }
 };
 
-const handleQuickSelect = (u: string) => {
+const handleQuickSelect = async (u: string) => {
   username.value = u;
   password.value = 'password123';
+  await handleSubmit();
 };
 </script>
 

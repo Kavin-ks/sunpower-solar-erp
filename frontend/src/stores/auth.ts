@@ -4,19 +4,31 @@ import { api } from '../api/client';
 import type { User } from '../types';
 
 export const useAuthStore = defineStore('auth', () => {
-  const token = ref<string | null>(localStorage.getItem('sunpower_token'));
+  let initialToken = localStorage.getItem('sunpower_token');
+  let parsedUser: User | null = null;
   
-  let initialUser: User | null = null;
   try {
-    const raw = localStorage.getItem('sunpower_user');
-    if (raw && raw !== 'undefined' && raw !== 'null') {
-      initialUser = JSON.parse(raw);
+    const savedUser = localStorage.getItem('sunpower_user');
+    if (savedUser && savedUser !== 'undefined' && savedUser !== 'null') {
+      parsedUser = JSON.parse(savedUser);
     }
   } catch (_e) {
+    initialToken = null;
+    parsedUser = null;
     localStorage.removeItem('sunpower_user');
     localStorage.removeItem('sunpower_token');
   }
-  const user = ref<User | null>(initialUser);
+
+  // Ensure both token and user object are present and valid; clear orphaned state
+  if (!initialToken || !parsedUser || !parsedUser.roles || !parsedUser.roles.length) {
+    initialToken = null;
+    parsedUser = null;
+    localStorage.removeItem('sunpower_token');
+    localStorage.removeItem('sunpower_user');
+  }
+
+  const token = ref<string | null>(initialToken);
+  const user = ref<User | null>(parsedUser);
 
   const isAuthenticated = computed(() => !!token.value && !!user.value);
 
