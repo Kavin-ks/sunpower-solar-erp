@@ -1,5 +1,6 @@
 'use client';
 import React, { useEffect, useState } from 'react';
+import Link from 'next/link';
 import CommentFormTeam from '../forms/CommentFormTeam';
 import SocialLinks from '../common/SocialLinks';
 

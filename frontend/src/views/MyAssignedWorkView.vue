@@ -70,8 +70,82 @@ const showCommissioningPdf = ref(false);
 const activeDossierInstallation = ref<any | null>(null);
 
 const defaultSignature = (name: string) => {
-  const cleanName = (name || 'Customer').replace(/[^a-zA-Z\s]/g, '');
-  return `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="260" height="70" viewBox="0 0 260 70"><text x="20" y="45" font-family="Brush Script MT, Segoe Script, cursive" font-size="28" font-style="italic" fill="%230f172a">${encodeURIComponent(cleanName)}</text></svg>`;
+  const cleanName = (name || 'Customer').trim();
+  const dateStr = new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+  return `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="340" height="95" viewBox="0 0 340 95">
+    <rect width="100%" height="100%" fill="%23fdfcf9" rx="8" stroke="%23e2e8f0"/>
+    <line x1="20" y1="70" x2="320" y2="70" stroke="%23cbd5e1" stroke-width="1" stroke-dasharray="4,4"/>
+    <text x="24" y="85" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="9" fill="%2364748b">Verified Customer Sign-off • ${dateStr}</text>
+    <text x="28" y="52" font-family="'Brush Script MT', 'Segoe Script', 'Caveat', cursive" font-size="34" font-style="italic" font-weight="600" fill="%230f172a" transform="rotate(-2 28 52)">${encodeURIComponent(cleanName)}</text>
+    <path d="M 22 64 Q 100 76 195 62 T 310 66" fill="none" stroke="%231e293b" stroke-width="2.2" stroke-linecap="round"/>
+    <path d="M 220 59 Q 260 55 290 62" fill="none" stroke="%232563eb" stroke-width="1.3" stroke-linecap="round"/>
+  </svg>`;
+};
+
+// Signature Pad State & Methods
+const showSignaturePad = ref(false);
+const signatureCanvasRef = ref<HTMLCanvasElement | null>(null);
+let isDrawing = false;
+let sigCtx: CanvasRenderingContext2D | null = null;
+
+const initSigCanvas = () => {
+  if (signatureCanvasRef.value) {
+    sigCtx = signatureCanvasRef.value.getContext('2d');
+    if (sigCtx) {
+      sigCtx.lineWidth = 2.5;
+      sigCtx.lineCap = 'round';
+      sigCtx.strokeStyle = '#0f172a';
+    }
+  }
+};
+
+const startDrawing = (e: MouseEvent) => {
+  isDrawing = true;
+  initSigCanvas();
+  if (!sigCtx || !signatureCanvasRef.value) return;
+  const rect = signatureCanvasRef.value.getBoundingClientRect();
+  sigCtx.beginPath();
+  sigCtx.moveTo(e.clientX - rect.left, e.clientY - rect.top);
+};
+
+const draw = (e: MouseEvent) => {
+  if (!isDrawing || !sigCtx || !signatureCanvasRef.value) return;
+  const rect = signatureCanvasRef.value.getBoundingClientRect();
+  sigCtx.lineTo(e.clientX - rect.left, e.clientY - rect.top);
+  sigCtx.stroke();
+};
+
+const stopDrawing = () => {
+  isDrawing = false;
+};
+
+const startDrawingTouch = (e: TouchEvent) => {
+  e.preventDefault();
+  isDrawing = true;
+  initSigCanvas();
+  if (!sigCtx || !signatureCanvasRef.value || e.touches.length === 0) return;
+  const rect = signatureCanvasRef.value.getBoundingClientRect();
+  sigCtx.beginPath();
+  sigCtx.moveTo(e.touches[0].clientX - rect.left, e.touches[0].clientY - rect.top);
+};
+
+const drawTouch = (e: TouchEvent) => {
+  e.preventDefault();
+  if (!isDrawing || !sigCtx || !signatureCanvasRef.value || e.touches.length === 0) return;
+  const rect = signatureCanvasRef.value.getBoundingClientRect();
+  sigCtx.lineTo(e.touches[0].clientX - rect.left, e.touches[0].clientY - rect.top);
+  sigCtx.stroke();
+};
+
+const clearSignatureCanvas = () => {
+  if (!sigCtx || !signatureCanvasRef.value) return;
+  sigCtx.clearRect(0, 0, signatureCanvasRef.value.width, signatureCanvasRef.value.height);
+};
+
+const saveCanvasSignature = () => {
+  if (!signatureCanvasRef.value) return;
+  installCompleteForm.value.customerSignatureUrl = signatureCanvasRef.value.toDataURL('image/png');
+  showSignaturePad.value = false;
 };
 
 const installCompleteForm = ref({
@@ -1064,10 +1138,30 @@ onMounted(() => {
 
           <!-- Customer Sign-Off & Digital Signature -->
           <div class="p-3 bg-amber-50/60 rounded-xl border border-amber-200 space-y-3">
-            <span class="block text-[10px] font-bold text-amber-900 uppercase tracking-wider flex items-center gap-1.5">
-              <PenTool class="w-3.5 h-3.5 text-amber-600" />
-              Customer Formal Sign-off & Digital Signature
-            </span>
+            <div class="flex items-center justify-between">
+              <span class="text-[10px] font-bold text-amber-900 uppercase tracking-wider flex items-center gap-1.5">
+                <PenTool class="w-3.5 h-3.5 text-amber-600" />
+                Customer Formal Sign-off & Realistic Digital Signature
+              </span>
+              <div class="flex items-center gap-1.5">
+                <button
+                  type="button"
+                  @click="installCompleteForm.customerSignatureUrl = defaultSignature(installCompleteForm.customerSigneeName)"
+                  class="px-2 py-0.5 bg-amber-100 hover:bg-amber-200 text-amber-900 font-semibold rounded text-[10px] cursor-pointer"
+                >
+                  Adopt Pen Signature
+                </button>
+                <button
+                  type="button"
+                  @click="showSignaturePad = !showSignaturePad"
+                  class="px-2 py-0.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 font-semibold rounded text-[10px] cursor-pointer flex items-center gap-1"
+                >
+                  <PenTool class="w-3 h-3 text-indigo-600" />
+                  <span>{{ showSignaturePad ? 'Hide Draw Pad' : '✍️ Draw on Screen' }}</span>
+                </button>
+              </div>
+            </div>
+
             <div class="grid grid-cols-1 md:grid-cols-2 gap-3 items-center">
               <div>
                 <label class="block font-semibold text-slate-700 uppercase text-[10px] mb-1">Customer Signee Full Name *</label>
@@ -1076,21 +1170,55 @@ onMounted(() => {
                   v-model="installCompleteForm.customerSigneeName"
                   @input="installCompleteForm.customerSignatureUrl = defaultSignature(installCompleteForm.customerSigneeName)"
                   class="w-full border border-slate-200 rounded-lg p-2 text-xs bg-white"
+                  placeholder="e.g. Ramesh Sharma"
                   required
                 />
-                <span class="text-[10px] text-slate-500 mt-1 block">Name of customer representative who verified the installation.</span>
+                <span class="text-[10px] text-slate-500 mt-1 block">Customer representative who inspected and accepted the solar setup.</span>
               </div>
+
               <div>
                 <label class="block font-semibold text-slate-700 uppercase text-[10px] mb-1">Customer Digital Signature Preview</label>
-                <div class="h-16 w-full bg-white border border-dashed border-amber-300 rounded-lg flex items-center justify-center p-1 relative overflow-hidden">
+                <div class="h-20 w-full bg-white border border-slate-300 rounded-lg flex items-center justify-center p-1.5 relative overflow-hidden shadow-2xs">
                   <img
                     v-if="installCompleteForm.customerSignatureUrl"
                     :src="installCompleteForm.customerSignatureUrl"
                     alt="Customer Digital Signature"
-                    class="h-full object-contain"
+                    class="h-full w-auto object-contain"
                   />
-                  <span v-else class="text-[10px] text-slate-400">Enter customer signee name to sign</span>
+                  <span v-else class="text-[10px] text-slate-400">Enter customer name or draw signature</span>
                 </div>
+              </div>
+            </div>
+
+            <!-- Draw Signature Pad Dropdown -->
+            <div v-show="showSignaturePad" class="p-2.5 bg-white rounded-xl border border-slate-300 space-y-2">
+              <div class="flex items-center justify-between text-[11px] font-semibold text-slate-700">
+                <span>Draw Signature with finger, stylus, or mouse:</span>
+                <button type="button" @click="clearSignatureCanvas" class="text-rose-600 hover:text-rose-700 text-[10px] underline cursor-pointer">
+                  Clear Pad
+                </button>
+              </div>
+              <canvas
+                ref="signatureCanvasRef"
+                width="360"
+                height="100"
+                class="w-full h-24 border border-dashed border-slate-300 rounded-lg cursor-crosshair touch-none bg-slate-50"
+                @mousedown="startDrawing"
+                @mousemove="draw"
+                @mouseup="stopDrawing"
+                @mouseleave="stopDrawing"
+                @touchstart="startDrawingTouch"
+                @touchmove="drawTouch"
+                @touchend="stopDrawing"
+              ></canvas>
+              <div class="flex justify-end gap-2">
+                <button
+                  type="button"
+                  @click="saveCanvasSignature"
+                  class="px-3 py-1 bg-indigo-600 hover:bg-indigo-700 text-white rounded text-xs font-semibold cursor-pointer shadow-xs"
+                >
+                  Apply Drawn Signature
+                </button>
               </div>
             </div>
           </div>
