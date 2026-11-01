@@ -88,4 +88,14 @@ public class DispatchController {
         Dispatch dispatch = dispatchService.confirmDelivery(id, req, actor);
         return ResponseEntity.ok(dispatch);
     }
+
+    @RequestMapping(value = "/{id}/activate-warranty", method = {RequestMethod.POST, RequestMethod.PATCH})
+    @PreAuthorize("hasAnyRole('WAREHOUSE', 'ADMIN')")
+    public ResponseEntity<Dispatch> activateWarranty(
+            @PathVariable Long id,
+            Authentication authentication) {
+        String actor = authentication != null ? authentication.getName() : "Warehouse Manager";
+        Dispatch dispatch = dispatchService.activateWarranty(id, actor);
+        return ResponseEntity.ok(dispatch);
+    }
 }

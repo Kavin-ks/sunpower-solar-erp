@@ -110,4 +110,14 @@ public class InstallationController {
         InstallationPhoto photo = installationService.addInstallationPhoto(id, photoUrl, stage, caption);
         return ResponseEntity.status(HttpStatus.CREATED).body(photo);
     }
+
+    @RequestMapping(value = "/{id}/activate-warranty", method = {RequestMethod.POST, RequestMethod.PATCH})
+    @PreAuthorize("hasAnyRole('WAREHOUSE', 'ADMIN')")
+    public ResponseEntity<Installation> activateWarranty(
+            @PathVariable Long id,
+            Authentication authentication) {
+        String actor = authentication != null ? authentication.getName() : "Warehouse Manager";
+        Installation installation = installationService.activateWarranty(id, actor);
+        return ResponseEntity.ok(installation);
+    }
 }
