@@ -75,9 +75,15 @@ const AuthWelcomePage = () => {
         throw new Error(data.message || 'Invalid email or password. Please verify credentials.');
       }
 
-      localStorage.setItem('sunpower_user', JSON.stringify(data.user));
+      const sessionUser = {
+        ...(data.user || {}),
+        fullName: data.user?.fullName || data.user?.name || '',
+        name: data.user?.name || data.user?.fullName || '',
+        token: data.token,
+      };
+      localStorage.setItem('sunpower_user', JSON.stringify(sessionUser));
       if (data.token) {
-        localStorage.setItem('odoo_erp_user_session', JSON.stringify({ token: data.token, user: data.user }));
+        localStorage.setItem('odoo_erp_user_session', JSON.stringify({ token: data.token, user: sessionUser }));
       }
 
       toast.success('Login successful! Redirecting to solar portal...');
@@ -219,7 +225,8 @@ const AuthWelcomePage = () => {
         throw new Error(data.message || 'Invalid verification OTP.');
       }
 
-      // Persist customer to backend database table 'users' with BCrypt password hashing
+      let registeredToken = '';
+      let registeredUserObj: any = null;
       try {
         const regDbRes = await fetch('/api/auth/customer', {
           method: 'POST',
@@ -234,6 +241,8 @@ const AuthWelcomePage = () => {
         });
         const regDbData = await regDbRes.json();
         if (regDbData.token) {
+          registeredToken = regDbData.token;
+          registeredUserObj = regDbData.user;
           localStorage.setItem('odoo_erp_user_session', JSON.stringify({ token: regDbData.token, user: regDbData.user }));
         }
       } catch (dbErr) {
@@ -241,10 +250,16 @@ const AuthWelcomePage = () => {
       }
 
       setRegisterStep('success');
-      localStorage.setItem(
-        'sunpower_user',
-        JSON.stringify({ fullName: regFullName, email: regEmail, phone: regPhone, role: 'customer' })
-      );
+      const regSessionUser = {
+        ...(registeredUserObj || {}),
+        fullName: regFullName,
+        name: regFullName,
+        email: regEmail,
+        phone: regPhone,
+        role: 'ROLE_CUSTOMER',
+        token: registeredToken,
+      };
+      localStorage.setItem('sunpower_user', JSON.stringify(regSessionUser));
       toast.success('Account registered & securely saved to database!');
 
       setTimeout(() => {

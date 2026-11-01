@@ -66,12 +66,6 @@ const menu_data: DataType[] = [
     link: "/complaint",
     has_dropdown: false,
   },
-  {
-    id: 8,
-    title: "My Dashboard",
-    link: "/profile",
-    has_dropdown: false,
-  },
 ];
 
 export default menu_data;
