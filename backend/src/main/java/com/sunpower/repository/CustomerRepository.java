@@ -23,6 +23,7 @@ public interface CustomerRepository extends JpaRepository<Customer, Long> {
 
     // Customer portal lookups
     Optional<Customer> findByUserId(Long userId);
+    Optional<Customer> findFirstByUserIdOrderByIdDesc(Long userId);
     Optional<Customer> findFirstByPhoneOrderByIdDesc(String phone);
     Optional<Customer> findFirstByEmailIgnoreCaseOrderByIdDesc(String email);
 }

@@ -187,7 +187,7 @@ public class CustomerPortalService {
         // Check if it looks like a phone number (digits only, 10 chars)
         if (raw.matches("\\d{10,}")) {
             // Look up by phone
-            Optional<User> byPhone = userRepository.findByPhone(raw);
+            Optional<User> byPhone = userRepository.findFirstByPhoneOrderByIdDesc(raw);
             if (byPhone.isPresent()) {
                 username = byPhone.get().getUsername();
             } else {
@@ -200,9 +200,15 @@ public class CustomerPortalService {
             }
         } else if (raw.contains("@")) {
             // Resolve by email
-            Optional<User> byEmail = userRepository.findByEmail(raw);
+            Optional<User> byEmail = userRepository.findFirstByEmailIgnoreCaseOrderByIdDesc(raw);
             if (byEmail.isPresent()) {
                 username = byEmail.get().getUsername();
+            } else {
+                Optional<Customer> cByEmail = customerRepository.findFirstByEmailIgnoreCaseOrderByIdDesc(raw);
+                if (cByEmail.isPresent() && cByEmail.get().getUserId() != null) {
+                    Optional<User> u = userRepository.findById(cByEmail.get().getUserId());
+                    if (u.isPresent()) username = u.get().getUsername();
+                }
             }
         }
 
@@ -230,7 +236,7 @@ public class CustomerPortalService {
     @Transactional
     public Customer resolveOrCreateCustomer(User user, String address, String city, String pincode) {
         // 1. First try: direct user_id link
-        Optional<Customer> byUserId = customerRepository.findByUserId(user.getId());
+        Optional<Customer> byUserId = customerRepository.findFirstByUserIdOrderByIdDesc(user.getId());
         if (byUserId.isPresent()) {
             return byUserId.get();
         }
@@ -279,8 +285,7 @@ public class CustomerPortalService {
     public Customer getCustomerByUsername(String username) {
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new RuntimeException("User not found: " + username));
-        return customerRepository.findByUserId(user.getId())
-                .orElseThrow(() -> new RuntimeException("No customer profile linked to this account."));
+        return resolveOrCreateCustomer(user, null, null, null);
     }
 
     // ─────────────────────────────────────────────────────────────
