@@ -9,30 +9,64 @@ interface UserData {
   email?: string;
   phone?: string;
   role?: string;
+  token?: string;
 }
 
 const UserProfileDropdown: React.FC = () => {
   const [user, setUser] = useState<UserData | null>(null);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
 
   useEffect(() => {
+    // Check sunpower_user session (customer portal session)
     const storedUser = localStorage.getItem('sunpower_user');
     if (storedUser) {
       try {
-        setUser(JSON.parse(storedUser));
+        const parsed = JSON.parse(storedUser);
+        setUser(parsed);
+        setIsLoggedIn(!!parsed.token);
       } catch (e) {
-        setUser({ fullName: 'Arivuchezhiyan E', email: 'arivuchezhiyan000@gmail.com', phone: '7010818264' });
+        setUser(null);
+        setIsLoggedIn(false);
       }
-    } else {
-      setUser({
-        fullName: 'Arivuchezhiyan E',
-        email: 'arivuchezhiyan000@gmail.com',
-        phone: '7010818264',
-        role: 'Verified Customer',
-      });
     }
   }, []);
 
-  const displayName = user?.fullName || user?.name || 'Customer Account';
+  // If not logged in, show a "Login" button
+  if (!isLoggedIn) {
+    return (
+      <Link
+        href="/profile"
+        title="Customer Login"
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px',
+          padding: '5px 14px 5px 10px',
+          backgroundColor: '#e63a27',
+          border: '1.5px solid #e63a27',
+          borderRadius: '9999px',
+          textDecoration: 'none',
+          transition: 'all 0.2s ease',
+          boxShadow: '0 2px 8px rgba(230, 58, 39, 0.3)',
+        }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.backgroundColor = '#c93020';
+          e.currentTarget.style.borderColor = '#c93020';
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.backgroundColor = '#e63a27';
+          e.currentTarget.style.borderColor = '#e63a27';
+        }}
+      >
+        <i className="bi bi-person-circle" style={{ fontSize: '16px', color: '#ffffff' }} />
+        <span style={{ fontSize: '13px', fontWeight: 700, color: '#ffffff' }}>
+          My Account
+        </span>
+      </Link>
+    );
+  }
+
+  const displayName = user?.fullName || user?.name || 'Customer';
   const firstName = displayName.split(' ')[0] || 'Profile';
 
   const initials = displayName
@@ -46,7 +80,7 @@ const UserProfileDropdown: React.FC = () => {
   return (
     <Link
       href="/profile"
-      title="View My Profile"
+      title="View My Dashboard"
       style={{
         display: 'flex',
         alignItems: 'center',
@@ -68,7 +102,7 @@ const UserProfileDropdown: React.FC = () => {
         e.currentTarget.style.backgroundColor = '#ffffff';
       }}
     >
-      {/* Circular Avatar without ANY dot */}
+      {/* Circular Avatar */}
       <div
         style={{
           width: '32px',
@@ -102,7 +136,7 @@ const UserProfileDropdown: React.FC = () => {
         {firstName}
       </span>
 
-      <i className="bi bi-person-fill" style={{ fontSize: '13px', color: '#64748b' }}></i>
+      <i className="bi bi-grid-fill" style={{ fontSize: '12px', color: '#64748b' }} />
     </Link>
   );
 };

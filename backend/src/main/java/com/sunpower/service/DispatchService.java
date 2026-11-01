@@ -406,29 +406,86 @@ public class DispatchService {
 
         dispatch = dispatchRepository.save(dispatch);
 
-        // Update serial numbers delivery status and automatically start warranty clock
+        // Update serial numbers delivery status (equipment delivered to site, awaiting technician installation)
+        // Delivery does NOT activate warranty. Warranty activation happens only after technician installation
+        // with customer digital signature and commissioning PDF report reviewed by Warehouse Manager.
         for (DispatchItem item : dispatch.getItems()) {
-            Product product = item.getProduct();
             SerialNumber sn = item.getSerialNumber();
             if (sn != null) {
                 sn.setDeliveryDate(deliveryDate);
+                sn.setStatus(SerialNumberStatus.SITE_RECEIVED);
                 serialNumberRepository.save(sn);
 
                 SerialNumberHistory history = new SerialNumberHistory(
                         sn,
-                        sn.getStatus(),
-                        "Delivered to customer site. Warranty clock automatically initiated.",
+                        SerialNumberStatus.SITE_RECEIVED,
+                        "Delivered to customer site. Goods received at rooftop location. Pending on-site technician installation and commissioning.",
                         dispatch.getCustomer().getAddress(),
                         confirmedBy
                 );
                 serialNumberHistoryRepository.save(history);
-
-                // Auto-warranty clock initiation on delivery
-                warrantyService.activateWarranty(dispatch.getCustomer(), dispatch.getSalesOrder(), product, sn, deliveryDate);
-            } else if (product != null && product.getCategory() != null && product.getCategory().getName().toUpperCase().contains("PANEL")) {
-                warrantyService.activateWarranty(dispatch.getCustomer(), dispatch.getSalesOrder(), product, null, deliveryDate);
             }
         }
+
+        return dispatch;
+    }
+
+    @Transactional
+    public Dispatch activateWarranty(Long dispatchId, String actor) {
+        Dispatch dispatch = getDispatchById(dispatchId);
+        SalesOrder order = dispatch.getSalesOrder();
+        Installation installation = installationRepository.findBySalesOrderId(order.getId())
+                .orElseThrow(() -> new IllegalStateException("No installation found for sales order " + order.getOrderNumber()));
+
+        if (installation.getStatus() != com.sunpower.entity.enums.Enums.InstallationStatus.COMPLETED) {
+            throw new IllegalStateException("Warranty cannot be activated: Installation has not been completed by technician lead yet (current status: " + installation.getStatus() + ").");
+        }
+
+        if (installation.getCustomerSignatureUrl() == null || installation.getCustomerSignatureUrl().trim().isEmpty()) {
+            throw new IllegalStateException("Warranty cannot be activated: Customer digital signature is missing from technician installation report.");
+        }
+
+        LocalDate installationDate = installation.getActualFinishTime() != null ?
+                installation.getActualFinishTime().toLocalDate() : LocalDate.now();
+
+        // 1. Activate warranties starting from verified installation date
+        for (DispatchItem item : dispatch.getItems()) {
+            Product product = item.getProduct();
+            SerialNumber sn = item.getSerialNumber();
+            if (sn != null) {
+                sn.setStatus(SerialNumberStatus.INSTALLED);
+                sn.setInstallationCompletedAt(installation.getActualFinishTime());
+                sn.setInstallationId(installation.getId());
+                serialNumberRepository.save(sn);
+
+                SerialNumberHistory history = new SerialNumberHistory(
+                        sn,
+                        SerialNumberStatus.INSTALLED,
+                        "Warranty officially activated by Warehouse Manager (" + actor + "). Equipment status changed to INSTALLED upon review of technician lead dossier (photos, timeframe, commissioning report PDF, and customer digital signature).",
+                        dispatch.getCustomer().getAddress(),
+                        actor
+                );
+                serialNumberHistoryRepository.save(history);
+
+                warrantyService.activateWarranty(dispatch.getCustomer(), order, product, sn, installationDate, installation.getId(), installationDate);
+            } else if (product != null && product.getCategory() != null && product.getCategory().getName().toUpperCase().contains("PANEL")) {
+                warrantyService.activateWarranty(dispatch.getCustomer(), order, product, null, installationDate, installation.getId(), installationDate);
+            }
+        }
+
+        // 2. Set dispatch status to INSTALLED
+        dispatch.setStatus(DispatchStatus.INSTALLED);
+        dispatch = dispatchRepository.save(dispatch);
+
+        // 3. Mark installation warranty activated
+        installation.setWarrantyActivated(true);
+        installation.setWarrantyActivatedAt(LocalDateTime.now());
+        installation.setWarrantyActivatedBy(actor);
+        installationRepository.save(installation);
+
+        // 4. Update sales order status
+        order.setStatus(OrderStatus.COMPLETED);
+        salesOrderRepository.save(order);
 
         return dispatch;
     }

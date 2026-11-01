@@ -81,6 +81,7 @@ public class InstallationDTOs {
         private String customerAcceptanceNote;
         private String workNotes;
         private String completionPhotoUrl;
+        private String completionReportPdfUrl;
 
         // Technician hours & payouts
         private List<TechnicianHoursRequest> technicianHours;
@@ -113,6 +114,8 @@ public class InstallationDTOs {
         public void setWorkNotes(String workNotes) { this.workNotes = workNotes; }
         public String getCompletionPhotoUrl() { return completionPhotoUrl; }
         public void setCompletionPhotoUrl(String completionPhotoUrl) { this.completionPhotoUrl = completionPhotoUrl; }
+        public String getCompletionReportPdfUrl() { return completionReportPdfUrl; }
+        public void setCompletionReportPdfUrl(String completionReportPdfUrl) { this.completionReportPdfUrl = completionReportPdfUrl; }
         public List<TechnicianHoursRequest> getTechnicianHours() { return technicianHours; }
         public void setTechnicianHours(List<TechnicianHoursRequest> technicianHours) { this.technicianHours = technicianHours; }
     }

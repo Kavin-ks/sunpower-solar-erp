@@ -8,7 +8,7 @@ export type OrderStatus = 'PENDING_PAYMENT' | 'CONFIRMED' | 'DISPATCHED' | 'IN_I
 export type PaymentMethod = 'BANK_TRANSFER' | 'UPI' | 'CHEQUE' | 'CASH' | 'CARD';
 export type PaymentType = 'ADVANCE' | 'PROGRESS' | 'FULL';
 export type SerialNumberStatus = 'IN_STOCK' | 'RESERVED' | 'ALLOCATED' | 'PICKED' | 'DISPATCHED' | 'SITE_RECEIVED' | 'INSTALLED' | 'DEFECTIVE' | 'REPLACED';
-export type DispatchStatus = 'PENDING' | 'PICKING' | 'READY_FOR_DISPATCH' | 'DISPATCHED' | 'DELIVERED';
+export type DispatchStatus = 'PENDING' | 'PICKING' | 'READY_FOR_DISPATCH' | 'DISPATCHED' | 'DELIVERED' | 'INSTALLED';
 export type InstallationStatus = 'SCHEDULED' | 'SITE_RECEIVED' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED';
 export type WarrantyStatus = 'NOT_STARTED' | 'ACTIVE' | 'EXPIRED' | 'VOIDED';
 export type TicketStatus = 'OPEN' | 'ASSIGNED' | 'IN_PROGRESS' | 'WAITING_FOR_PARTS' | 'RESOLVED' | 'CUSTOMER_CONFIRMED' | 'CLOSED';
@@ -347,6 +347,10 @@ export interface Installation {
   customerSignatureUrl?: string;
   customerAcceptanceNote?: string;
   customerSignedAt?: string;
+  completionReportPdfUrl?: string;
+  warrantyActivated?: boolean;
+  warrantyActivatedAt?: string;
+  warrantyActivatedBy?: string;
   status: InstallationStatus;
   workNotes?: string;
   assignedTechnicians: InstallationTechnician[];
