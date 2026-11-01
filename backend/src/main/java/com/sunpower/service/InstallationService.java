@@ -38,6 +38,9 @@ public class InstallationService {
     private TechnicianRepository technicianRepository;
 
     @Autowired
+    private TechnicianService technicianService;
+
+    @Autowired
     private ExpenseRepository expenseRepository;
 
     @Autowired
@@ -67,13 +70,10 @@ public class InstallationService {
 
     @Transactional(readOnly = true)
     public List<Installation> getInstallationsForTechnician(String username) {
-        if (username == null || username.equalsIgnoreCase("admin") || username.equalsIgnoreCase("technician")) {
+        if (username == null || username.equalsIgnoreCase("admin")) {
             return installationRepository.findAll();
         }
-        java.util.Optional<Technician> techOpt = technicianRepository.findByUserUsername(username);
-        if (techOpt.isEmpty()) {
-            techOpt = technicianRepository.findByNameContainingIgnoreCase(username);
-        }
+        java.util.Optional<Technician> techOpt = technicianService.resolveTechnician(username);
         if (techOpt.isPresent()) {
             List<Long> instIds = installationTechnicianRepository.findByTechnicianId(techOpt.get().getId()).stream()
                     .map(it -> it.getInstallation().getId())

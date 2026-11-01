@@ -113,4 +113,36 @@ public class TechnicianService {
         }
         technicianRepository.save(tech);
     }
+
+    public java.util.Optional<Technician> resolveTechnician(String username) {
+        if (username == null || username.trim().isEmpty()) {
+            return java.util.Optional.empty();
+        }
+        String u = username.trim();
+        // 1. Direct findByUserUsername
+        java.util.Optional<Technician> tech = technicianRepository.findByUserUsername(u);
+        if (tech.isPresent()) {
+            return tech;
+        }
+        // 2. Exact known demo aliases
+        if (u.equalsIgnoreCase("technician") || u.equalsIgnoreCase("karthik")) {
+            tech = technicianRepository.findByNameContainingIgnoreCase("Karthik");
+            if (tech.isPresent()) return tech;
+        }
+        if (u.equalsIgnoreCase("tech.ganesh") || u.equalsIgnoreCase("ganesh")) {
+            tech = technicianRepository.findByNameContainingIgnoreCase("Ganesh");
+            if (tech.isPresent()) return tech;
+        }
+        if (u.equalsIgnoreCase("tech.selva") || u.equalsIgnoreCase("selva") || u.equalsIgnoreCase("selvakumar")) {
+            tech = technicianRepository.findByNameContainingIgnoreCase("Selvakumar");
+            if (tech.isPresent()) return tech;
+        }
+        // 3. Strip prefixes like "tech." or "technician."
+        String cleanName = u.replaceFirst("(?i)^tech\\.", "").replaceFirst("(?i)^technician\\.", "");
+        tech = technicianRepository.findByNameContainingIgnoreCase(cleanName);
+        if (tech.isPresent()) {
+            return tech;
+        }
+        return technicianRepository.findByNameContainingIgnoreCase(u);
+    }
 }

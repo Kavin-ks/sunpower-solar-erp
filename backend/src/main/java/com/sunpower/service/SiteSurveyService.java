@@ -30,6 +30,9 @@ public class SiteSurveyService {
     private TechnicianRepository technicianRepository;
 
     @Autowired
+    private TechnicianService technicianService;
+
+    @Autowired
     private SurveyPhotoRepository surveyPhotoRepository;
 
     @Autowired
@@ -56,13 +59,10 @@ public class SiteSurveyService {
     }
 
     public List<SiteSurvey> getSurveysForTechnician(String username) {
-        if (username == null || username.equalsIgnoreCase("admin") || username.equalsIgnoreCase("technician")) {
+        if (username == null || username.equalsIgnoreCase("admin")) {
             return siteSurveyRepository.findAll();
         }
-        java.util.Optional<Technician> techOpt = technicianRepository.findByUserUsername(username);
-        if (techOpt.isEmpty()) {
-            techOpt = technicianRepository.findByNameContainingIgnoreCase(username);
-        }
+        java.util.Optional<Technician> techOpt = technicianService.resolveTechnician(username);
         if (techOpt.isPresent()) {
             return siteSurveyRepository.findByTechnicianId(techOpt.get().getId());
         }

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, watch } from 'vue';
 import api from '../api/client';
 import StatusBadge from '../components/ui/StatusBadge.vue';
 import CameraPhotoUpload from '../components/common/CameraPhotoUpload.vue';
@@ -388,6 +388,10 @@ const handleServiceCompleteSubmit = async () => {
     alert(err.response?.data?.message || 'Failed to submit service completion');
   }
 };
+
+watch(() => authStore.user?.username, () => {
+  fetchMyWork();
+});
 
 onMounted(() => {
   fetchMyWork();

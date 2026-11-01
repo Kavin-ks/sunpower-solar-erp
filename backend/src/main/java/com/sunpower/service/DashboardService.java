@@ -67,6 +67,9 @@ public class DashboardService {
     private TechnicianRepository technicianRepository;
 
     @Autowired
+    private TechnicianService technicianService;
+
+    @Autowired
     private InstallationTechnicianRepository installationTechnicianRepository;
 
     @Autowired
@@ -341,10 +344,7 @@ summary.setCapacityDistribution(dist);
 
         Technician tech = null;
         if (username != null && !username.trim().isEmpty()) {
-            tech = technicianRepository.findByUserUsername(username).orElse(null);
-            if (tech == null) {
-                tech = technicianRepository.findByNameContainingIgnoreCase(username).orElse(null);
-            }
+            tech = technicianService.resolveTechnician(username).orElse(null);
         }
         if (tech == null) {
             tech = allTechs.stream().findFirst().orElse(null);

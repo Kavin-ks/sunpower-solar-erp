@@ -98,6 +98,12 @@ public class DataInitializationService implements CommandLineRunner {
     @Autowired
     private EnquiryRepository enquiryRepository;
 
+    @Autowired
+    private InstallationTechnicianRepository installationTechnicianRepository;
+
+    @Autowired
+    private ServiceTicketRepository serviceTicketRepository;
+
     @Override
     @Transactional
     public void run(String... args) throws Exception {
@@ -123,6 +129,8 @@ public class DataInitializationService implements CommandLineRunner {
         createUser("sales", "Suresh Kumar (Sales Lead)", "sales@sunpower.com", "9876543211", roles.get(RoleName.ROLE_SALES));
         createUser("warehouse", "Murugan V (Warehouse)", "warehouse@sunpower.com", "9876543212", roles.get(RoleName.ROLE_WAREHOUSE));
         createUser("technician", "Karthik Raja", "tech@sunpower.com", "9876543213", roles.get(RoleName.ROLE_TECHNICIAN));
+        createUser("tech.ganesh", "Ganesh Moorthy", "ganesh.tech@sunpower.com", "9840112234", roles.get(RoleName.ROLE_TECHNICIAN));
+        createUser("tech.selva", "Selvakumar R", "selva.tech@sunpower.com", "9840112235", roles.get(RoleName.ROLE_TECHNICIAN));
         createUser("support", "Priya Nair (Support)", "support@sunpower.com", "9876543214", roles.get(RoleName.ROLE_SUPPORT));
         createUser("finance", "Ramanathan M (Finance)", "finance@sunpower.com", "9876543215", roles.get(RoleName.ROLE_FINANCE));
         createUser("director", "Venkatesh S (Director)", "director@sunpower.com", "9876543216", roles.get(RoleName.ROLE_DIRECTOR));
@@ -146,7 +154,15 @@ public class DataInitializationService implements CommandLineRunner {
                 {"Vigneshwar M", "9840112247", "vignesh.tech@sunpower.com", "Preventive Maintenance & Panel Cleaning"}
         };
         for (String[] t : techData) {
-            technicianRepository.save(new Technician(t[0], t[1], t[2], t[3]));
+            Technician techEntity = new Technician(t[0], t[1], t[2], t[3]);
+            if (t[0].equals("Karthik Raja")) {
+                userRepository.findByUsername("technician").ifPresent(techEntity::setUser);
+            } else if (t[0].equals("Ganesh Moorthy")) {
+                userRepository.findByUsername("tech.ganesh").ifPresent(techEntity::setUser);
+            } else if (t[0].equals("Selvakumar R")) {
+                userRepository.findByUsername("tech.selva").ifPresent(techEntity::setUser);
+            }
+            technicianRepository.save(techEntity);
         }
 
         // 4. Product Categories
@@ -1223,6 +1239,9 @@ public class DataInitializationService implements CommandLineRunner {
                 }
             }
         }
+
+        ensureTechnicianNamingNormalized();
+        ensureDemoEnquiriesExist();
     }
 
     private void ensureDemoEnquiriesExist() {
@@ -1387,12 +1406,152 @@ public class DataInitializationService implements CommandLineRunner {
     }
 
     private void ensureTechnicianNamingNormalized() {
+        Role techRole = roleRepository.findByName(RoleName.ROLE_TECHNICIAN).orElse(null);
+        if (techRole != null) {
+            if (userRepository.findByUsername("technician").isEmpty()) {
+                createUser("technician", "Karthik Raja", "tech@sunpower.com", "9876543213", techRole);
+            }
+            if (userRepository.findByUsername("tech.ganesh").isEmpty()) {
+                createUser("tech.ganesh", "Ganesh Moorthy", "ganesh.tech@sunpower.com", "9840112234", techRole);
+            }
+            if (userRepository.findByUsername("tech.selva").isEmpty()) {
+                createUser("tech.selva", "Selvakumar R", "selva.tech@sunpower.com", "9840112235", techRole);
+            }
+        }
+
         userRepository.findByUsername("technician").ifPresent(user -> {
             if (user.getFullName() != null && user.getFullName().contains("Field Lead")) {
                 user.setFullName("Karthik Raja");
                 userRepository.save(user);
             }
         });
+
+        // Link Technician entities to User accounts
+        technicianRepository.findByNameContainingIgnoreCase("Karthik").ifPresent(t -> {
+            userRepository.findByUsername("technician").ifPresent(u -> {
+                t.setUser(u);
+                technicianRepository.save(t);
+            });
+        });
+        technicianRepository.findByNameContainingIgnoreCase("Ganesh").ifPresent(t -> {
+            userRepository.findByUsername("tech.ganesh").ifPresent(u -> {
+                t.setUser(u);
+                technicianRepository.save(t);
+            });
+        });
+        technicianRepository.findByNameContainingIgnoreCase("Selvakumar").ifPresent(t -> {
+            userRepository.findByUsername("tech.selva").ifPresent(u -> {
+                t.setUser(u);
+                technicianRepository.save(t);
+            });
+        });
+
+        // Ensure each technician has realistic assigned installations via InstallationTechnician
+        Technician karthik = technicianRepository.findByNameContainingIgnoreCase("Karthik").orElse(null);
+        Technician ganesh = technicianRepository.findByNameContainingIgnoreCase("Ganesh").orElse(null);
+        Technician selva = technicianRepository.findByNameContainingIgnoreCase("Selvakumar").orElse(null);
+
+        installationRepository.findByInstallationNumber("INS-DEMO-18M").ifPresent(instA -> {
+            if (karthik != null && installationTechnicianRepository.findByInstallationId(instA.getId()).isEmpty()) {
+                InstallationTechnician it = new InstallationTechnician(instA, karthik, "Lead Rooftop Installer");
+                it.setHoursWorked(new BigDecimal("8.00"));
+                installationTechnicianRepository.save(it);
+            }
+        });
+
+        installationRepository.findByInstallationNumber("INS-DEMO-LOSS").ifPresent(instB -> {
+            if (ganesh != null && installationTechnicianRepository.findByInstallationId(instB.getId()).isEmpty()) {
+                InstallationTechnician it = new InstallationTechnician(instB, ganesh, "Inverter & AC Wiring Specialist");
+                it.setHoursWorked(new BigDecimal("16.00"));
+                installationTechnicianRepository.save(it);
+            }
+        });
+
+        installationRepository.findByInstallationNumber("INS-DEMO-30M").ifPresent(instC -> {
+            if (selva != null && installationTechnicianRepository.findByInstallationId(instC.getId()).isEmpty()) {
+                InstallationTechnician it = new InstallationTechnician(instC, selva, "Mounting Structure Fabricator");
+                it.setHoursWorked(new BigDecimal("12.00"));
+                installationTechnicianRepository.save(it);
+            }
+        });
+
+        // Ensure distinct scheduled site surveys for Ganesh Moorthy and Selvakumar R
+        if (ganesh != null && siteSurveyRepository.findByTechnicianId(ganesh.getId()).stream().noneMatch(s -> s.getStatus() == SurveyStatus.SCHEDULED)) {
+            Customer cust = customerRepository.findByPhone("9840112250").orElseGet(() -> customerRepository.findAll().stream().findFirst().orElse(null));
+            if (cust != null) {
+                SiteSurvey s = new SiteSurvey();
+                s.setSurveyNumber("SRV-DEMO-GM");
+                s.setCustomer(cust);
+                s.setTechnician(ganesh);
+                s.setScheduledDate(LocalDate.now().plusDays(2));
+                s.setStatus(SurveyStatus.SCHEDULED);
+                s.setSurveyNotes("Commercial rooftop survey for 3-phase grid-tied inverter connection. Check AC distribution box distance.");
+                siteSurveyRepository.save(s);
+            }
+        }
+
+        if (selva != null && siteSurveyRepository.findByTechnicianId(selva.getId()).stream().noneMatch(s -> s.getStatus() == SurveyStatus.SCHEDULED)) {
+            Customer cust = customerRepository.findByPhone("9840122334").orElseGet(() -> customerRepository.findAll().stream().skip(1).findFirst().orElse(null));
+            if (cust != null) {
+                SiteSurvey s = new SiteSurvey();
+                s.setSurveyNumber("SRV-DEMO-SK");
+                s.setCustomer(cust);
+                s.setTechnician(selva);
+                s.setScheduledDate(LocalDate.now().plusDays(3));
+                s.setStatus(SurveyStatus.SCHEDULED);
+                s.setSurveyNotes("Tin shed mounting structure wind load inspection. Verify purlin spacing and roof sheet gauge.");
+                siteSurveyRepository.save(s);
+            }
+        }
+
+        // Ensure distinct service tickets assigned to each technician
+        if (ganesh != null && serviceTicketRepository.findByAssignedTechnicianId(ganesh.getId()).isEmpty()) {
+            Customer cust = customerRepository.findAll().stream().findFirst().orElse(null);
+            if (cust != null) {
+                ServiceTicket tkt = new ServiceTicket();
+                tkt.setTicketNumber("TKT-2026-INV-01");
+                tkt.setCustomer(cust);
+                tkt.setAssignedTechnician(ganesh);
+                tkt.setStatus(TicketStatus.IN_PROGRESS);
+                tkt.setComplaintDescription("Inverter grid sync fault (Error Code 03) after recent utility grid fluctuation.");
+                tkt.setFaultCode("ERR-GRID-SYNC");
+                tkt.setReportedDate(LocalDate.now().minusDays(1));
+                tkt.setSubmissionSource("CUSTOMER_PORTAL");
+                serviceTicketRepository.save(tkt);
+            }
+        }
+
+        if (selva != null && serviceTicketRepository.findByAssignedTechnicianId(selva.getId()).isEmpty()) {
+            Customer cust = customerRepository.findAll().stream().skip(1).findFirst().orElse(null);
+            if (cust != null) {
+                ServiceTicket tkt = new ServiceTicket();
+                tkt.setTicketNumber("TKT-2026-STR-02");
+                tkt.setCustomer(cust);
+                tkt.setAssignedTechnician(selva);
+                tkt.setStatus(TicketStatus.OPEN);
+                tkt.setComplaintDescription("Mid-clamp vibration and rail re-tightening requested on tin-shed roof.");
+                tkt.setFaultCode("ERR-STRUCTURE-LOOSE");
+                tkt.setReportedDate(LocalDate.now().minusDays(2));
+                tkt.setSubmissionSource("CUSTOMER_PORTAL");
+                serviceTicketRepository.save(tkt);
+            }
+        }
+
+        if (karthik != null && serviceTicketRepository.findByAssignedTechnicianId(karthik.getId()).isEmpty()) {
+            Customer cust = customerRepository.findAll().stream().skip(2).findFirst().orElse(null);
+            if (cust != null) {
+                ServiceTicket tkt = new ServiceTicket();
+                tkt.setTicketNumber("TKT-2026-DC-03");
+                tkt.setCustomer(cust);
+                tkt.setAssignedTechnician(karthik);
+                tkt.setStatus(TicketStatus.IN_PROGRESS);
+                tkt.setComplaintDescription("DC string conduit cable routing check and MC4 connector moisture sealing.");
+                tkt.setFaultCode("ERR-DC-CONDUIT");
+                tkt.setReportedDate(LocalDate.now().minusDays(3));
+                tkt.setSubmissionSource("CUSTOMER_PORTAL");
+                serviceTicketRepository.save(tkt);
+            }
+        }
 
         technicianPaymentRepository.findAll().forEach(tp -> {
             boolean modified = false;
