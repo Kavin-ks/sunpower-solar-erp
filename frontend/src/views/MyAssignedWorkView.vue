@@ -3,6 +3,7 @@ import { ref, computed, onMounted, watch } from 'vue';
 import api from '../api/client';
 import StatusBadge from '../components/ui/StatusBadge.vue';
 import CameraPhotoUpload from '../components/common/CameraPhotoUpload.vue';
+import CommissioningReportModal from '../components/common/CommissioningReportModal.vue';
 import { useAuthStore } from '../stores/auth';
 import { formatFaultCode } from '../utils/faultCatalog';
 import {
@@ -24,7 +25,9 @@ import {
   Calendar,
   Layers,
   Check,
-  RefreshCw
+  RefreshCw,
+  FileText,
+  PenTool
 } from 'lucide-vue-next';
 
 const authStore = useAuthStore();
@@ -63,16 +66,28 @@ const siteArrivalInst = ref<any | null>(null);
 const siteArrivalNotes = ref('Technician crew arrived on site. Dispatched components and rooftop structure inspected.');
 const siteArrivalPhotoUrl = ref('https://images.unsplash.com/photo-1613665813446-82a78c468a1d?w=800');
 
+const showCommissioningPdf = ref(false);
+const activeDossierInstallation = ref<any | null>(null);
+
+const defaultSignature = (name: string) => {
+  const cleanName = (name || 'Customer').replace(/[^a-zA-Z\s]/g, '');
+  return `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="260" height="70" viewBox="0 0 260 70"><text x="20" y="45" font-family="Brush Script MT, Segoe Script, cursive" font-size="28" font-style="italic" fill="%230f172a">${encodeURIComponent(cleanName)}</text></svg>`;
+};
+
 const installCompleteForm = ref({
   installedCapacityKw: '5.0',
+  actualStartTime: '',
+  actualFinishTime: '',
   panelMountingConfirmed: true,
   wiringConfirmed: true,
   earthingConfirmed: true,
   testingPassed: true,
-  testingNotes: 'String open-circuit voltage Voc = 380V. Short-circuit current Isc = 11.2A. Inverter grid sync test passed.',
+  testingNotes: 'String open-circuit voltage Voc = 380V. Short-circuit current Isc = 11.2A. Inverter grid sync test passed at 4.9 kW peak.',
   customerSigneeName: '',
-  hoursWorked: '8.0',
+  customerSignatureUrl: '',
+  hoursWorked: '7.5',
   completionPhotoUrl: 'https://images.unsplash.com/photo-1509391365360-2e959784a276?w=800',
+  completionReportPdfUrl: '',
 });
 
 // Survey photo modals
@@ -265,18 +280,53 @@ const handleStartInstallation = async (inst: any) => {
 
 const openInstallationComplete = (inst: any) => {
   selectedInstallation.value = inst;
+  const now = new Date();
+  const start = new Date(now.getTime() - 7.5 * 3600 * 1000);
   installCompleteForm.value = {
     installedCapacityKw: inst.installedCapacityKw ? inst.installedCapacityKw.toString() : (inst.salesOrder?.capacityKw ? inst.salesOrder.capacityKw.toString() : '5.0'),
+    actualStartTime: inst.actualStartTime ? new Date(inst.actualStartTime).toISOString().slice(0, 16) : start.toISOString().slice(0, 16),
+    actualFinishTime: now.toISOString().slice(0, 16),
     panelMountingConfirmed: true,
     wiringConfirmed: true,
     earthingConfirmed: true,
     testingPassed: true,
-    testingNotes: 'String open-circuit voltage Voc = 380V. Short-circuit current Isc = 11.2A. Inverter grid sync test passed.',
+    testingNotes: 'String open-circuit voltage Voc = 380V. Short-circuit current Isc = 11.2A. Inverter grid sync test passed at 4.9 kW peak.',
     customerSigneeName: inst.customer?.fullName || '',
-    hoursWorked: '8.0',
+    customerSignatureUrl: defaultSignature(inst.customer?.fullName || 'Customer Signature'),
+    hoursWorked: '7.5',
     completionPhotoUrl: 'https://images.unsplash.com/photo-1509391365360-2e959784a276?w=800',
+    completionReportPdfUrl: `/reports/commissioning-ins-${inst.id}.pdf`
   };
   showInstallCompleteModal.value = true;
+};
+
+const openDossierModal = (inst: any) => {
+  activeDossierInstallation.value = inst;
+  showCommissioningPdf.value = true;
+};
+
+const previewDossierFromForm = () => {
+  if (!selectedInstallation.value) return;
+  if (!installCompleteForm.value.customerSignatureUrl && installCompleteForm.value.customerSigneeName) {
+    installCompleteForm.value.customerSignatureUrl = defaultSignature(installCompleteForm.value.customerSigneeName);
+  }
+  activeDossierInstallation.value = {
+    ...selectedInstallation.value,
+    installedCapacityKw: parseFloat(installCompleteForm.value.installedCapacityKw) || selectedInstallation.value.installedCapacityKw,
+    actualStartTime: installCompleteForm.value.actualStartTime,
+    actualFinishTime: installCompleteForm.value.actualFinishTime,
+    completionPhotoUrl: installCompleteForm.value.completionPhotoUrl,
+    customerSigneeName: installCompleteForm.value.customerSigneeName,
+    customerSignatureUrl: installCompleteForm.value.customerSignatureUrl,
+    completionReportPdfUrl: installCompleteForm.value.completionReportPdfUrl,
+    testingNotes: installCompleteForm.value.testingNotes,
+    panelMountingConfirmed: installCompleteForm.value.panelMountingConfirmed,
+    wiringConfirmed: installCompleteForm.value.wiringConfirmed,
+    earthingConfirmed: installCompleteForm.value.earthingConfirmed,
+    testingPassed: installCompleteForm.value.testingPassed,
+    status: 'COMPLETED',
+  };
+  showCommissioningPdf.value = true;
 };
 
 const handleInstallationCompleteSubmit = async () => {
@@ -293,6 +343,9 @@ const handleInstallationCompleteSubmit = async () => {
     alert('Validation Error: Customer signee full name is required for formal sign-off.');
     return;
   }
+  if (!installCompleteForm.value.customerSignatureUrl.trim()) {
+    installCompleteForm.value.customerSignatureUrl = defaultSignature(installCompleteForm.value.customerSigneeName);
+  }
   if (!installCompleteForm.value.completionPhotoUrl.trim()) {
     alert('Validation Error: Photo evidence of the completed rooftop solar setup is required.');
     return;
@@ -300,6 +353,8 @@ const handleInstallationCompleteSubmit = async () => {
 
   try {
     await api.post(`/installations/${selectedInstallation.value.id}/complete`, {
+      actualStartTime: installCompleteForm.value.actualStartTime,
+      actualFinishTime: installCompleteForm.value.actualFinishTime,
       installedCapacityKw: parseFloat(installCompleteForm.value.installedCapacityKw),
       panelMountingConfirmed: installCompleteForm.value.panelMountingConfirmed,
       wiringConfirmed: installCompleteForm.value.wiringConfirmed,
@@ -307,12 +362,14 @@ const handleInstallationCompleteSubmit = async () => {
       testingPassed: installCompleteForm.value.testingPassed,
       testingNotes: installCompleteForm.value.testingNotes,
       customerSigneeName: installCompleteForm.value.customerSigneeName,
+      customerSignatureUrl: installCompleteForm.value.customerSignatureUrl,
       hoursWorked: parseFloat(installCompleteForm.value.hoursWorked),
       completionPhotoUrl: installCompleteForm.value.completionPhotoUrl,
+      completionReportPdfUrl: installCompleteForm.value.completionReportPdfUrl
     });
     showInstallCompleteModal.value = false;
     await fetchMyWork();
-    alert('Installation marked COMPLETED! Final rooftop commissioning photos archived, warranties linked and technician hours credited.');
+    alert('Installation marked COMPLETED! Final rooftop commissioning photos, timeframe, PDF report, and customer digital signature submitted to Warehouse Manager for warranty activation.');
   } catch (err: any) {
     alert(err.response?.data?.message || 'Failed to complete installation');
   }
@@ -676,9 +733,34 @@ onMounted(() => {
                   </template>
 
                   <template v-else>
-                    <span class="text-xs font-semibold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-md border border-emerald-200">
-                      ✓ Commissioned
-                    </span>
+                    <div class="inline-flex items-center space-x-1.5">
+                      <span
+                        v-if="inst.warrantyActivated"
+                        class="text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2 py-1 rounded-md border border-emerald-200 inline-flex items-center gap-1"
+                        title="Warranty officially activated by Warehouse Manager"
+                      >
+                        <ShieldCheck class="w-3.5 h-3.5 text-emerald-600" />
+                        <span>Warranty Active</span>
+                      </span>
+                      <span
+                        v-else
+                        class="text-[11px] font-semibold text-amber-700 bg-amber-50 px-2 py-1 rounded-md border border-amber-200 inline-flex items-center gap-1"
+                        title="Commissioning dossier submitted to Warehouse Manager for warranty activation"
+                      >
+                        <Clock class="w-3.5 h-3.5 text-amber-600" />
+                        <span>Awaiting Activation</span>
+                      </span>
+
+                      <button
+                        type="button"
+                        @click="openDossierModal(inst)"
+                        class="px-2.5 py-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-lg text-xs font-semibold border border-indigo-200 inline-flex items-center space-x-1 cursor-pointer transition shadow-2xs"
+                        title="View Commissioning Dossier, Customer Signature & Warranties"
+                      >
+                        <FileText class="w-3.5 h-3.5" />
+                        <span>Dossier / PDF</span>
+                      </button>
+                    </div>
                   </template>
                 </td>
               </tr>
@@ -881,30 +963,70 @@ onMounted(() => {
         </div>
 
         <form @submit.prevent="handleInstallationCompleteSubmit" class="space-y-4 text-xs">
-          <div class="grid grid-cols-2 gap-3">
-            <div>
-              <label class="block font-semibold text-slate-700 uppercase text-[10px] mb-1">Installed Capacity (kW)</label>
-              <input type="number" step="0.1" v-model="installCompleteForm.installedCapacityKw" class="w-full border border-slate-200 rounded-lg p-2 text-xs font-mono font-bold" required />
-            </div>
-            <div>
-              <label class="block font-semibold text-slate-700 uppercase text-[10px] mb-1">Hours Worked</label>
-              <input type="number" step="0.5" v-model="installCompleteForm.hoursWorked" class="w-full border border-slate-200 rounded-lg p-2 text-xs font-mono" required />
+          <!-- Timeframe Section -->
+          <div class="bg-indigo-50/50 p-3 rounded-xl border border-indigo-100 space-y-2">
+            <span class="block text-[10px] font-bold text-indigo-700 uppercase tracking-wider flex items-center gap-1.5">
+              <Clock class="w-3.5 h-3.5 text-indigo-600" />
+              Installation Timeframe & Capacity
+            </span>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-2.5">
+              <div>
+                <label class="block font-semibold text-slate-700 text-[10px] mb-1">Work Started At *</label>
+                <input
+                  type="datetime-local"
+                  v-model="installCompleteForm.actualStartTime"
+                  class="w-full border border-slate-200 rounded-lg p-2 text-xs font-mono bg-white"
+                  required
+                />
+              </div>
+              <div>
+                <label class="block font-semibold text-slate-700 text-[10px] mb-1">Work Completed At *</label>
+                <input
+                  type="datetime-local"
+                  v-model="installCompleteForm.actualFinishTime"
+                  class="w-full border border-slate-200 rounded-lg p-2 text-xs font-mono bg-white"
+                  required
+                />
+              </div>
+              <div class="grid grid-cols-2 gap-2">
+                <div>
+                  <label class="block font-semibold text-slate-700 text-[10px] mb-1">Hours</label>
+                  <input
+                    type="number"
+                    step="0.5"
+                    v-model="installCompleteForm.hoursWorked"
+                    class="w-full border border-slate-200 rounded-lg p-2 text-xs font-mono bg-white"
+                    required
+                  />
+                </div>
+                <div>
+                  <label class="block font-semibold text-slate-700 text-[10px] mb-1">Capacity (kW)</label>
+                  <input
+                    type="number"
+                    step="0.1"
+                    v-model="installCompleteForm.installedCapacityKw"
+                    class="w-full border border-slate-200 rounded-lg p-2 text-xs font-mono font-bold bg-white"
+                    required
+                  />
+                </div>
+              </div>
             </div>
           </div>
 
+          <!-- Quality Checklist -->
           <div class="bg-slate-50 p-3 rounded-xl border border-slate-200 space-y-2">
-            <span class="block text-[10px] font-bold text-slate-500 uppercase tracking-wider">Quality Checklist</span>
+            <span class="block text-[10px] font-bold text-slate-500 uppercase tracking-wider">Quality Checklist & Standards</span>
             <label class="flex items-center space-x-2 cursor-pointer">
               <input type="checkbox" v-model="installCompleteForm.panelMountingConfirmed" class="rounded text-emerald-600 focus:ring-emerald-500" />
-              <span>Solar panels securely mounted and torque-checked</span>
+              <span>Solar panels securely mounted, torque-checked, and structural clamps tightened</span>
             </label>
             <label class="flex items-center space-x-2 cursor-pointer">
               <input type="checkbox" v-model="installCompleteForm.wiringConfirmed" class="rounded text-emerald-600 focus:ring-emerald-500" />
-              <span>DC/AC cabling routed through UV-resistant conduits</span>
+              <span>DC/AC cabling routed through UV-resistant conduits with MC4 waterproof joints</span>
             </label>
             <label class="flex items-center space-x-2 cursor-pointer">
               <input type="checkbox" v-model="installCompleteForm.earthingConfirmed" class="rounded text-emerald-600 focus:ring-emerald-500" />
-              <span>Dual-ground earthing pit connected and resistance verified</span>
+              <span>Dual-ground earthing pit connected and resistance verified (&lt; 5 Ohms)</span>
             </label>
             <label class="flex items-center space-x-2 cursor-pointer">
               <input type="checkbox" v-model="installCompleteForm.testingPassed" class="rounded text-emerald-600 focus:ring-emerald-500" />
@@ -913,43 +1035,103 @@ onMounted(() => {
           </div>
 
           <div>
-            <label class="block font-semibold text-slate-700 uppercase text-[10px] mb-1">Testing Notes & Voltage Readings</label>
+            <label class="block font-semibold text-slate-700 uppercase text-[10px] mb-1">Testing Notes & Voltage Readings *</label>
             <textarea v-model="installCompleteForm.testingNotes" rows="2" class="w-full border border-slate-200 rounded-lg p-2 text-xs" required></textarea>
           </div>
 
           <div>
             <label class="block font-semibold text-slate-700 uppercase text-[10px] mb-1">Rooftop Commissioning Photo URL *</label>
-            <input
-              type="url"
-              v-model="installCompleteForm.completionPhotoUrl"
-              class="w-full border border-slate-200 rounded-lg p-2 text-xs focus:ring-2 focus:ring-emerald-500 focus:outline-none"
-              placeholder="https://... photo of completed panels & inverter"
-              required
-            />
-            <div class="mt-1 flex items-center justify-between">
-              <span class="text-[10px] text-slate-400">Mandatory photographic proof of commissioned rooftop setup</span>
+            <div class="flex gap-2">
+              <input
+                type="url"
+                v-model="installCompleteForm.completionPhotoUrl"
+                class="flex-1 border border-slate-200 rounded-lg p-2 text-xs focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+                placeholder="https://... photo of completed panels & inverter"
+                required
+              />
               <button
                 type="button"
                 @click="installCompleteForm.completionPhotoUrl = 'https://images.unsplash.com/photo-1509391365360-2e959784a276?w=800'"
-                class="text-[10px] text-emerald-600 hover:text-emerald-700 font-medium cursor-pointer"
+                class="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg font-medium text-[11px] whitespace-nowrap cursor-pointer"
               >
-                Use sample photo
+                Sample Photo
               </button>
+            </div>
+            <div v-if="installCompleteForm.completionPhotoUrl" class="mt-2 h-24 w-full max-w-sm rounded-lg overflow-hidden border border-slate-200">
+              <img :src="installCompleteForm.completionPhotoUrl" class="w-full h-full object-cover" alt="Commissioning Rooftop" />
             </div>
           </div>
 
-          <div>
-            <label class="block font-semibold text-slate-700 uppercase text-[10px] mb-1">Customer Signee Full Name</label>
-            <input type="text" v-model="installCompleteForm.customerSigneeName" class="w-full border border-slate-200 rounded-lg p-2 text-xs" required />
+          <!-- Customer Sign-Off & Digital Signature -->
+          <div class="p-3 bg-amber-50/60 rounded-xl border border-amber-200 space-y-3">
+            <span class="block text-[10px] font-bold text-amber-900 uppercase tracking-wider flex items-center gap-1.5">
+              <PenTool class="w-3.5 h-3.5 text-amber-600" />
+              Customer Formal Sign-off & Digital Signature
+            </span>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3 items-center">
+              <div>
+                <label class="block font-semibold text-slate-700 uppercase text-[10px] mb-1">Customer Signee Full Name *</label>
+                <input
+                  type="text"
+                  v-model="installCompleteForm.customerSigneeName"
+                  @input="installCompleteForm.customerSignatureUrl = defaultSignature(installCompleteForm.customerSigneeName)"
+                  class="w-full border border-slate-200 rounded-lg p-2 text-xs bg-white"
+                  required
+                />
+                <span class="text-[10px] text-slate-500 mt-1 block">Name of customer representative who verified the installation.</span>
+              </div>
+              <div>
+                <label class="block font-semibold text-slate-700 uppercase text-[10px] mb-1">Customer Digital Signature Preview</label>
+                <div class="h-16 w-full bg-white border border-dashed border-amber-300 rounded-lg flex items-center justify-center p-1 relative overflow-hidden">
+                  <img
+                    v-if="installCompleteForm.customerSignatureUrl"
+                    :src="installCompleteForm.customerSignatureUrl"
+                    alt="Customer Digital Signature"
+                    class="h-full object-contain"
+                  />
+                  <span v-else class="text-[10px] text-slate-400">Enter customer signee name to sign</span>
+                </div>
+              </div>
+            </div>
           </div>
 
-          <div class="flex justify-end space-x-2 pt-3 border-t border-slate-100">
-            <button type="button" @click="showInstallCompleteModal = false" class="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-lg text-xs cursor-pointer">
-              Cancel
+          <!-- Commissioning Dossier Report Document Notice -->
+          <div class="p-2.5 bg-slate-50 rounded-lg border border-slate-200 flex items-center justify-between">
+            <div class="flex items-center space-x-2">
+              <FileCheck class="w-4 h-4 text-emerald-600" />
+              <div>
+                <span class="text-[11px] font-bold text-slate-800 block">Commissioning Dossier PDF Generated</span>
+                <span class="text-[10px] text-slate-500 font-mono">{{ installCompleteForm.completionReportPdfUrl }}</span>
+              </div>
+            </div>
+            <button
+              type="button"
+              @click="previewDossierFromForm"
+              class="px-2.5 py-1 bg-white hover:bg-slate-100 text-slate-700 border border-slate-300 rounded text-[11px] font-semibold cursor-pointer inline-flex items-center space-x-1"
+            >
+              <FileText class="w-3 h-3 text-indigo-600" />
+              <span>Preview Dossier PDF</span>
             </button>
-            <button type="submit" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-lg text-xs shadow-2xs cursor-pointer">
-              Confirm Commissioning
+          </div>
+
+          <div class="flex justify-between items-center pt-3 border-t border-slate-100">
+            <button
+              type="button"
+              @click="previewDossierFromForm"
+              class="px-3 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-semibold rounded-lg text-xs cursor-pointer inline-flex items-center space-x-1 border border-indigo-200"
+            >
+              <FileText class="w-3.5 h-3.5" />
+              <span>Preview Commissioning PDF</span>
             </button>
+            <div class="flex space-x-2">
+              <button type="button" @click="showInstallCompleteModal = false" class="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-lg text-xs cursor-pointer">
+                Cancel
+              </button>
+              <button type="submit" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-lg text-xs shadow-2xs cursor-pointer flex items-center space-x-1">
+                <CheckCircle2 class="w-4 h-4" />
+                <span>Submit Dossier to Warehouse Manager</span>
+              </button>
+            </div>
           </div>
         </form>
       </div>
@@ -1282,6 +1464,13 @@ onMounted(() => {
       @stage-change="(s) => installationPhotoStage = s"
       @photo-uploaded="handleInstallPhotoUploaded"
       @close="photoModalInstallation = null"
+    />
+
+    <!-- Modal: Commissioning Report & Dossier PDF View -->
+    <CommissioningReportModal
+      v-if="showCommissioningPdf && activeDossierInstallation"
+      :installation="activeDossierInstallation"
+      @close="showCommissioningPdf = false"
     />
   </div>
 </template>

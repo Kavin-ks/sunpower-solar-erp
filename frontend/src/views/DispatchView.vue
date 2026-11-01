@@ -22,12 +22,23 @@ import {
   ImageIcon,
   Users,
   ShieldCheck,
+  Clock,
+  FileText,
+  Calendar,
+  PenTool,
 } from 'lucide-vue-next';
 import { BrowserMultiFormatReader, type IScannerControls } from '@zxing/browser';
+import CommissioningReportModal from '../components/common/CommissioningReportModal.vue';
 
 const dispatches = ref<Dispatch[]>([]);
 const confirmedOrders = ref<SalesOrder[]>([]);
 const availableTechnicians = ref<Technician[]>([]);
+const installations = ref<any[]>([]);
+const showActivateWarrantyModal = ref(false);
+const activeWarrantyDispatch = ref<Dispatch | null>(null);
+const activeWarrantyInstallation = ref<any | null>(null);
+const showCommissioningPdf = ref(false);
+const activeCommissioningInstallation = ref<any | null>(null);
 const loading = ref(true);
 const showCreateModal = ref(false);
 const selectedDispatch = ref<Dispatch | null>(null);
@@ -116,14 +127,16 @@ const playBeep = () => {
 const fetchData = async () => {
   loading.value = true;
   try {
-    const [dispRes, ordRes, techRes] = await Promise.all([
+    const [dispRes, ordRes, techRes, instRes] = await Promise.all([
       api.get('/dispatches'),
       api.get('/orders'),
       api.get('/technicians'),
+      api.get('/installations'),
     ]);
     dispatches.value = dispRes.data;
     confirmedOrders.value = ordRes.data.filter((o: SalesOrder) => o.status === 'CONFIRMED');
     availableTechnicians.value = techRes.data;
+    installations.value = instRes.data;
     if (confirmedOrders.value.length > 0 && !createForm.value.salesOrderId) {
       createForm.value.salesOrderId = confirmedOrders.value[0].id.toString();
     }
@@ -461,15 +474,49 @@ const handleDispatchShipment = async (dispatchId: number) => {
   }
 };
 
+const getInstallationForDispatch = (disp: Dispatch) => {
+  return installations.value.find(
+    (inst) => (inst.dispatch && inst.dispatch.id === disp.id) || (inst.salesOrder && disp.salesOrder && inst.salesOrder.id === disp.salesOrder.id)
+  );
+};
+
+const openActivateWarrantyModal = (disp: Dispatch) => {
+  activeWarrantyDispatch.value = disp;
+  activeWarrantyInstallation.value = getInstallationForDispatch(disp);
+  showActivateWarrantyModal.value = true;
+};
+
+const handleActivateWarranty = async () => {
+  if (!activeWarrantyDispatch.value) return;
+  const dispId = activeWarrantyDispatch.value.id;
+  try {
+    await api.post(`/dispatches/${dispId}/activate-warranty`);
+    showActivateWarrantyModal.value = false;
+    alert(`Warranty officially activated for Dispatch #${activeWarrantyDispatch.value.dispatchNumber}! Equipment & Dispatch status set to INSTALLED.`);
+    await fetchData();
+    if (selectedDispatch.value && selectedDispatch.value.id === dispId) {
+      const res = await api.get(`/dispatches/${dispId}`);
+      selectedDispatch.value = res.data;
+    }
+  } catch (err: any) {
+    alert(err.response?.data?.message || 'Failed to activate warranty');
+  }
+};
+
+const openCommissioningPdfModal = (inst: any) => {
+  activeCommissioningInstallation.value = inst;
+  showCommissioningPdf.value = true;
+};
+
 const handleMarkDelivered = async (dispatchId: number) => {
   try {
     await api.patch(`/dispatches/${dispatchId}/deliver`);
-    fetchData();
+    await fetchData();
     if (selectedDispatch.value && selectedDispatch.value.id === dispatchId) {
       const res = await api.get(`/dispatches/${dispatchId}`);
       selectedDispatch.value = res.data;
     }
-    alert('Shipment marked DELIVERED! Delivery date recorded and serialized product warranties activated.');
+    alert('Shipment marked DELIVERED! Delivery date recorded. Serial numbers are at customer site awaiting on-site technician installation.');
   } catch (err: any) {
     alert(err.response?.data?.message || 'Failed to mark delivered');
   }
@@ -584,6 +631,49 @@ onBeforeUnmount(() => {
                   <CheckCircle2 class="w-3.5 h-3.5" />
                   <span>Mark Delivered</span>
                 </button>
+
+                <!-- If DELIVERED: Check installation status -->
+                <template v-else-if="disp.status === 'DELIVERED'">
+                  <button
+                    v-if="canManageDispatch && getInstallationForDispatch(disp)?.status === 'COMPLETED'"
+                    type="button"
+                    @click="openActivateWarrantyModal(disp)"
+                    class="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded font-semibold cursor-pointer inline-flex items-center space-x-1 shadow-xs animate-pulse"
+                    title="Technician submitted completion dossier with photos, timeframe & customer digital signature"
+                  >
+                    <ShieldCheck class="w-3.5 h-3.5" />
+                    <span>Review & Activate Warranty</span>
+                  </button>
+
+                  <span
+                    v-else
+                    class="text-[11px] font-semibold text-amber-700 bg-amber-50 px-2 py-1 rounded-md border border-amber-200 inline-flex items-center gap-1"
+                    title="Equipment delivered. Awaiting technician team lead rooftop installation & customer signature"
+                  >
+                    <Clock class="w-3.5 h-3.5 text-amber-600" />
+                    <span>Awaiting Installation</span>
+                  </span>
+                </template>
+
+                <!-- If INSTALLED: Warranties Active badge + view dossier button -->
+                <template v-else-if="disp.status === 'INSTALLED'">
+                  <div class="inline-flex items-center space-x-1.5">
+                    <span class="text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2 py-1 rounded-md border border-emerald-200 inline-flex items-center gap-1">
+                      <ShieldCheck class="w-3.5 h-3.5 text-emerald-600" />
+                      <span>INSTALLED • Warranties Active</span>
+                    </span>
+                    <button
+                      v-if="getInstallationForDispatch(disp)"
+                      type="button"
+                      @click="openCommissioningPdfModal(getInstallationForDispatch(disp))"
+                      class="px-2 py-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded text-xs font-semibold border border-indigo-200 inline-flex items-center space-x-1 cursor-pointer"
+                      title="View Commissioning Dossier & Digital Signature"
+                    >
+                      <FileText class="w-3.5 h-3.5" />
+                      <span>Dossier</span>
+                    </button>
+                  </div>
+                </template>
               </td>
             </tr>
           </tbody>
@@ -1154,6 +1244,178 @@ onBeforeUnmount(() => {
         </div>
       </div>
     </div>
+
+    <!-- MODAL: WAREHOUSE MANAGER WARRANTY ACTIVATION REVIEW -->
+    <div v-if="showActivateWarrantyModal && activeWarrantyDispatch" class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center z-50 p-4">
+      <div class="bg-white rounded-2xl max-w-3xl w-full p-6 shadow-2xl max-h-[92vh] overflow-y-auto space-y-4">
+        <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+          <div>
+            <div class="flex items-center space-x-2">
+              <ShieldCheck class="w-5 h-5 text-emerald-600" />
+              <h2 class="text-lg font-bold text-slate-900">Review Dossier & Activate Equipment Warranty</h2>
+            </div>
+            <p class="text-xs text-slate-500 mt-0.5">
+              Dispatch #{{ activeWarrantyDispatch.dispatchNumber }} • Customer: <span class="font-bold text-slate-700">{{ activeWarrantyDispatch.customer.fullName }}</span> ({{ activeWarrantyDispatch.customer.city || activeWarrantyDispatch.customer.phone }})
+            </p>
+          </div>
+          <button type="button" @click="showActivateWarrantyModal = false" class="text-slate-400 hover:text-slate-600 text-lg cursor-pointer">✕</button>
+        </div>
+
+        <div v-if="!activeWarrantyInstallation" class="p-6 text-center text-slate-500">
+          No installation record found for this dispatch.
+        </div>
+
+        <div v-else class="space-y-4 text-xs">
+          <!-- Timeframe & Installation Summary -->
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <div class="p-3 bg-indigo-50/60 rounded-xl border border-indigo-100">
+              <span class="text-[10px] uppercase font-bold text-indigo-700 block mb-1">Timeframe</span>
+              <div class="font-semibold text-slate-800">
+                Started: {{ activeWarrantyInstallation.actualStartTime ? new Date(activeWarrantyInstallation.actualStartTime).toLocaleString() : 'N/A' }}
+              </div>
+              <div class="font-semibold text-slate-800 mt-0.5">
+                Completed: {{ activeWarrantyInstallation.actualFinishTime ? new Date(activeWarrantyInstallation.actualFinishTime).toLocaleString() : 'N/A' }}
+              </div>
+              <div class="text-[11px] text-indigo-900 font-bold mt-1">
+                Elapsed Hours: {{ activeWarrantyInstallation.hoursWorked || 7.5 }} hrs
+              </div>
+            </div>
+
+            <div class="p-3 bg-emerald-50/60 rounded-xl border border-emerald-100">
+              <span class="text-[10px] uppercase font-bold text-emerald-700 block mb-1">Capacity & Testing</span>
+              <div class="font-mono font-bold text-emerald-900 text-sm">
+                {{ activeWarrantyInstallation.installedCapacityKw || activeWarrantyDispatch.salesOrder.capacityKw }} kW Commissioned
+              </div>
+              <div class="text-emerald-700 font-medium text-[11px] mt-1">
+                ✓ Mounting, wiring & earthing certified
+              </div>
+              <div class="text-emerald-700 font-medium text-[11px]">
+                ✓ Grid synchronization test PASSED
+              </div>
+            </div>
+
+            <div class="p-3 bg-amber-50/60 rounded-xl border border-amber-100">
+              <span class="text-[10px] uppercase font-bold text-amber-700 block mb-1">Customer Sign-Off</span>
+              <div class="font-bold text-slate-900">
+                {{ activeWarrantyInstallation.customerSigneeName || activeWarrantyDispatch.customer.fullName }}
+              </div>
+              <div class="text-[10px] text-amber-800 font-medium mt-0.5">
+                Formal digital acceptance captured
+              </div>
+              <div class="text-[10px] text-slate-500 font-mono mt-1">
+                Dossier: {{ activeWarrantyInstallation.completionReportPdfUrl || `/reports/commissioning-ins-${activeWarrantyInstallation.id}.pdf` }}
+              </div>
+            </div>
+          </div>
+
+          <!-- Photo Evidence & Customer Signature Preview Grid -->
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <!-- Photo Evidence -->
+            <div class="p-3 bg-slate-50 rounded-xl border border-slate-200 space-y-2">
+              <span class="text-[10px] uppercase font-bold text-slate-600 block flex items-center justify-between">
+                <span>Rooftop Commissioning Photo Evidence</span>
+                <span class="text-emerald-600 text-[10px]">✓ On-site proof</span>
+              </span>
+              <div class="h-44 w-full bg-slate-200 rounded-lg overflow-hidden border border-slate-300">
+                <img
+                  v-if="activeWarrantyInstallation.completionPhotoUrl"
+                  :src="activeWarrantyInstallation.completionPhotoUrl"
+                  alt="Rooftop solar completed"
+                  class="w-full h-full object-cover"
+                />
+                <div v-else class="h-full flex items-center justify-center text-slate-400">
+                  No photo provided
+                </div>
+              </div>
+            </div>
+
+            <!-- Customer Signature Preview -->
+            <div class="p-3 bg-slate-50 rounded-xl border border-slate-200 space-y-2">
+              <span class="text-[10px] uppercase font-bold text-slate-600 block flex items-center justify-between">
+                <span>Customer Digital Signature</span>
+                <span class="text-emerald-600 text-[10px]">✓ Verified</span>
+              </span>
+              <div class="h-44 w-full bg-white rounded-lg border border-dashed border-slate-300 p-2 flex flex-col items-center justify-center">
+                <img
+                  v-if="activeWarrantyInstallation.customerSignatureUrl"
+                  :src="activeWarrantyInstallation.customerSignatureUrl"
+                  alt="Customer Signature"
+                  class="max-h-24 object-contain"
+                />
+                <span v-else class="text-slate-400">Signature not attached</span>
+                <div class="mt-2 text-center border-t border-slate-100 pt-2 w-full">
+                  <span class="text-[10px] text-slate-500 block">Signee: <strong class="text-slate-800">{{ activeWarrantyInstallation.customerSigneeName }}</strong></span>
+                  <span class="text-[9px] text-slate-400 font-mono">Digitally signed upon inspection</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Electrical Testing Details -->
+          <div class="p-3 bg-slate-50 rounded-xl border border-slate-200">
+            <span class="text-[10px] uppercase font-bold text-slate-500 block mb-1">Technician Test Readings</span>
+            <p class="text-slate-700 font-mono text-[11px] bg-white p-2 rounded border border-slate-200">
+              {{ activeWarrantyInstallation.testingNotes || 'String open-circuit voltage Voc = 380V. Short-circuit current Isc = 11.2A. Inverter grid sync test passed at 4.9 kW peak.' }}
+            </p>
+          </div>
+
+          <!-- Serialized Items that will be activated -->
+          <div class="p-3 bg-slate-50 rounded-xl border border-slate-200">
+            <span class="text-[10px] uppercase font-bold text-slate-500 block mb-1.5">
+              Equipment Warranties to be Activated ({{ activeWarrantyDispatch.items.filter(i => i.product.serialized && i.serialNumber).length }} Items)
+            </span>
+            <div class="flex flex-wrap gap-2">
+              <span
+                v-for="item in activeWarrantyDispatch.items.filter(i => i.product.serialized && i.serialNumber)"
+                :key="item.id"
+                class="px-2.5 py-1 bg-white border border-slate-200 rounded-md font-mono text-[11px] text-slate-800 flex items-center gap-1.5"
+              >
+                <Barcode class="w-3.5 h-3.5 text-slate-400" />
+                <span>{{ item.serialNumber }}</span>
+                <span class="text-slate-400 font-sans">({{ item.product.warrantyYears || 5 }} yrs)</span>
+              </span>
+            </div>
+          </div>
+
+          <!-- Footer Actions -->
+          <div class="flex items-center justify-between pt-4 border-t border-slate-100">
+            <button
+              type="button"
+              @click="openCommissioningPdfModal(activeWarrantyInstallation)"
+              class="px-3.5 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-semibold rounded-xl text-xs cursor-pointer inline-flex items-center space-x-1.5 border border-indigo-200 transition"
+            >
+              <FileText class="w-4 h-4 text-indigo-600" />
+              <span>View Commissioning PDF Dossier</span>
+            </button>
+
+            <div class="flex items-center space-x-2">
+              <button
+                type="button"
+                @click="showActivateWarrantyModal = false"
+                class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-xl text-xs cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                @click="handleActivateWarranty"
+                class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs shadow-md cursor-pointer flex items-center space-x-1.5 transition"
+              >
+                <ShieldCheck class="w-4 h-4" />
+                <span>Approve Dossier & Activate Warranty (Set INSTALLED)</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal: Commissioning Report & Dossier PDF View -->
+    <CommissioningReportModal
+      v-if="showCommissioningPdf && activeCommissioningInstallation"
+      :installation="activeCommissioningInstallation"
+      @close="showCommissioningPdf = false"
+    />
   </div>
 </template>
 

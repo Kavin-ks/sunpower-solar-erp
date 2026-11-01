@@ -55,6 +55,14 @@ public class Installation {
 
     private LocalDateTime customerSignedAt;
 
+    @Column(columnDefinition = "LONGTEXT")
+    private String completionReportPdfUrl;
+
+    private boolean warrantyActivated = false;
+    private LocalDateTime warrantyActivatedAt;
+    @Column(length = 100)
+    private String warrantyActivatedBy;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 30)
     private InstallationStatus status = InstallationStatus.SCHEDULED;
@@ -121,6 +129,14 @@ public class Installation {
     public void setCustomerSignatureUrl(String customerSignatureUrl) { this.customerSignatureUrl = customerSignatureUrl; }
     public LocalDateTime getCustomerSignedAt() { return customerSignedAt; }
     public void setCustomerSignedAt(LocalDateTime customerSignedAt) { this.customerSignedAt = customerSignedAt; }
+    public String getCompletionReportPdfUrl() { return completionReportPdfUrl; }
+    public void setCompletionReportPdfUrl(String completionReportPdfUrl) { this.completionReportPdfUrl = completionReportPdfUrl; }
+    public boolean isWarrantyActivated() { return warrantyActivated; }
+    public void setWarrantyActivated(boolean warrantyActivated) { this.warrantyActivated = warrantyActivated; }
+    public LocalDateTime getWarrantyActivatedAt() { return warrantyActivatedAt; }
+    public void setWarrantyActivatedAt(LocalDateTime warrantyActivatedAt) { this.warrantyActivatedAt = warrantyActivatedAt; }
+    public String getWarrantyActivatedBy() { return warrantyActivatedBy; }
+    public void setWarrantyActivatedBy(String warrantyActivatedBy) { this.warrantyActivatedBy = warrantyActivatedBy; }
     public InstallationStatus getStatus() { return status; }
     public void setStatus(InstallationStatus status) { this.status = status; }
     public String getWorkNotes() { return workNotes; }

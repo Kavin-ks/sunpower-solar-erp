@@ -115,7 +115,8 @@ public class Enums {
         PICKING,
         READY_FOR_DISPATCH,
         DISPATCHED,
-        DELIVERED
+        DELIVERED,
+        INSTALLED
     }
 
     public enum InstallationStatus {
