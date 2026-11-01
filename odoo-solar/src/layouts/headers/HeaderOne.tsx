@@ -5,12 +5,10 @@ import Link from 'next/link';
 import NavMenu from './Menu/NavMenu';
 import UseSticky from '@/hooks/UseSticky';
 import MobileMeneu from './Menu/MobileMeneu';
-import SearchPopup from '@/components/common/SearchPopup';
 import UserProfileDropdown from '@/components/common/UserProfileDropdown';
 
 const HeaderOne = ({ style }: any) => {
   const { sticky } = UseSticky();
-  const [searchPopup, setSearchPopup] = useState<boolean>(false);
 
   return (
     <>
@@ -51,18 +49,8 @@ const HeaderOne = ({ style }: any) => {
               </nav>
             </div>
 
-            {/* RIGHT BUTTONS: Search, Profile & Get A Quote */}
+            {/* RIGHT BUTTONS: Profile & Get A Quote */}
             <div className="d-flex align-items-center gap-3 flex-shrink-0">
-              <button
-                type="button"
-                className="btn btn-light btn-sm rounded-circle d-flex align-items-center justify-content-center p-2 text-dark shadow-none border"
-                style={{ width: '38px', height: '38px' }}
-                onClick={() => setSearchPopup(true)}
-                title="Search"
-              >
-                <i className="bi bi-search" style={{ fontSize: '15px' }}></i>
-              </button>
-
               {/* User Profile Dropdown with Entered Details & Logout Button */}
               <UserProfileDropdown />
 
@@ -167,7 +155,6 @@ const HeaderOne = ({ style }: any) => {
       </header>
 
       <MobileMeneu />
-      <SearchPopup searchPopup={searchPopup} setSearchPopup={setSearchPopup} />
     </>
   );
 };

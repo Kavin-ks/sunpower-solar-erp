@@ -1,5 +1,6 @@
 
 import React from 'react';
+import Link from 'next/link';
 import Image, { StaticImageData } from 'next/image';
 
 import { TeamSocialLinks } from '@/components/common/SocialLinks';
@@ -55,8 +56,8 @@ const TeamAreaHomeOne = ({style, style_2}: any) => {
                       <a href="#"><i className={`${style? "bi bi-dash" : "bi bi-plus"}`}></i></a>
                     </div>
                     <div className="team-content">
-                      <h4><a href="team-details.html">Roten Barsaw</a></h4>
-                      <span>Chief Engineer</span>
+                      <h4><Link href="/team">{item.name}</Link></h4>
+                      <span>{item.designation}</span>
                     </div>
                   </div>
                 </div>
