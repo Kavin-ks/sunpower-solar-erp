@@ -107,7 +107,6 @@ const handleQuickSelect = (u: string) => {
           <button
             v-for="p in [
               { label: 'Admin', u: 'admin' },
-              { label: 'Director', u: 'director' },
               { label: 'Sales', u: 'sales' },
               { label: 'Warehouse', u: 'warehouse' },
               { label: 'Technician', u: 'technician' },

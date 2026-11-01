@@ -9,7 +9,6 @@ const router = useRouter();
 
 const roleOptions = [
   { label: 'Admin (Full Access & Oversight)', username: 'admin' },
-  { label: 'Director (Executive Oversight)', username: 'director' },
   { label: 'Sales Lead', username: 'sales' },
   { label: 'Warehouse Manager', username: 'warehouse' },
   { label: 'Technician (Karthik Raja)', username: 'technician' },
