@@ -121,6 +121,43 @@ public class InstallationService {
     }
 
     @Transactional
+    public Installation confirmSiteReceived(Long installationId, com.sunpower.dto.InstallationDTOs.SiteReceivedRequest req, String actor) {
+        Installation installation = getInstallationById(installationId);
+        installation.setStatus(InstallationStatus.SITE_RECEIVED);
+        if (req != null && req.getNotes() != null && !req.getNotes().trim().isEmpty()) {
+            installation.setWorkNotes((installation.getWorkNotes() != null ? installation.getWorkNotes() + "\n" : "") + "Site arrival notes: " + req.getNotes().trim());
+        }
+        installation = installationRepository.save(installation);
+
+        if (req != null && req.getArrivalPhotoUrl() != null && !req.getArrivalPhotoUrl().trim().isEmpty()) {
+            InstallationPhoto photo = new InstallationPhoto(installation, req.getArrivalPhotoUrl().trim(), "Arrival", "Technician team arrived on customer site");
+            installationPhotoRepository.save(photo);
+        }
+
+        SalesOrder order = installation.getSalesOrder();
+        List<SerialNumber> serials = serialNumberRepository.findBySalesOrderId(order.getId());
+        for (SerialNumber sn : serials) {
+            sn.setStatus(com.sunpower.entity.enums.Enums.SerialNumberStatus.SITE_RECEIVED);
+            if (sn.getSiteReceivedAt() == null) {
+                sn.setSiteReceivedAt(LocalDateTime.now());
+            }
+            sn.setInstallationId(installation.getId());
+            serialNumberRepository.save(sn);
+
+            SerialNumberHistory history = new SerialNumberHistory(
+                    sn,
+                    com.sunpower.entity.enums.Enums.SerialNumberStatus.SITE_RECEIVED,
+                    "Technician team arrived at site. Equipment verified at customer location (" + installation.getCustomer().getAddress() + ")",
+                    installation.getCustomer().getAddress(),
+                    actor
+            );
+            serialNumberHistoryRepository.save(history);
+        }
+
+        return installation;
+    }
+
+    @Transactional
     public Installation startInstallation(Long installationId, String technicianName) {
         Installation installation = getInstallationById(installationId);
         if (installation.getActualStartTime() == null) {
@@ -186,15 +223,19 @@ public class InstallationService {
         if (techList == null || techList.isEmpty()) {
             throw new IllegalArgumentException("At least one technician must be assigned to the installation crew.");
         }
-        for (AssignedTechnicianRequest techReq : techList) {
+        for (int i = 0; i < techList.size(); i++) {
+            AssignedTechnicianRequest techReq = techList.get(i);
             Technician tech = technicianRepository.findById(techReq.getTechnicianId())
                     .orElseThrow(() -> new IllegalArgumentException("Technician not found with id: " + techReq.getTechnicianId()));
-            InstallationTechnician it = new InstallationTechnician(installation, tech, techReq.getRoleInCrew() != null ? techReq.getRoleInCrew() : "Lead Electrician");
+            boolean isLead = Boolean.TRUE.equals(techReq.getIsTeamLead()) || (i == 0 && techList.stream().noneMatch(t -> Boolean.TRUE.equals(t.getIsTeamLead())));
+            InstallationTechnician it = new InstallationTechnician(installation, tech,
+                    techReq.getRoleInCrew() != null ? techReq.getRoleInCrew() : (isLead ? "Team Lead / Electrician" : "Installer"),
+                    isLead);
             crew.add(it);
         }
 
-        installationTechnicianRepository.saveAll(crew);
         installation.setAssignedTechnicians(crew);
+        installation = installationRepository.save(installation);
 
         order.setStatus(OrderStatus.IN_INSTALLATION);
         salesOrderRepository.save(order);
@@ -205,6 +246,38 @@ public class InstallationService {
     @Transactional
     public Installation completeInstallation(Long installationId, CompleteInstallationRequest request, String completedBy) {
         Installation installation = getInstallationById(installationId);
+
+        // Required physical and testing verification guards
+        if (!request.isPanelMountingConfirmed() || !request.isWiringConfirmed() || !request.isEarthingConfirmed()) {
+            throw new IllegalStateException("Validation Error: Cannot complete installation without physical checks confirmed (Panel Mounting, Wiring, Earthing must all be checked).");
+        }
+        if (!request.isTestingPassed()) {
+            throw new IllegalStateException("Validation Error: Cannot complete installation without testing passed.");
+        }
+        if (request.getTestingNotes() == null || request.getTestingNotes().trim().isEmpty()) {
+            throw new IllegalStateException("Validation Error: Cannot complete installation without electrical test results (Voc, Isc, inverter grid sync readings).");
+        }
+        if (request.getCustomerSigneeName() == null || request.getCustomerSigneeName().trim().isEmpty()) {
+            throw new IllegalStateException("Validation Error: Customer signee name is mandatory for signoff.");
+        }
+
+        // Check for completed rooftop photo evidence
+        boolean hasCompletedPhoto = false;
+        if (request.getCompletionPhotoUrl() != null && !request.getCompletionPhotoUrl().trim().isEmpty()) {
+            hasCompletedPhoto = true;
+            InstallationPhoto photo = new InstallationPhoto(installation, request.getCompletionPhotoUrl().trim(), "Completed Rooftop", "Final commissioned solar installation on rooftop");
+            installationPhotoRepository.save(photo);
+        } else if (installation.getPhotos() != null) {
+            for (InstallationPhoto p : installation.getPhotos()) {
+                if (p.getStage() != null && (p.getStage().equalsIgnoreCase("Full Rooftop") || p.getStage().equalsIgnoreCase("Completed Rooftop") || p.getStage().equalsIgnoreCase("Completed"))) {
+                    hasCompletedPhoto = true;
+                    break;
+                }
+            }
+        }
+        if (!hasCompletedPhoto) {
+            throw new IllegalStateException("Validation Error: Cannot complete installation without photo evidence of the completed rooftop solar setup.");
+        }
 
         LocalDateTime finishTime = request.getActualFinishTime() != null ? request.getActualFinishTime() : LocalDateTime.now();
         if (installation.getActualStartTime() == null) {
@@ -291,15 +364,17 @@ public class InstallationService {
             );
             serialNumberHistoryRepository.save(history);
 
-            // Warranty activates strictly on completion date!
-            warrantyService.activateWarranty(installation.getCustomer(), order, sn.getProduct(), sn, finishTime.toLocalDate(), installation.getId());
+            // Link installation completion separately without overriding warranty start date (which starts on delivery!)
+            warrantyService.activateWarranty(installation.getCustomer(), order, sn.getProduct(), sn, null, installation.getId(), finishTime.toLocalDate());
         }
 
-        // Also activate warranties for non-serialized components like solar panels
+        warrantyService.recordInstallationCompletion(order, installation.getId(), finishTime.toLocalDate());
+
+        // Also link non-serialized components like solar panels
         if (order.getItems() != null) {
             for (OrderItem oi : order.getItems()) {
                 if (oi.getProduct().getCategory() != null && oi.getProduct().getCategory().getName().toUpperCase().contains("PANEL")) {
-                    warrantyService.activateWarranty(installation.getCustomer(), order, oi.getProduct(), null, finishTime.toLocalDate(), installation.getId());
+                    warrantyService.activateWarranty(installation.getCustomer(), order, oi.getProduct(), null, null, installation.getId(), finishTime.toLocalDate());
                 }
             }
         }

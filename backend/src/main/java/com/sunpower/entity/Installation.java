@@ -126,9 +126,36 @@ public class Installation {
     public String getWorkNotes() { return workNotes; }
     public void setWorkNotes(String workNotes) { this.workNotes = workNotes; }
     public List<InstallationTechnician> getAssignedTechnicians() { return assignedTechnicians; }
-    public void setAssignedTechnicians(List<InstallationTechnician> assignedTechnicians) { this.assignedTechnicians = assignedTechnicians; }
+    public void setAssignedTechnicians(List<InstallationTechnician> assignedTechnicians) {
+        if (this.assignedTechnicians == null) {
+            this.assignedTechnicians = new ArrayList<>();
+        } else {
+            this.assignedTechnicians.clear();
+        }
+        if (assignedTechnicians != null) {
+            this.assignedTechnicians.addAll(assignedTechnicians);
+        }
+    }
     public List<InstallationPhoto> getPhotos() { return photos; }
-    public void setPhotos(List<InstallationPhoto> photos) { this.photos = photos; }
+    public void setPhotos(List<InstallationPhoto> photos) {
+        if (this.photos == null) {
+            this.photos = new ArrayList<>();
+        } else {
+            this.photos.clear();
+        }
+        if (photos != null) {
+            this.photos.addAll(photos);
+        }
+    }
+    public Technician getTeamLead() {
+        if (assignedTechnicians == null) return null;
+        for (InstallationTechnician it : assignedTechnicians) {
+            if (Boolean.TRUE.equals(it.getIsTeamLead())) {
+                return it.getTechnician();
+            }
+        }
+        return null;
+    }
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
     public LocalDateTime getUpdatedAt() { return updatedAt; }

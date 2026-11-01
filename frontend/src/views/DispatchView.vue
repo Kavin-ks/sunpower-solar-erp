@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onBeforeUnmount, nextTick } from 'vue';
 import { api } from '../api/client';
-import type { Dispatch, SalesOrder, DispatchItem } from '../types';
+import type { Dispatch, SalesOrder, DispatchItem, Technician } from '../types';
 import StatusBadge from '../components/ui/StatusBadge.vue';
 import { useAuthStore } from '../stores/auth';
 import {
@@ -20,11 +20,14 @@ import {
   Loader2,
   Check,
   ImageIcon,
+  Users,
+  ShieldCheck,
 } from 'lucide-vue-next';
 import { BrowserMultiFormatReader, type IScannerControls } from '@zxing/browser';
 
 const dispatches = ref<Dispatch[]>([]);
 const confirmedOrders = ref<SalesOrder[]>([]);
+const availableTechnicians = ref<Technician[]>([]);
 const loading = ref(true);
 const showCreateModal = ref(false);
 const selectedDispatch = ref<Dispatch | null>(null);
@@ -36,6 +39,19 @@ const createForm = ref({
   driverName: 'R. Murugan',
   driverPhone: '9842109876',
   dispatchNotes: 'Fragile solar modules & 5kW inverter strapped safely.',
+});
+
+// Confirm Dispatch Modal Form
+const showConfirmDispatchModal = ref(false);
+const dispatchToConfirm = ref<Dispatch | null>(null);
+const confirmForm = ref({
+  vehicleNumber: 'TN-38-BZ-4921',
+  driverName: 'R. Murugan',
+  driverPhone: '9842109876',
+  dispatchDateTime: new Date().toISOString().slice(0, 16),
+  dispatchNotes: 'All serialized components scanned and loaded securely.',
+  teamLeadId: '' as string | number,
+  assignedTechnicianIds: [] as number[],
 });
 
 // Barcode scanner
@@ -73,7 +89,10 @@ const isAdmin = computed(() => {
 });
 const isWarehouse = computed(() => {
   const roles = authStore.user?.roles || [];
-  return roles.includes('ROLE_WAREHOUSE') && !isAdmin.value;
+  return roles.includes('ROLE_WAREHOUSE');
+});
+const canManageDispatch = computed(() => {
+  return isAdmin.value || isWarehouse.value;
 });
 
 const playBeep = () => {
@@ -97,12 +116,14 @@ const playBeep = () => {
 const fetchData = async () => {
   loading.value = true;
   try {
-    const [dispRes, ordRes] = await Promise.all([
+    const [dispRes, ordRes, techRes] = await Promise.all([
       api.get('/dispatches'),
       api.get('/orders'),
+      api.get('/technicians'),
     ]);
     dispatches.value = dispRes.data;
     confirmedOrders.value = ordRes.data.filter((o: SalesOrder) => o.status === 'CONFIRMED');
+    availableTechnicians.value = techRes.data;
     if (confirmedOrders.value.length > 0 && !createForm.value.salesOrderId) {
       createForm.value.salesOrderId = confirmedOrders.value[0].id.toString();
     }
@@ -363,16 +384,80 @@ const closeScanModal = () => {
   lastDetectedBarcode.value = null;
 };
 
-const handleDispatchShipment = async (dispatchId: number) => {
+const openConfirmDispatchModal = (disp: Dispatch) => {
+  dispatchToConfirm.value = disp;
+  confirmForm.value.vehicleNumber = disp.vehicleNumber || 'TN-38-BZ-4921';
+  confirmForm.value.driverName = disp.driverName || 'R. Murugan';
+  confirmForm.value.driverPhone = disp.driverPhone || '9842109876';
+  confirmForm.value.dispatchDateTime = new Date().toISOString().slice(0, 16);
+  confirmForm.value.dispatchNotes = disp.dispatchNotes || 'All serialized components scanned and loaded securely.';
+  if (availableTechnicians.value.length > 0) {
+    confirmForm.value.teamLeadId = availableTechnicians.value[0].id;
+    confirmForm.value.assignedTechnicianIds = [
+      availableTechnicians.value[0].id,
+      ...(availableTechnicians.value.length > 1 ? [availableTechnicians.value[1].id] : [])
+    ];
+  }
+  showConfirmDispatchModal.value = true;
+};
+
+const toggleTechnicianSelection = (techId: number) => {
+  const idx = confirmForm.value.assignedTechnicianIds.indexOf(techId);
+  if (idx >= 0) {
+    confirmForm.value.assignedTechnicianIds.splice(idx, 1);
+    if (confirmForm.value.teamLeadId === techId) {
+      confirmForm.value.teamLeadId = confirmForm.value.assignedTechnicianIds[0] || '';
+    }
+  } else {
+    confirmForm.value.assignedTechnicianIds.push(techId);
+    if (!confirmForm.value.teamLeadId) {
+      confirmForm.value.teamLeadId = techId;
+    }
+  }
+};
+
+const handleConfirmDispatchSubmit = async () => {
+  if (!dispatchToConfirm.value) return;
+  if (!confirmForm.value.vehicleNumber || !confirmForm.value.driverName) {
+    alert('Vehicle number and driver details are required.');
+    return;
+  }
+  if (!confirmForm.value.teamLeadId) {
+    alert('Please assign a Team Lead technician for this installation.');
+    return;
+  }
   try {
-    await api.patch(`/dispatches/${dispatchId}/dispatch`);
+    const res = await api.post(`/dispatches/${dispatchToConfirm.value.id}/confirm-dispatch`, {
+      vehicleNumber: confirmForm.value.vehicleNumber,
+      driverName: confirmForm.value.driverName,
+      driverPhone: confirmForm.value.driverPhone,
+      dispatchDateTime: confirmForm.value.dispatchDateTime ? new Date(confirmForm.value.dispatchDateTime).toISOString() : null,
+      dispatchNotes: confirmForm.value.dispatchNotes,
+      teamLeadId: Number(confirmForm.value.teamLeadId),
+      assignedTechnicianIds: confirmForm.value.assignedTechnicianIds,
+    });
+    showConfirmDispatchModal.value = false;
+    alert(`Dispatch #${dispatchToConfirm.value.dispatchNumber} confirmed and marked DISPATCHED! Technician crew and Team Lead assigned.`);
     fetchData();
-    if (selectedDispatch.value && selectedDispatch.value.id === dispatchId) {
-      const res = await api.get(`/dispatches/${dispatchId}`);
+    if (selectedDispatch.value && selectedDispatch.value.id === dispatchToConfirm.value.id) {
       selectedDispatch.value = res.data;
     }
   } catch (err: any) {
-    alert(err.response?.data?.message || 'Failed to dispatch shipment');
+    alert(err.response?.data?.message || 'Failed to confirm dispatch');
+  }
+};
+
+const handleDispatchShipment = async (dispatchId: number) => {
+  const disp = dispatches.value.find(d => d.id === dispatchId);
+  if (disp) {
+    openConfirmDispatchModal(disp);
+  } else {
+    try {
+      await api.patch(`/dispatches/${dispatchId}/dispatch`);
+      fetchData();
+    } catch (err: any) {
+      alert(err.response?.data?.message || 'Failed to dispatch shipment');
+    }
   }
 };
 
@@ -384,7 +469,7 @@ const handleMarkDelivered = async (dispatchId: number) => {
       const res = await api.get(`/dispatches/${dispatchId}`);
       selectedDispatch.value = res.data;
     }
-    alert('Shipment marked DELIVERED! Serialized product warranties automatically activated in database.');
+    alert('Shipment marked DELIVERED! Delivery date recorded and serialized product warranties activated.');
   } catch (err: any) {
     alert(err.response?.data?.message || 'Failed to mark delivered');
   }
@@ -412,7 +497,7 @@ onBeforeUnmount(() => {
 
       <div class="flex items-center gap-2">
         <button
-          v-if="isWarehouse"
+          v-if="canManageDispatch"
           type="button"
           @click="showCreateModal = true"
           class="flex items-center space-x-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-semibold shadow-sm transition cursor-pointer"
@@ -479,18 +564,19 @@ onBeforeUnmount(() => {
                   <span>{{ disp.status === 'PICKING' ? '⚡ Scan & Pick' : 'View Serials' }}</span>
                 </button>
 
+                <!-- Enable Confirm Dispatch once all items are picked OR ready for dispatch -->
                 <button
-                  v-if="isWarehouse && disp.status === 'READY_FOR_DISPATCH'"
+                  v-if="canManageDispatch && (disp.status === 'READY_FOR_DISPATCH' || (disp.status === 'PICKING' && disp.items.filter(i => i.product.serialized && !i.serialNumber).length === 0))"
                   type="button"
-                  @click="handleDispatchShipment(disp.id)"
+                  @click="openConfirmDispatchModal(disp)"
                   class="px-2.5 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded font-semibold cursor-pointer inline-flex items-center space-x-1"
                 >
                   <Truck class="w-3.5 h-3.5" />
-                  <span>Dispatch Vehicle</span>
+                  <span>Confirm Dispatch</span>
                 </button>
 
                 <button
-                  v-if="isWarehouse && disp.status === 'DISPATCHED'"
+                  v-if="canManageDispatch && disp.status === 'DISPATCHED'"
                   type="button"
                   @click="handleMarkDelivered(disp.id)"
                   class="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded font-semibold cursor-pointer inline-flex items-center space-x-1"
@@ -588,6 +674,158 @@ onBeforeUnmount(() => {
       </div>
     </div>
 
+    <!-- Modal: Confirm Dispatch & Assign Technician Crew -->
+    <div v-if="showConfirmDispatchModal && dispatchToConfirm" class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center z-50 p-4">
+      <div class="bg-white rounded-2xl max-w-xl w-full p-6 shadow-2xl max-h-[90vh] overflow-y-auto">
+        <div class="flex items-center justify-between pb-3 border-b border-slate-100 mb-4">
+          <div>
+            <h2 class="text-lg font-bold text-slate-900 flex items-center gap-2">
+              <Truck class="w-5 h-5 text-blue-600" />
+              Confirm Dispatch: {{ dispatchToConfirm.dispatchNumber }}
+            </h2>
+            <p class="text-xs text-slate-500">Record vehicle, driver details and assign the installation team</p>
+          </div>
+          <button type="button" @click="showConfirmDispatchModal = false" class="text-slate-400 hover:text-slate-600 text-lg cursor-pointer">✕</button>
+        </div>
+
+        <form @submit.prevent="handleConfirmDispatchSubmit" class="space-y-4 text-xs">
+          <!-- Logistics Details -->
+          <div class="bg-slate-50 p-3 rounded-xl border border-slate-200 space-y-3">
+            <h3 class="font-bold text-slate-800 text-xs uppercase tracking-wide">Vehicle & Driver Details</h3>
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="block font-semibold text-slate-700 mb-1">Vehicle Registration # *</label>
+                <input
+                  type="text"
+                  required
+                  v-model="confirmForm.vehicleNumber"
+                  placeholder="e.g. TN-38-BZ-4921"
+                  class="w-full px-3 py-2 border border-slate-200 rounded-lg text-xs font-mono uppercase bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                />
+              </div>
+              <div>
+                <label class="block font-semibold text-slate-700 mb-1">Dispatch Date & Time *</label>
+                <input
+                  type="datetime-local"
+                  required
+                  v-model="confirmForm.dispatchDateTime"
+                  class="w-full px-3 py-2 border border-slate-200 rounded-lg text-xs bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                />
+              </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="block font-semibold text-slate-700 mb-1">Driver Name *</label>
+                <input
+                  type="text"
+                  required
+                  v-model="confirmForm.driverName"
+                  placeholder="e.g. R. Murugan"
+                  class="w-full px-3 py-2 border border-slate-200 rounded-lg text-xs bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                />
+              </div>
+              <div>
+                <label class="block font-semibold text-slate-700 mb-1">Driver Phone Number *</label>
+                <input
+                  type="tel"
+                  required
+                  v-model="confirmForm.driverPhone"
+                  placeholder="e.g. 9842109876"
+                  class="w-full px-3 py-2 border border-slate-200 rounded-lg text-xs bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label class="block font-semibold text-slate-700 mb-1">Dispatch Notes</label>
+              <textarea
+                rows="2"
+                v-model="confirmForm.dispatchNotes"
+                placeholder="Transit packaging, fragile items note, etc."
+                class="w-full px-3 py-2 border border-slate-200 rounded-lg text-xs bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none"
+              ></textarea>
+            </div>
+          </div>
+
+          <!-- Technician Team Assignment -->
+          <div class="bg-indigo-50/60 p-3 rounded-xl border border-indigo-200 space-y-3">
+            <div class="flex items-center justify-between">
+              <div>
+                <h3 class="font-bold text-indigo-900 text-xs uppercase tracking-wide flex items-center gap-1.5">
+                  <Users class="w-4 h-4 text-indigo-700" />
+                  Assigned Technician Team
+                </h3>
+                <p class="text-[11px] text-indigo-700">Select technicians who will install this solar rooftop system</p>
+              </div>
+              <span class="text-[11px] font-bold text-indigo-800 bg-indigo-100 px-2 py-0.5 rounded-full">
+                {{ confirmForm.assignedTechnicianIds.length }} selected
+              </span>
+            </div>
+
+            <div class="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-40 overflow-y-auto p-1 bg-white rounded-lg border border-indigo-100">
+              <label
+                v-for="tech in availableTechnicians"
+                :key="tech.id"
+                :class="[
+                  'flex items-center space-x-2 p-2 rounded border cursor-pointer transition text-[11px]',
+                  confirmForm.assignedTechnicianIds.includes(tech.id)
+                    ? 'border-indigo-500 bg-indigo-50/70 text-indigo-900 font-semibold'
+                    : 'border-slate-200 hover:bg-slate-50 text-slate-700'
+                ]"
+              >
+                <input
+                  type="checkbox"
+                  :checked="confirmForm.assignedTechnicianIds.includes(tech.id)"
+                  @change="toggleTechnicianSelection(tech.id)"
+                  class="rounded text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+                />
+                <span class="truncate">{{ tech.name }}</span>
+              </label>
+            </div>
+
+            <!-- Select Team Lead -->
+            <div v-if="confirmForm.assignedTechnicianIds.length > 0">
+              <label class="block font-semibold text-indigo-950 mb-1">
+                ⭐ Appoint Team Lead (Coordinates installation & submits final signoff) *
+              </label>
+              <select
+                required
+                v-model="confirmForm.teamLeadId"
+                class="w-full px-3 py-2 border border-indigo-300 rounded-lg text-xs bg-white font-medium focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+              >
+                <option value="">-- Choose Team Lead --</option>
+                <option
+                  v-for="tId in confirmForm.assignedTechnicianIds"
+                  :key="tId"
+                  :value="tId"
+                >
+                  ⭐ {{ availableTechnicians.find(t => t.id === tId)?.name || 'Technician #' + tId }} (Team Lead)
+                </option>
+              </select>
+            </div>
+          </div>
+
+          <div class="flex justify-end space-x-3 pt-3 border-t border-slate-100">
+            <button
+              type="button"
+              @click="showConfirmDispatchModal = false"
+              class="px-4 py-2 border border-slate-200 text-slate-600 rounded-xl hover:bg-slate-50 font-medium cursor-pointer"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              class="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold shadow-xs cursor-pointer flex items-center space-x-1.5"
+            >
+              <Truck class="w-4 h-4" />
+              <span>Confirm & Dispatch</span>
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
     <!-- Modal: Barcode Scanning & Picking Workbench -->
     <div v-if="selectedDispatch" class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center z-50 p-4">
       <div class="bg-white rounded-2xl max-w-2xl w-full p-6 shadow-2xl max-h-[92vh] overflow-y-auto">
@@ -604,16 +842,24 @@ onBeforeUnmount(() => {
           <button type="button" @click="closeScanModal" class="text-slate-400 hover:text-slate-600 text-lg cursor-pointer">✕</button>
         </div>
 
-        <!-- Already allocated notice if all items are assigned -->
-        <div v-if="unallocatedItemsCount === 0" class="p-3 bg-blue-50 border border-blue-200 rounded-xl text-blue-900 text-xs mb-3 flex items-start gap-2.5">
-          <span class="text-base shrink-0">ℹ️</span>
-          <div class="flex-1">
-            <p class="font-bold">All serialized items in {{ selectedDispatch.dispatchNumber }} are already assigned & picked!</p>
-            <p class="text-[11px] text-blue-700 mt-0.5">
-              Current status: <b>{{ selectedDispatch.status }}</b>.
-              To pick and register new barcodes, close this modal and click <b>⚡ Scan & Pick</b> on a dispatch in <b>PICKING</b> status (such as <b>DSP-00005</b> or <b>DSP-00007</b>).
-            </p>
+        <!-- Banner when all serialized products picked -->
+        <div v-if="unallocatedItemsCount === 0" class="p-4 bg-emerald-50 border border-emerald-300 rounded-xl text-emerald-950 text-xs mb-4 flex items-center justify-between">
+          <div class="flex items-center space-x-2.5">
+            <CheckCircle2 class="w-5 h-5 text-emerald-600 shrink-0" />
+            <div>
+              <p class="font-bold text-emerald-900">All serialized items in {{ selectedDispatch.dispatchNumber }} are scanned & verified!</p>
+              <p class="text-[11px] text-emerald-700">Status: <span class="font-bold">{{ selectedDispatch.status }}</span>. Ready to assign technician team and dispatch vehicle.</p>
+            </div>
           </div>
+          <button
+            v-if="canManageDispatch && (selectedDispatch.status === 'PICKING' || selectedDispatch.status === 'READY_FOR_DISPATCH')"
+            type="button"
+            @click="openConfirmDispatchModal(selectedDispatch)"
+            class="px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold text-xs shadow-xs cursor-pointer flex items-center space-x-1.5 shrink-0"
+          >
+            <Truck class="w-4 h-4" />
+            <span>Confirm Dispatch</span>
+          </button>
         </div>
 
         <!-- Target Product Selector -->

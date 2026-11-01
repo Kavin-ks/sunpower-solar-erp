@@ -18,7 +18,12 @@ public class WarrantyController {
 
     @GetMapping
     @PreAuthorize("hasAnyRole('SUPPORT', 'ADMIN', 'DIRECTOR', 'TECHNICIAN', 'SALES', 'FINANCE')")
-    public ResponseEntity<List<Warranty>> getAllWarranties(@RequestParam(required = false) Long customerId) {
+    public ResponseEntity<List<Warranty>> getAllWarranties(
+            @RequestParam(required = false) Long customerId,
+            @RequestParam(required = false) String query) {
+        if (query != null && !query.trim().isEmpty()) {
+            return ResponseEntity.ok(warrantyService.searchWarranties(query));
+        }
         if (customerId != null) {
             return ResponseEntity.ok(warrantyService.getWarrantiesByCustomerId(customerId));
         }

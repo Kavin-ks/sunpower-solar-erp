@@ -46,6 +46,15 @@ public class DispatchService {
     private StockMovementRepository stockMovementRepository;
 
     @Autowired
+    private InstallationRepository installationRepository;
+
+    @Autowired
+    private InstallationTechnicianRepository installationTechnicianRepository;
+
+    @Autowired
+    private TechnicianRepository technicianRepository;
+
+    @Autowired
     private WarrantyService warrantyService;
 
     public List<Dispatch> getAllDispatches() {
@@ -190,7 +199,20 @@ public class DispatchService {
         item.setSerialNumber(serial);
         dispatchItemRepository.save(item);
 
-        return item.getDispatch();
+        Dispatch dispatch = item.getDispatch();
+        boolean allAssigned = true;
+        for (DispatchItem di : dispatch.getItems()) {
+            if (di.getProduct().isSerialized() && di.getSerialNumber() == null) {
+                allAssigned = false;
+                break;
+            }
+        }
+        if (allAssigned && dispatch.getStatus() == DispatchStatus.PICKING) {
+            dispatch.setStatus(DispatchStatus.READY_FOR_DISPATCH);
+            dispatch = dispatchRepository.save(dispatch);
+        }
+
+        return dispatch;
     }
 
     @Transactional
@@ -227,6 +249,11 @@ public class DispatchService {
 
     @Transactional
     public Dispatch confirmDispatch(Long dispatchId, String confirmedBy) {
+        return confirmDispatch(dispatchId, null, confirmedBy);
+    }
+
+    @Transactional
+    public Dispatch confirmDispatch(Long dispatchId, com.sunpower.dto.DispatchDTOs.ConfirmDispatchRequest request, String confirmedBy) {
         Dispatch dispatch = getDispatchById(dispatchId);
 
         // Verify all serialized items have serial numbers assigned
@@ -237,8 +264,28 @@ public class DispatchService {
             }
         }
 
+        if (request != null) {
+            if (request.getVehicleNumber() != null && !request.getVehicleNumber().trim().isEmpty()) {
+                dispatch.setVehicleNumber(request.getVehicleNumber().trim());
+            }
+            if (request.getDriverName() != null && !request.getDriverName().trim().isEmpty()) {
+                dispatch.setDriverName(request.getDriverName().trim());
+            }
+            if (request.getDriverPhone() != null && !request.getDriverPhone().trim().isEmpty()) {
+                dispatch.setDriverPhone(request.getDriverPhone().trim());
+            }
+            if (request.getDispatchDateTime() != null) {
+                dispatch.setDispatchDate(request.getDispatchDateTime().toLocalDate());
+            }
+            if (request.getDispatchNotes() != null && !request.getDispatchNotes().trim().isEmpty()) {
+                dispatch.setDispatchNotes(request.getDispatchNotes().trim());
+            }
+        }
+
         dispatch.setStatus(DispatchStatus.DISPATCHED);
-        dispatch.setDispatchDate(LocalDate.now());
+        if (dispatch.getDispatchDate() == null) {
+            dispatch.setDispatchDate(LocalDate.now());
+        }
 
         // Commit stock deduction
         for (DispatchItem item : dispatch.getItems()) {
@@ -264,7 +311,7 @@ public class DispatchService {
             if (item.getSerialNumber() != null) {
                 SerialNumber sn = item.getSerialNumber();
                 sn.setStatus(SerialNumberStatus.DISPATCHED);
-                sn.setDispatchDate(LocalDate.now());
+                sn.setDispatchDate(dispatch.getDispatchDate());
                 sn.setDispatchAt(LocalDateTime.now());
                 sn.setDispatchId(dispatch.getId());
                 serialNumberRepository.save(sn);
@@ -272,16 +319,11 @@ public class DispatchService {
                 SerialNumberHistory history = new SerialNumberHistory(
                         sn,
                         SerialNumberStatus.DISPATCHED,
-                        "Dispatched in vehicle " + dispatch.getVehicleNumber() + " with manifest for Order " + dispatch.getSalesOrder().getOrderNumber(),
+                        "Dispatched in vehicle " + (dispatch.getVehicleNumber() != null ? dispatch.getVehicleNumber() : "N/A") + " with manifest for Order " + dispatch.getSalesOrder().getOrderNumber(),
                         dispatch.getCustomer().getFullName(),
                         confirmedBy
                 );
                 serialNumberHistoryRepository.save(history);
-
-                // Auto-warranty clock initiation on dispatch
-                warrantyService.activateWarranty(dispatch.getCustomer(), dispatch.getSalesOrder(), product, sn, LocalDate.now());
-            } else if (product.getCategory() != null && product.getCategory().getName().toUpperCase().contains("PANEL")) {
-                warrantyService.activateWarranty(dispatch.getCustomer(), dispatch.getSalesOrder(), product, null, LocalDate.now());
             }
         }
 
@@ -289,7 +331,57 @@ public class DispatchService {
         order.setStatus(OrderStatus.DISPATCHED);
         salesOrderRepository.save(order);
 
+        // Auto-assign or schedule installation with technician team & lead if provided
+        if (request != null && (request.getTeamLeadId() != null || (request.getAssignedTechnicianIds() != null && !request.getAssignedTechnicianIds().isEmpty()))) {
+            assignTechnicianCrew(order, request);
+        }
+
         return dispatchRepository.save(dispatch);
+    }
+
+    private void assignTechnicianCrew(SalesOrder order, com.sunpower.dto.DispatchDTOs.ConfirmDispatchRequest request) {
+        Installation installation = installationRepository.findBySalesOrderId(order.getId())
+                .orElse(new Installation());
+
+        installation.setSalesOrder(order);
+        installation.setCustomer(order.getCustomer());
+        installation.setScheduledDate(request.getDispatchDateTime() != null ? request.getDispatchDateTime().toLocalDate() : LocalDate.now());
+        installation.setStatus(com.sunpower.entity.enums.Enums.InstallationStatus.SCHEDULED);
+        if (installation.getWorkNotes() == null || installation.getWorkNotes().isEmpty()) {
+            installation.setWorkNotes("Technician crew assigned at dispatch. Vehicle: " + request.getVehicleNumber());
+        }
+
+        installation = installationRepository.save(installation);
+        if (installation.getInstallationNumber() == null) {
+            installation.setInstallationNumber("INS-" + String.format("%05d", installation.getId()));
+            installation = installationRepository.save(installation);
+        }
+
+        final Installation targetInstallation = installation;
+
+        List<InstallationTechnician> crew = new ArrayList<>();
+        Long leadId = request.getTeamLeadId();
+        List<Long> memberIds = request.getAssignedTechnicianIds() != null ? new ArrayList<>(request.getAssignedTechnicianIds()) : new ArrayList<>();
+
+        if (leadId != null) {
+            technicianRepository.findById(leadId).ifPresent(leadTech -> {
+                InstallationTechnician itLead = new InstallationTechnician(targetInstallation, leadTech, "Team Lead / Electrician", true);
+                crew.add(itLead);
+            });
+            memberIds.remove(leadId);
+        }
+
+        for (Long mId : memberIds) {
+            technicianRepository.findById(mId).ifPresent(tech -> {
+                InstallationTechnician it = new InstallationTechnician(targetInstallation, tech, "Installer / Technician", false);
+                crew.add(it);
+            });
+        }
+
+        if (!crew.isEmpty()) {
+            targetInstallation.setAssignedTechnicians(crew);
+            installationRepository.save(targetInstallation);
+        }
     }
 
     @Transactional

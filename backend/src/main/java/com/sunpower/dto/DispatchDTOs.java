@@ -70,4 +70,31 @@ public class DispatchDTOs {
         public Long getDispatchItemId() { return dispatchItemId; }
         public void setDispatchItemId(Long dispatchItemId) { this.dispatchItemId = dispatchItemId; }
     }
+
+    public static class ConfirmDispatchRequest {
+        private String vehicleNumber;
+        private String driverName;
+        private String driverPhone;
+        private java.time.LocalDateTime dispatchDateTime;
+        private String dispatchNotes;
+        private Long teamLeadId;
+        private List<Long> assignedTechnicianIds;
+
+        public ConfirmDispatchRequest() {}
+
+        public String getVehicleNumber() { return vehicleNumber; }
+        public void setVehicleNumber(String vehicleNumber) { this.vehicleNumber = vehicleNumber; }
+        public String getDriverName() { return driverName; }
+        public void setDriverName(String driverName) { this.driverName = driverName; }
+        public String getDriverPhone() { return driverPhone; }
+        public void setDriverPhone(String driverPhone) { this.driverPhone = driverPhone; }
+        public java.time.LocalDateTime getDispatchDateTime() { return dispatchDateTime; }
+        public void setDispatchDateTime(java.time.LocalDateTime dispatchDateTime) { this.dispatchDateTime = dispatchDateTime; }
+        public String getDispatchNotes() { return dispatchNotes; }
+        public void setDispatchNotes(String dispatchNotes) { this.dispatchNotes = dispatchNotes; }
+        public Long getTeamLeadId() { return teamLeadId; }
+        public void setTeamLeadId(Long teamLeadId) { this.teamLeadId = teamLeadId; }
+        public List<Long> getAssignedTechnicianIds() { return assignedTechnicianIds; }
+        public void setAssignedTechnicianIds(List<Long> assignedTechnicianIds) { this.assignedTechnicianIds = assignedTechnicianIds; }
+    }
 }

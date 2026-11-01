@@ -36,6 +36,7 @@ public class Warranty {
     private LocalDate deliveryDate;
     private LocalDate warrantyStartDate;
     private LocalDate warrantyEndDate;
+    private LocalDate installationDate;
 
     @Column(nullable = false)
     private Integer durationMonths;
@@ -86,6 +87,8 @@ public class Warranty {
     public void setWarrantyStartDate(LocalDate warrantyStartDate) { this.warrantyStartDate = warrantyStartDate; }
     public LocalDate getWarrantyEndDate() { return warrantyEndDate; }
     public void setWarrantyEndDate(LocalDate warrantyEndDate) { this.warrantyEndDate = warrantyEndDate; }
+    public LocalDate getInstallationDate() { return installationDate; }
+    public void setInstallationDate(LocalDate installationDate) { this.installationDate = installationDate; }
     public Integer getDurationMonths() { return durationMonths; }
     public void setDurationMonths(Integer durationMonths) { this.durationMonths = durationMonths; }
     public WarrantyStatus getStatus() { return status; }

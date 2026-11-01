@@ -120,6 +120,7 @@ public class Enums {
 
     public enum InstallationStatus {
         SCHEDULED,
+        SITE_RECEIVED,
         IN_PROGRESS,
         COMPLETED,
         CANCELLED

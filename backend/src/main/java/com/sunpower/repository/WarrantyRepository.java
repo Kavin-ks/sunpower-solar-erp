@@ -24,4 +24,12 @@ public interface WarrantyRepository extends JpaRepository<Warranty, Long> {
     List<Warranty> findExpiringWarranties(@Param("targetDate") LocalDate targetDate);
 
     long countByStatus(WarrantyStatus status);
+
+    @Query("SELECT w FROM Warranty w WHERE " +
+           "LOWER(w.warrantyNumber) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
+           "(w.serialNumber IS NOT NULL AND LOWER(w.serialNumber.serialCode) LIKE LOWER(CONCAT('%', :query, '%'))) OR " +
+           "LOWER(w.customer.fullName) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
+           "LOWER(w.product.name) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
+           "LOWER(w.salesOrder.orderNumber) LIKE LOWER(CONCAT('%', :query, '%'))")
+    List<Warranty> searchWarranties(@Param("query") String query);
 }

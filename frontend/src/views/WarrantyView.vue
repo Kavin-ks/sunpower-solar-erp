@@ -3,17 +3,18 @@ import { ref, onMounted } from 'vue';
 import { api } from '../api/client';
 import type { Warranty } from '../types';
 import StatusBadge from '../components/ui/StatusBadge.vue';
-import { Barcode, CheckCircle2, Award, Printer, ExternalLink } from 'lucide-vue-next';
+import { Barcode, CheckCircle2, Award, Printer, ExternalLink, Search, X } from 'lucide-vue-next';
 
 const warranties = ref<Warranty[]>([]);
-const searchSerial = ref('');
+const searchQuery = ref('');
 const loading = ref(true);
 const selectedWarranty = ref<Warranty | null>(null);
 
 const fetchWarranties = async () => {
   loading.value = true;
   try {
-    const res = await api.get('/warranties');
+    const params = searchQuery.value.trim() ? { query: searchQuery.value.trim() } : {};
+    const res = await api.get('/warranties', { params });
     warranties.value = res.data;
   } catch (err) {
     console.error(err);
@@ -22,17 +23,13 @@ const fetchWarranties = async () => {
   }
 };
 
-const handleSerialLookup = async () => {
-  if (!searchSerial.value.trim()) {
-    fetchWarranties();
-    return;
-  }
-  try {
-    const res = await api.get(`/warranties/serial/${encodeURIComponent(searchSerial.value.trim())}`);
-    warranties.value = [res.data];
-  } catch (err) {
-    alert('No warranty found for serial number: ' + searchSerial.value);
-  }
+const handleSearch = () => {
+  fetchWarranties();
+};
+
+const clearSearch = () => {
+  searchQuery.value = '';
+  fetchWarranties();
 };
 
 const isWarrantyValid = (w: Warranty) => {
@@ -58,7 +55,7 @@ onMounted(() => {
       <div>
         <h1 class="text-2xl font-bold text-slate-900 tracking-tight">Automatic Warranty Management</h1>
         <p class="text-sm text-slate-500">
-          Serialized component tracking, 20-year panel & 2-year inverter/battery duration management
+          Serialized component tracking • 20-yr panels & 2-yr inverters/batteries • Initiated upon delivery
         </p>
       </div>
 
@@ -74,22 +71,31 @@ onMounted(() => {
           <span>Customer Portal (odoo-solar) ↗</span>
         </a>
 
-        <!-- Quick Serial Lookup -->
-        <form @submit.prevent="handleSerialLookup" class="flex items-center space-x-2">
+        <!-- Universal Warranty & Serial Search -->
+        <form @submit.prevent="handleSearch" class="flex items-center space-x-2">
           <div class="relative">
-            <Barcode class="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+            <Search class="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
             <input
               type="text"
-              v-model="searchSerial"
-              placeholder="Instant Serial Lookup..."
-              class="pl-9 pr-3 py-1.5 bg-white border border-slate-200 rounded-xl text-xs font-mono focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+              v-model="searchQuery"
+              placeholder="Search serial, customer, order..."
+              class="pl-9 pr-7 py-1.5 bg-white border border-slate-200 rounded-xl text-xs font-mono focus:ring-2 focus:ring-emerald-500 focus:outline-none w-64"
             />
+            <button
+              v-if="searchQuery"
+              type="button"
+              @click="clearSearch"
+              class="absolute right-2 top-2 text-slate-400 hover:text-slate-600"
+            >
+              <X class="w-3.5 h-3.5" />
+            </button>
           </div>
           <button
             type="submit"
-            class="px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-semibold shadow-xs cursor-pointer"
+            class="px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-semibold shadow-xs cursor-pointer flex items-center space-x-1"
           >
-            Verify
+            <Barcode class="w-3.5 h-3.5" />
+            <span>Search</span>
           </button>
         </form>
       </div>
@@ -107,14 +113,16 @@ onMounted(() => {
               <th class="py-3 px-4">Customer</th>
               <th class="py-3 px-4">Order Ref</th>
               <th class="py-3 px-4">Duration</th>
-              <th class="py-3 px-4">Warranty Period</th>
+              <th class="py-3 px-4">Delivery / Start Date</th>
+              <th class="py-3 px-4">Installation Date</th>
+              <th class="py-3 px-4">Expiry Date</th>
               <th class="py-3 px-4">Coverage Status</th>
               <th class="py-3 px-4 text-right">Certificate</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-slate-100">
             <tr v-if="warranties.length === 0">
-              <td colspan="9" class="py-8 text-center text-slate-400">
+              <td colspan="11" class="py-8 text-center text-slate-400">
                 No active warranty records found. Warranties activate automatically when dispatches are marked DELIVERED.
               </td>
             </tr>
@@ -131,7 +139,7 @@ onMounted(() => {
                   {{ w.serialNumber.serialCode }}
                 </span>
                 <span v-else class="font-mono text-slate-500 text-[11px]">
-                  Pending Individual Barcode Scan
+                  Pending Barcode Scan
                 </span>
               </td>
               <td class="py-3 px-4 font-medium text-slate-800">{{ w.customer.fullName }}</td>
@@ -140,9 +148,19 @@ onMounted(() => {
                 <span class="font-bold text-slate-800">{{ w.durationMonths / 12 }} Years</span>
                 <span class="text-slate-400 text-[10px]"> ({{ w.durationMonths }}m)</span>
               </td>
+              <td class="py-3 px-4 whitespace-nowrap font-medium text-slate-700">
+                {{ w.deliveryDate || w.warrantyStartDate || 'Pending Delivery' }}
+              </td>
               <td class="py-3 px-4 whitespace-nowrap">
-                <div>From: {{ w.warrantyStartDate }}</div>
-                <div class="text-[11px] text-slate-400 font-medium">To: {{ w.warrantyEndDate }}</div>
+                <span v-if="w.installationDate" class="font-medium text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+                  {{ w.installationDate }}
+                </span>
+                <span v-else class="text-amber-600 italic bg-amber-50 px-2 py-0.5 rounded border border-amber-200 text-[11px]">
+                  Pending Installation
+                </span>
+              </td>
+              <td class="py-3 px-4 whitespace-nowrap font-medium text-slate-700">
+                {{ w.warrantyEndDate }}
               </td>
               <td class="py-3 px-4">
                 <span v-if="isWarrantyValid(w)" class="inline-flex items-center space-x-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">
@@ -215,8 +233,14 @@ onMounted(() => {
               <span class="font-mono font-bold text-purple-700">{{ selectedWarranty.serialNumber.serialCode }}</span>
             </div>
             <div class="flex justify-between">
-              <span class="text-slate-500">Site Commissioning Date:</span>
-              <span class="font-semibold text-slate-800">{{ selectedWarranty.deliveryDate }}</span>
+              <span class="text-slate-500">Delivery Date (Warranty Start):</span>
+              <span class="font-semibold text-slate-800">{{ selectedWarranty.deliveryDate || selectedWarranty.warrantyStartDate }}</span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-slate-500">Rooftop Commissioning Date:</span>
+              <span class="font-semibold text-emerald-800">
+                {{ selectedWarranty.installationDate || 'Pending On-Site Installation' }}
+              </span>
             </div>
             <div class="flex justify-between">
               <span class="text-slate-500">Warranty Valid Until:</span>

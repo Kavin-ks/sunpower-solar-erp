@@ -9,7 +9,7 @@ export type PaymentMethod = 'BANK_TRANSFER' | 'UPI' | 'CHEQUE' | 'CASH' | 'CARD'
 export type PaymentType = 'ADVANCE' | 'PROGRESS' | 'FULL';
 export type SerialNumberStatus = 'IN_STOCK' | 'RESERVED' | 'ALLOCATED' | 'PICKED' | 'DISPATCHED' | 'SITE_RECEIVED' | 'INSTALLED' | 'DEFECTIVE' | 'REPLACED';
 export type DispatchStatus = 'PENDING' | 'PICKING' | 'READY_FOR_DISPATCH' | 'DISPATCHED' | 'DELIVERED';
-export type InstallationStatus = 'SCHEDULED' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED';
+export type InstallationStatus = 'SCHEDULED' | 'SITE_RECEIVED' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED';
 export type WarrantyStatus = 'NOT_STARTED' | 'ACTIVE' | 'EXPIRED' | 'VOIDED';
 export type TicketStatus = 'OPEN' | 'ASSIGNED' | 'IN_PROGRESS' | 'WAITING_FOR_PARTS' | 'RESOLVED' | 'CUSTOMER_CONFIRMED' | 'CLOSED';
 export type SubsidyStatus = 'NOT_STARTED' | 'DOCUMENTS_PENDING' | 'SUBMITTED' | 'UNDER_VERIFICATION' | 'APPROVED' | 'PARTIALLY_RECEIVED' | 'AMOUNT_RECEIVED' | 'REJECTED';
@@ -306,6 +306,7 @@ export interface Warranty {
   deliveryDate: string;
   warrantyStartDate: string;
   warrantyEndDate: string;
+  installationDate?: string;
   durationMonths: number;
   status: WarrantyStatus;
   termsAndConditions: string;
@@ -317,6 +318,7 @@ export interface InstallationTechnician {
   roleInCrew: string;
   hoursWorked: number;
   payoutAmount: number;
+  isTeamLead?: boolean;
 }
 
 export interface InstallationPhoto {
@@ -348,6 +350,7 @@ export interface Installation {
   status: InstallationStatus;
   workNotes?: string;
   assignedTechnicians: InstallationTechnician[];
+  teamLead?: Technician;
   photos: InstallationPhoto[];
 }
 

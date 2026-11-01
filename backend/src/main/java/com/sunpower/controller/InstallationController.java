@@ -69,6 +69,17 @@ public class InstallationController {
         return ResponseEntity.ok(sn);
     }
 
+    @RequestMapping(value = "/{id}/site-received", method = {RequestMethod.POST, RequestMethod.PATCH})
+    @PreAuthorize("hasAnyRole('TECHNICIAN', 'ADMIN', 'WAREHOUSE')")
+    public ResponseEntity<Installation> confirmSiteReceived(
+            @PathVariable Long id,
+            @RequestBody(required = false) com.sunpower.dto.InstallationDTOs.SiteReceivedRequest request,
+            Authentication authentication) {
+        String actor = authentication != null ? authentication.getName() : "Technician Lead";
+        Installation installation = installationService.confirmSiteReceived(id, request, actor);
+        return ResponseEntity.ok(installation);
+    }
+
     @RequestMapping(value = "/{id}/start", method = {RequestMethod.POST, RequestMethod.PATCH})
     @PreAuthorize("hasAnyRole('TECHNICIAN', 'ADMIN')")
     public ResponseEntity<Installation> startInstallation(

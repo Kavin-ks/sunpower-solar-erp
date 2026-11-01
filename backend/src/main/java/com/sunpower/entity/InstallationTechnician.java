@@ -29,12 +29,22 @@ public class InstallationTechnician {
     @Column(precision = 10, scale = 2)
     private BigDecimal payoutAmount = BigDecimal.ZERO;
 
+    @Column(nullable = false)
+    private Boolean isTeamLead = false;
+
     public InstallationTechnician() {}
 
     public InstallationTechnician(Installation installation, Technician technician, String roleInCrew) {
         this.installation = installation;
         this.technician = technician;
         this.roleInCrew = roleInCrew;
+    }
+
+    public InstallationTechnician(Installation installation, Technician technician, String roleInCrew, Boolean isTeamLead) {
+        this.installation = installation;
+        this.technician = technician;
+        this.roleInCrew = roleInCrew;
+        this.isTeamLead = isTeamLead != null ? isTeamLead : false;
     }
 
     public Long getId() { return id; }
@@ -49,4 +59,6 @@ public class InstallationTechnician {
     public void setHoursWorked(BigDecimal hoursWorked) { this.hoursWorked = hoursWorked; }
     public BigDecimal getPayoutAmount() { return payoutAmount; }
     public void setPayoutAmount(BigDecimal payoutAmount) { this.payoutAmount = payoutAmount; }
+    public Boolean getIsTeamLead() { return isTeamLead; }
+    public void setIsTeamLead(Boolean isTeamLead) { this.isTeamLead = isTeamLead != null ? isTeamLead : false; }
 }

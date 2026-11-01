@@ -51,6 +51,7 @@ public class InstallationDTOs {
         @NotNull(message = "Technician ID is required")
         private Long technicianId;
         private String roleInCrew; // "Lead Electrician", "Mounting Specialist"
+        private Boolean isTeamLead = false;
 
         public AssignedTechnicianRequest() {}
 
@@ -58,6 +59,8 @@ public class InstallationDTOs {
         public void setTechnicianId(Long technicianId) { this.technicianId = technicianId; }
         public String getRoleInCrew() { return roleInCrew; }
         public void setRoleInCrew(String roleInCrew) { this.roleInCrew = roleInCrew; }
+        public Boolean getIsTeamLead() { return isTeamLead; }
+        public void setIsTeamLead(Boolean isTeamLead) { this.isTeamLead = isTeamLead != null ? isTeamLead : false; }
     }
 
     public static class CompleteInstallationRequest {
@@ -77,6 +80,7 @@ public class InstallationDTOs {
         private String customerSignatureUrl;
         private String customerAcceptanceNote;
         private String workNotes;
+        private String completionPhotoUrl;
 
         // Technician hours & payouts
         private List<TechnicianHoursRequest> technicianHours;
@@ -107,8 +111,41 @@ public class InstallationDTOs {
         public void setCustomerAcceptanceNote(String customerAcceptanceNote) { this.customerAcceptanceNote = customerAcceptanceNote; }
         public String getWorkNotes() { return workNotes; }
         public void setWorkNotes(String workNotes) { this.workNotes = workNotes; }
+        public String getCompletionPhotoUrl() { return completionPhotoUrl; }
+        public void setCompletionPhotoUrl(String completionPhotoUrl) { this.completionPhotoUrl = completionPhotoUrl; }
         public List<TechnicianHoursRequest> getTechnicianHours() { return technicianHours; }
         public void setTechnicianHours(List<TechnicianHoursRequest> technicianHours) { this.technicianHours = technicianHours; }
+    }
+
+    public static class SiteReceivedRequest {
+        private String arrivalPhotoUrl;
+        private String notes;
+        private List<String> verifiedSerialCodes;
+
+        public SiteReceivedRequest() {}
+
+        public String getArrivalPhotoUrl() { return arrivalPhotoUrl; }
+        public void setArrivalPhotoUrl(String arrivalPhotoUrl) { this.arrivalPhotoUrl = arrivalPhotoUrl; }
+        public String getNotes() { return notes; }
+        public void setNotes(String notes) { this.notes = notes; }
+        public List<String> getVerifiedSerialCodes() { return verifiedSerialCodes; }
+        public void setVerifiedSerialCodes(List<String> verifiedSerialCodes) { this.verifiedSerialCodes = verifiedSerialCodes; }
+    }
+
+    public static class AddPhotoRequest {
+        @NotNull(message = "Photo URL is required")
+        private String photoUrl;
+        private String stage; // "Arrival", "Mounting", "Wiring", "Inverter", "Earthing", "Completed Rooftop"
+        private String caption;
+
+        public AddPhotoRequest() {}
+
+        public String getPhotoUrl() { return photoUrl; }
+        public void setPhotoUrl(String photoUrl) { this.photoUrl = photoUrl; }
+        public String getStage() { return stage; }
+        public void setStage(String stage) { this.stage = stage; }
+        public String getCaption() { return caption; }
+        public void setCaption(String caption) { this.caption = caption; }
     }
 
     public static class VerifyProductRequest {

@@ -70,9 +70,10 @@ public class DispatchController {
     @PreAuthorize("hasAnyRole('WAREHOUSE', 'ADMIN')")
     public ResponseEntity<Dispatch> confirmDispatch(
             @PathVariable Long id,
+            @RequestBody(required = false) com.sunpower.dto.DispatchDTOs.ConfirmDispatchRequest request,
             Authentication authentication) {
         String actor = authentication != null ? authentication.getName() : "Warehouse Lead";
-        Dispatch dispatch = dispatchService.confirmDispatch(id, actor);
+        Dispatch dispatch = dispatchService.confirmDispatch(id, request, actor);
         return ResponseEntity.ok(dispatch);
     }
 

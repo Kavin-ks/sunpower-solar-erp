@@ -38,32 +38,40 @@ public class WarrantyService {
     }
 
     @Transactional
-    public Warranty activateWarranty(Customer customer, SalesOrder order, Product product, SerialNumber serialNumber, LocalDate completionDate) {
-        return activateWarranty(customer, order, product, serialNumber, completionDate, null);
+    public Warranty activateWarranty(Customer customer, SalesOrder order, Product product, SerialNumber serialNumber, LocalDate deliveryOrCompletionDate) {
+        return activateWarranty(customer, order, product, serialNumber, deliveryOrCompletionDate, null, null);
     }
 
     @Transactional
-    public Warranty activateWarranty(Customer customer, SalesOrder order, Product product, SerialNumber serialNumber, LocalDate completionDate, Long installationId) {
-        LocalDate startDate = completionDate != null ? completionDate : LocalDate.now();
+    public Warranty activateWarranty(Customer customer, SalesOrder order, Product product, SerialNumber serialNumber, LocalDate deliveryOrCompletionDate, Long installationId) {
+        return activateWarranty(customer, order, product, serialNumber, deliveryOrCompletionDate, installationId, null);
+    }
+
+    @Transactional
+    public Warranty activateWarranty(Customer customer, SalesOrder order, Product product, SerialNumber serialNumber, LocalDate deliveryOrCompletionDate, Long installationId, LocalDate installationDate) {
+        LocalDate startDate = deliveryOrCompletionDate != null ? deliveryOrCompletionDate : LocalDate.now();
 
         // Prevent duplicate warranty activation for the same serial number
         if (serialNumber != null) {
             Optional<Warranty> existing = warrantyRepository.findBySerialNumberId(serialNumber.getId());
             if (existing.isPresent()) {
                 Warranty w = existing.get();
-                if (completionDate != null) {
-                    w.setDeliveryDate(completionDate);
-                    w.setWarrantyStartDate(completionDate);
+                if (installationId != null) {
+                    w.setInstallationId(installationId);
+                }
+                if (installationDate != null) {
+                    w.setInstallationDate(installationDate);
+                }
+                // Only initialize start/end date if not already set (warranty begins on delivery!)
+                if (w.getWarrantyStartDate() == null && deliveryOrCompletionDate != null) {
+                    w.setDeliveryDate(deliveryOrCompletionDate);
+                    w.setWarrantyStartDate(deliveryOrCompletionDate);
                     int dur = w.getDurationMonths() != null ? w.getDurationMonths() :
                             (product.getDefaultWarrantyMonths() != null ? product.getDefaultWarrantyMonths() : 24);
-                    w.setWarrantyEndDate(completionDate.plusMonths(dur));
-                    w.setStatus(WarrantyStatus.ACTIVE);
-                    if (installationId != null) {
-                        w.setInstallationId(installationId);
-                    }
-                    return warrantyRepository.save(w);
+                    w.setWarrantyEndDate(deliveryOrCompletionDate.plusMonths(dur));
                 }
-                return w;
+                w.setStatus(WarrantyStatus.ACTIVE);
+                return warrantyRepository.save(w);
             }
         }
 
@@ -89,6 +97,7 @@ public class WarrantyService {
         warranty.setProduct(product);
         warranty.setSerialNumber(serialNumber);
         warranty.setInstallationId(installationId);
+        warranty.setInstallationDate(installationDate);
         warranty.setDeliveryDate(startDate);
         warranty.setWarrantyStartDate(startDate);
         warranty.setWarrantyEndDate(endDate);
@@ -108,10 +117,35 @@ public class WarrantyService {
             if (installationId != null) {
                 serialNumber.setInstallationId(installationId);
             }
+            if (installationDate != null) {
+                serialNumber.setInstallationCompletedAt(installationDate.atStartOfDay());
+            }
             serialNumberRepository.save(serialNumber);
         }
 
         return warranty;
+    }
+
+    @Transactional
+    public void recordInstallationCompletion(SalesOrder order, Long installationId, LocalDate installationDate) {
+        if (order == null) return;
+        List<Warranty> warranties = warrantyRepository.findBySalesOrderId(order.getId());
+        for (Warranty w : warranties) {
+            if (installationId != null) {
+                w.setInstallationId(installationId);
+            }
+            if (installationDate != null) {
+                w.setInstallationDate(installationDate);
+            }
+            warrantyRepository.save(w);
+        }
+    }
+
+    public List<Warranty> searchWarranties(String query) {
+        if (query == null || query.trim().isEmpty()) {
+            return warrantyRepository.findAll();
+        }
+        return warrantyRepository.searchWarranties(query.trim());
     }
 
     public com.sunpower.dto.ServiceTicketDTOs.WarrantyDecisionDTO evaluateWarranty(String serialCode, Long customerId, String faultCategory) {

@@ -6,7 +6,7 @@ import type { Installation, SalesOrder, Technician, SerialNumber } from '../type
 import StatusBadge from '../components/ui/StatusBadge.vue';
 import CameraPhotoUpload from '../components/common/CameraPhotoUpload.vue';
 import { useAuthStore } from '../stores/auth';
-import { Wrench, Plus, CheckCircle2, Camera, UserCheck, Play, RotateCcw, FileText, Check } from 'lucide-vue-next';
+import { Wrench, Plus, CheckCircle2, Camera, UserCheck, Play, RotateCcw, FileText, Check, MapPin, Users, Award } from 'lucide-vue-next';
 
 const installations = ref<Installation[]>([]);
 const eligibleOrders = ref<SalesOrder[]>([]);
@@ -16,6 +16,11 @@ const loading = ref(true);
 // Modals
 const showScheduleModal = ref(false);
 const showCompleteModal = ref(false);
+const showSiteArrivalModal = ref(false);
+const siteArrivalInst = ref<Installation | null>(null);
+const siteArrivalNotes = ref('Technician crew arrived on site. Dispatched components and rooftop structure inspected.');
+const siteArrivalPhotoUrl = ref('https://images.unsplash.com/photo-1613665813446-82a78c468a1d?w=800');
+
 const selectedInstallation = ref<Installation | null>(null);
 const photoModalInstallation = ref<Installation | null>(null);
 const viewPhotosInstallation = ref<Installation | null>(null);
@@ -25,6 +30,7 @@ const installationPhotoStage = ref('STRUCTURE_MOUNTING');
 const selectedOrderId = ref('');
 const scheduledDate = ref(new Date().toISOString().split('T')[0]);
 const selectedTechIds = ref<number[]>([]);
+const teamLeadTechId = ref<number | ''>('');
 const workNotes = ref('');
 
 // Complete Form State
@@ -33,10 +39,11 @@ const panelMounting = ref(true);
 const wiringConfirmed = ref(true);
 const earthingConfirmed = ref(true);
 const testingPassed = ref(true);
-const testingNotes = ref('System generated 4.85 kW at peak noon, grid synchronization normal.');
+const testingNotes = ref('String open-circuit voltage Voc = 380V. Short-circuit current Isc = 11.2A. Inverter grid sync test passed.');
 const customerSigneeName = ref('');
 const customerAcceptanceNote = ref('Satisfied with rooftop solar mounting and inverter operation.');
 const hoursWorked = ref('8.0');
+const completionPhotoUrl = ref('https://images.unsplash.com/photo-1509391365360-2e959784a276?w=800');
 
 // Digital Signature Canvas
 const signatureCanvasRef = ref<HTMLCanvasElement | null>(null);
@@ -127,11 +134,17 @@ const handleScheduleSubmit = async () => {
     alert('Please select an order and at least one technician.');
     return;
   }
+  const leadId = teamLeadTechId.value || selectedTechIds.value[0];
+  const techRequests = selectedTechIds.value.map((tId) => ({
+    technicianId: tId,
+    isTeamLead: tId === leadId,
+    roleInCrew: tId === leadId ? 'Team Lead / Electrician' : 'Installer',
+  }));
   try {
     await api.post('/installations', {
       salesOrderId: parseInt(selectedOrderId.value),
       scheduledDate: scheduledDate.value,
-      technicianIds: selectedTechIds.value,
+      technicians: techRequests,
       workNotes: workNotes.value,
     });
     showScheduleModal.value = false;
@@ -141,10 +154,33 @@ const handleScheduleSubmit = async () => {
   }
 };
 
+const openSiteArrivalModal = (inst: Installation) => {
+  siteArrivalInst.value = inst;
+  siteArrivalNotes.value = 'Technician crew arrived on site. Dispatched components and rooftop structure inspected.';
+  siteArrivalPhotoUrl.value = 'https://images.unsplash.com/photo-1613665813446-82a78c468a1d?w=800';
+  showSiteArrivalModal.value = true;
+};
+
+const handleSiteArrivalSubmit = async () => {
+  if (!siteArrivalInst.value) return;
+  try {
+    await api.post(`/installations/${siteArrivalInst.value.id}/site-received`, {
+      arrivalPhotoUrl: siteArrivalPhotoUrl.value,
+      notes: siteArrivalNotes.value,
+    });
+    showSiteArrivalModal.value = false;
+    alert(`Site arrival recorded! Status transitioned to SITE_RECEIVED.`);
+    fetchInitialData();
+  } catch (err: any) {
+    alert(err.response?.data?.message || 'Failed to record site arrival');
+  }
+};
+
 const handleStartInstallation = async (id: number) => {
   try {
     await api.patch(`/installations/${id}/start`);
     fetchInitialData();
+    alert(`Installation marked IN_PROGRESS on-site. Work timer running.`);
   } catch (err: any) {
     alert(err.response?.data?.message || 'Failed to start installation');
   }
@@ -154,6 +190,7 @@ const openCompleteModal = (inst: Installation) => {
   selectedInstallation.value = inst;
   installedCapacityKw.value = inst.installedCapacityKw ? inst.installedCapacityKw.toString() : (inst.salesOrder.capacityKw ? inst.salesOrder.capacityKw.toString() : '5.0');
   customerSigneeName.value = inst.customer.fullName;
+  completionPhotoUrl.value = 'https://images.unsplash.com/photo-1509391365360-2e959784a276?w=800';
   showCompleteModal.value = true;
   setTimeout(() => {
     clearSignature();
@@ -162,6 +199,22 @@ const openCompleteModal = (inst: Installation) => {
 
 const handleCompleteSubmit = async () => {
   if (!selectedInstallation.value) return;
+  if (!panelMounting.value || !wiringConfirmed.value || !earthingConfirmed.value) {
+    alert('Validation Error: All physical safety checks (Mounting, Cabling, Earthing) must be confirmed.');
+    return;
+  }
+  if (!testingPassed.value || !testingNotes.value.trim()) {
+    alert('Validation Error: Electrical testing (Voc, Isc, inverter grid sync) must be confirmed with test notes.');
+    return;
+  }
+  if (!customerSigneeName.value.trim()) {
+    alert('Validation Error: Customer signee full name is required for sign-off.');
+    return;
+  }
+  if (!completionPhotoUrl.value.trim()) {
+    alert('Validation Error: Photo evidence of the completed rooftop installation is required.');
+    return;
+  }
 
   let signatureUrl = '';
   if (signatureCanvasRef.value && hasSignature.value) {
@@ -180,10 +233,11 @@ const handleCompleteSubmit = async () => {
       customerSignatureUrl: signatureUrl,
       customerAcceptanceNote: customerAcceptanceNote.value,
       hoursWorked: parseFloat(hoursWorked.value),
+      completionPhotoUrl: completionPhotoUrl.value,
     });
     showCompleteModal.value = false;
     fetchInitialData();
-    alert('Installation marked COMPLETED! Customer sign-off archived and technician hours credited.');
+    alert('Installation marked COMPLETED! Final rooftop commissioning photos archived, warranties linked and technician hours credited.');
   } catch (err: any) {
     alert(err.response?.data?.message || 'Failed to complete installation');
   }
@@ -285,8 +339,12 @@ onMounted(() => {
                   <span
                     v-for="t in inst.assignedTechnicians"
                     :key="t.id"
-                    class="bg-slate-100 text-slate-700 px-2 py-0.5 rounded text-[10px] font-medium"
+                    :class="[
+                      'px-2 py-0.5 rounded text-[10px] font-medium flex items-center gap-1',
+                      t.isTeamLead ? 'bg-amber-100 text-amber-900 border border-amber-300 font-bold' : 'bg-slate-100 text-slate-700'
+                    ]"
                   >
+                    <span v-if="t.isTeamLead" class="text-[9px] bg-amber-500 text-white px-1 py-0.2 rounded font-bold">LEAD</span>
                     {{ t.technician.name }}
                   </span>
                 </div>
@@ -302,7 +360,7 @@ onMounted(() => {
                 <StatusBadge :status="inst.status" />
               </td>
               <td class="py-3 px-4 text-right space-x-2 whitespace-nowrap">
-                <!-- Action: Attach Photo (Technician / Admin only - Sales does not upload installation photos) -->
+                <!-- Action: Attach Photo -->
                 <button
                   v-if="isAdmin || isTech"
                   type="button"
@@ -313,7 +371,7 @@ onMounted(() => {
                   <span>Attach Photo</span>
                 </button>
 
-                <!-- Action: View Photos (Sales Lead & All) -->
+                <!-- Action: View Photos (Visible to all: Warehouse, Sales, Support, Admin) -->
                 <button
                   type="button"
                   @click="viewPhotosInstallation = inst"
@@ -323,8 +381,20 @@ onMounted(() => {
                   <span>Photos ({{ inst.photos ? inst.photos.length : 0 }})</span>
                 </button>
 
+                <!-- Action: Site Arrival (SCHEDULED -> SITE_RECEIVED) -->
                 <button
                   v-if="inst.status === 'SCHEDULED' && (isAdmin || isTech)"
+                  type="button"
+                  @click="openSiteArrivalModal(inst)"
+                  class="px-2.5 py-1 bg-indigo-600 hover:bg-indigo-700 text-white rounded font-semibold cursor-pointer inline-flex items-center space-x-1"
+                >
+                  <MapPin class="w-3.5 h-3.5" />
+                  <span>Site Arrival</span>
+                </button>
+
+                <!-- Action: Start Work (SITE_RECEIVED or SCHEDULED -> IN_PROGRESS) -->
+                <button
+                  v-if="(inst.status === 'SITE_RECEIVED' || inst.status === 'SCHEDULED') && (isAdmin || isTech)"
                   type="button"
                   @click="handleStartInstallation(inst.id)"
                   class="px-2.5 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded font-semibold cursor-pointer inline-flex items-center space-x-1"
@@ -333,6 +403,7 @@ onMounted(() => {
                   <span>Start Work</span>
                 </button>
 
+                <!-- Action: Sign-Off & Complete -->
                 <button
                   v-if="inst.status === 'IN_PROGRESS' && (isAdmin || isTech)"
                   type="button"
@@ -401,6 +472,21 @@ onMounted(() => {
             </div>
           </div>
 
+          <div v-if="selectedTechIds.length > 0" class="p-2.5 bg-indigo-50 border border-indigo-200 rounded-xl space-y-1">
+            <label class="block font-semibold text-indigo-950">
+              ⭐ Select Team Lead Technician *
+            </label>
+            <select
+              v-model="teamLeadTechId"
+              class="w-full px-3 py-1.5 border border-indigo-300 rounded-lg text-xs bg-white focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+            >
+              <option value="">-- Choose Team Lead --</option>
+              <option v-for="tId in selectedTechIds" :key="tId" :value="tId">
+                ⭐ {{ technicians.find(t => t.id === tId)?.name }} (Lead Electrician)
+              </option>
+            </select>
+          </div>
+
           <div>
             <label class="block font-semibold text-slate-700 mb-1">Work Instructions</label>
             <textarea
@@ -445,7 +531,7 @@ onMounted(() => {
           <!-- Quality Checklist -->
           <div class="space-y-2 p-3 bg-slate-50 rounded-xl border border-slate-200">
             <span class="font-bold text-slate-800 block text-[11px] uppercase tracking-wider mb-1">
-              Field Quality & Electrical Safety Checklist
+              Field Quality & Electrical Safety Checklist (All Required) *
             </span>
             <label class="flex items-center space-x-2 cursor-pointer">
               <input type="checkbox" v-model="panelMounting" class="rounded text-emerald-600" />
@@ -484,6 +570,30 @@ onMounted(() => {
           <div>
             <label class="block font-semibold text-slate-700 mb-1">Customer Signee Full Name *</label>
             <input type="text" required v-model="customerSigneeName" class="w-full px-3 py-2 border border-slate-200 rounded-lg text-xs focus:ring-2 focus:ring-emerald-500 focus:outline-none" />
+          </div>
+
+          <!-- Completed Rooftop Photo Evidence -->
+          <div>
+            <label class="block font-semibold text-slate-700 mb-1">
+              📸 Completed Rooftop Solar Photo / Evidence (Required) *
+            </label>
+            <input
+              type="url"
+              required
+              v-model="completionPhotoUrl"
+              placeholder="https://... URL of completed commissioned rooftop setup"
+              class="w-full px-3 py-2 border border-slate-200 rounded-lg text-xs focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+            />
+            <div class="mt-1 flex items-center justify-between">
+              <span class="text-[10px] text-slate-400">Must show all installed panels & cabling</span>
+              <button
+                type="button"
+                @click="completionPhotoUrl = 'https://images.unsplash.com/photo-1509391365360-2e959784a276?w=800'"
+                class="text-[11px] text-emerald-600 hover:text-emerald-700 font-medium cursor-pointer"
+              >
+                Use sample photo
+              </button>
+            </div>
           </div>
 
           <!-- Touch / Mouse Signature Canvas -->
@@ -528,6 +638,74 @@ onMounted(() => {
               class="px-4 py-2 bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 font-semibold shadow-xs cursor-pointer"
             >
               Submit Formal Commissioning
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Modal: Site Arrival Confirmation -->
+    <div v-if="showSiteArrivalModal && siteArrivalInst" class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center z-50 p-4">
+      <div class="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl">
+        <div class="flex items-center justify-between pb-3 border-b border-slate-100 mb-4">
+          <div>
+            <h2 class="text-lg font-bold text-slate-900 flex items-center gap-2">
+              <MapPin class="w-5 h-5 text-indigo-600" />
+              Confirm Site Arrival: {{ siteArrivalInst.installationNumber }}
+            </h2>
+            <p class="text-xs text-slate-500">
+              Customer: {{ siteArrivalInst.customer.fullName }} • {{ siteArrivalInst.customer.address }}
+            </p>
+          </div>
+          <button type="button" @click="showSiteArrivalModal = false" class="text-slate-400 hover:text-slate-600 text-lg cursor-pointer">✕</button>
+        </div>
+
+        <form @submit.prevent="handleSiteArrivalSubmit" class="space-y-4 text-xs">
+          <div>
+            <label class="block font-semibold text-slate-700 mb-1">Site Arrival Notes / Preliminary Inspection *</label>
+            <textarea
+              rows="3"
+              required
+              v-model="siteArrivalNotes"
+              class="w-full px-3 py-2 border border-slate-200 rounded-lg text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+            ></textarea>
+          </div>
+
+          <div>
+            <label class="block font-semibold text-slate-700 mb-1">Arrival Photo Evidence URL *</label>
+            <input
+              type="url"
+              required
+              v-model="siteArrivalPhotoUrl"
+              placeholder="https://... photo of team/truck at site"
+              class="w-full px-3 py-2 border border-slate-200 rounded-lg text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+            />
+            <div class="mt-1 flex items-center justify-between">
+              <span class="text-[10px] text-slate-400">Verifies crew arrival at customer rooftop</span>
+              <button
+                type="button"
+                @click="siteArrivalPhotoUrl = 'https://images.unsplash.com/photo-1613665813446-82a78c468a1d?w=800'"
+                class="text-[11px] text-indigo-600 hover:text-indigo-700 font-medium cursor-pointer"
+              >
+                Use sample arrival photo
+              </button>
+            </div>
+          </div>
+
+          <div class="flex justify-end space-x-3 pt-3 border-t border-slate-100">
+            <button
+              type="button"
+              @click="showSiteArrivalModal = false"
+              class="px-4 py-2 border border-slate-200 text-slate-600 rounded-xl hover:bg-slate-50 font-medium cursor-pointer"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold shadow-xs cursor-pointer flex items-center space-x-1.5"
+            >
+              <Check class="w-4 h-4" />
+              <span>Confirm Site Arrival</span>
             </button>
           </div>
         </form>
