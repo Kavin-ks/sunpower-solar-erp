@@ -1,3 +1,4 @@
+import React from "react";
 import Link from "next/link";
 
 interface social_links_type {
@@ -7,19 +8,19 @@ interface social_links_type {
 
 const social_links: social_links_type[] = [
   {
-    link: "#",
+    link: "#!",
     icon: "fab fa-facebook-f",
   },
   {
-    link: "#",
+    link: "#!",
     icon: "fab fa-twitter",
   },
   {
-    link: "#",
+    link: "#!",
     icon: "fab fa-linkedin-in",
   },
   {
-    link: "#",
+    link: "#!",
     icon: "fab fa-vimeo-v",
   },
 ];
@@ -31,7 +32,6 @@ const SocialLinks = () => {
         <a
           key={i}
           href={l.link}
-          onClick={(e) => e.preventDefault()}
           style={{ color: 'black', cursor: 'pointer' }}>
           <i className={l.icon}></i>{' '}
         </a>
@@ -50,22 +50,22 @@ interface social_links_type_2 {
 
 const social_links_2: social_links_type_2[] = [
   {
-    link: "#",
+    link: "#!",
     color: "footer-facebook",
     icon: "fa-brands fa-facebook-f",
   },
   {
-    link: "#",
+    link: "#!",
     color: "",
     icon: "fa-brands fa-twitter",
   },
   {
-    link: "#",
+    link: "#!",
     color: "footer-linkedin",
     icon: "fa-brands fa-linkedin-in",
   },
   {
-    link: "#",
+    link: "#!",
     color: "footer-insta",
     icon: "fa-brands fa-instagram",
   },
@@ -78,7 +78,6 @@ export const SocialLinksTwo = () => {
         <a
           key={index}
           href={link.link}
-          onClick={(e) => e.preventDefault()}
           className={link.color}
           style={{ cursor: 'pointer' }}>
           <i className={link.icon}></i>{" "}
@@ -97,22 +96,22 @@ interface DataType {
 const team_social_data: DataType[] = [
   {
     id: 1,
-    link: "#",
+    link: "#!",
     icon: "fab fa-facebook-f",
   },
   {
     id: 2,
-    link: "#",
+    link: "#!",
     icon: "fab fa-twitter",
   },
   {
     id: 3,
-    link: "#",
+    link: "#!",
     icon: "fab fa-vimeo-v",
   },
   {
     id: 4,
-    link: "#",
+    link: "#!",
     icon: "fab fa-instagram",
   },
 ];
@@ -124,7 +123,6 @@ export const TeamSocialLinks = () => {
         <li key={t_index}>
           <a 
             href={t_item.link}
-            onClick={(e) => e.preventDefault()}
             style={{ cursor: 'pointer' }}>
             <i className={t_item.icon}></i>{" "}
           </a>
