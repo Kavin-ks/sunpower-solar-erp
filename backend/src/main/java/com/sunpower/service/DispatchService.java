@@ -196,7 +196,6 @@ public class DispatchService {
         item.setSerialNumber(serial);
         dispatchItemRepository.save(item);
 
-        return item.getDispatch();
         Dispatch dispatch = item.getDispatch();
         // Check if all serialized items in this dispatch have now been scanned/assigned
         boolean allPicked = true;
