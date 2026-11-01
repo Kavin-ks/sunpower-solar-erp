@@ -10,6 +10,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.*;
@@ -115,6 +116,7 @@ public class DataInitializationService implements CommandLineRunner {
             ensureDispatchedOrdersHaveSerialNumbers();
             ensureTechnicianNamingNormalized();
             ensureDemoEnquiriesExist();
+            ensureArivuCustomerAndQuotation();
             return; // Already initialized roles/users
         }
 
@@ -319,6 +321,7 @@ public class DataInitializationService implements CommandLineRunner {
         ensurePanelSerializationAndStockSerials();
         ensureDemoHistoricalDataExists();
         ensureDemoEnquiriesExist();
+        ensureArivuCustomerAndQuotation();
     }
 
     private void createUser(String username, String fullName, String email, String phone, Role role) {
@@ -1379,6 +1382,105 @@ public class DataInitializationService implements CommandLineRunner {
                     }
                 }
             }
+        }
+    }
+
+    private void ensureArivuCustomerAndQuotation() {
+        Role custRole = roleRepository.findByName(RoleName.ROLE_CUSTOMER).orElse(null);
+        String username = "cust_7010818264";
+        User user = userRepository.findByUsername(username).orElse(null);
+        if (user == null) {
+            user = new User(username, passwordEncoder.encode("SunPower@2026"), "Arivuchezhiyan E", "arivuchezhiyan000@gmail.com", "7010818264");
+            if (custRole != null) user.setRoles(Collections.singleton(custRole));
+            user = userRepository.save(user);
+        }
+
+        User finalUser = user;
+        Customer customer = customerRepository.findByPhone("7010818264").orElseGet(() -> {
+            Customer c = new Customer();
+            c.setFullName("Arivuchezhiyan E");
+            c.setPhone("7010818264");
+            c.setEmail("arivuchezhiyan000@gmail.com");
+            c.setAddress("gh-9,ssn college of engineering,kalavakam,chennai,603110");
+            c.setCity("Chennai");
+            c.setState("Tamil Nadu");
+            c.setPincode("603110");
+            c.setCustomerType(CustomerType.RESIDENTIAL);
+            c.setUserId(finalUser.getId());
+            return customerRepository.save(c);
+        });
+        if (customer.getUserId() == null) {
+            customer.setUserId(user.getId());
+            customer = customerRepository.save(customer);
+        }
+
+        Customer finalCust = customer;
+        Enquiry enquiry = enquiryRepository.findByCustomerId(customer.getId()).stream().findFirst().orElseGet(() -> {
+            Enquiry e = new Enquiry();
+            e.setCustomer(finalCust);
+            e.setEnquiryNumber("ENQ-00008");
+            e.setRequestedCapacityKw(new BigDecimal("3.00"));
+            e.setSystemType(SystemType.ON_GRID);
+            e.setSubsidyRequired(true);
+            e.setMonthlyElectricityBill(new BigDecimal("3500.00"));
+            e.setSource("CUSTOMER_PORTAL");
+            e.setStatus(EnquiryStatus.QUOTED);
+            return enquiryRepository.save(e);
+        });
+
+        SiteSurvey survey = siteSurveyRepository.findByCustomerId(customer.getId()).stream().findFirst().orElseGet(() -> {
+            SiteSurvey s = new SiteSurvey();
+            s.setSurveyNumber("SRV-00001");
+            s.setCustomer(finalCust);
+            s.setEnquiry(enquiry);
+            technicianRepository.findByNameContainingIgnoreCase("Karthik").ifPresent(s::setTechnician);
+            s.setScheduledDate(LocalDate.now());
+            s.setRoofDirection("SOUTH");
+            s.setRoofTilt("15-DEGREE");
+            s.setRoofCondition("EXCELLENT_RCC_CONCRETE");
+            s.setAvailableRoofAreaSqFt(new BigDecimal("350.00"));
+            s.setCableDistanceMeters(new BigDecimal("18.00"));
+            s.setShadingAssessment("ZERO_SHADOW");
+            s.setGridSuitability("EXCELLENT_GRID_STABILITY");
+            s.setStatus(SurveyStatus.APPROVED);
+            s.setApprovalNotes("Technical inspection cleared with full grid feasibility and structural clearance.");
+            return siteSurveyRepository.save(s);
+        });
+
+        if (quotationRepository.findByCustomerId(customer.getId()).isEmpty()) {
+            SolarPackage pkg = packageRepository.findByCapacityKw(new BigDecimal("3.00")).stream().findFirst().orElse(null);
+            if (pkg == null) pkg = packageRepository.findAll().stream().findFirst().orElse(null);
+
+            Quotation q = new Quotation();
+            q.setQuotationNumber("QT-00001");
+            q.setCustomer(customer);
+            q.setSiteSurvey(survey);
+            q.setSolarPackage(pkg);
+            q.setSystemType(SystemType.ON_GRID);
+            q.setCapacityKw(new BigDecimal("3.00"));
+            q.setQuotationDate(LocalDate.now());
+            q.setValidityDate(LocalDate.now().plusDays(30));
+            q.setStatus(QuotationStatus.SENT);
+            q.setNotes("Official Proposal from Odoo Solar ERP Sales Team for 3 kW Rooftop Solar System. Includes Tier-1 High-Efficiency Mono PERC Panels, Grid-Tied Inverter, Net Metering BOS Kit, and 25-Year Performance Warranty.");
+            q.setInstallationFee(new BigDecimal("15000.00"));
+
+            BigDecimal subtotal = BigDecimal.ZERO;
+            List<QuotationItem> items = new ArrayList<>();
+            if (pkg != null) {
+                List<PackageBOM> boms = bomRepository.findBySolarPackageId(pkg.getId());
+                for (PackageBOM bom : boms) {
+                    QuotationItem item = new QuotationItem(q, bom.getProduct(), bom.getQuantity(), bom.getProduct().getSellingPrice());
+                    subtotal = subtotal.add(item.getTotalPrice());
+                    items.add(item);
+                }
+            }
+
+            q.setSubtotal(subtotal);
+            BigDecimal tax = subtotal.multiply(new BigDecimal("0.05")).setScale(2, RoundingMode.HALF_UP);
+            q.setTaxAmount(tax);
+            q.setTotalAmount(subtotal.add(tax).add(q.getInstallationFee()));
+            q.setItems(items);
+            quotationRepository.save(q);
         }
     }
 
