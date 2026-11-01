@@ -1,16 +1,16 @@
 export type CustomerType = 'RESIDENTIAL' | 'SMALL_FACTORY';
 export type SystemType = 'ON_GRID' | 'OFF_GRID';
-export type EnquirySource = 'WEBSITE' | 'WHATSAPP' | 'PHONE' | 'MANUAL';
+export type EnquirySource = 'CUSTOMER_PORTAL' | 'WEBSITE' | 'WHATSAPP' | 'PHONE' | 'MANUAL';
 export type EnquiryStatus = 'NEW' | 'CONTACTED' | 'QUALIFIED' | 'SURVEY_SCHEDULED' | 'SURVEY_APPROVED' | 'QUOTED' | 'CONVERTED' | 'REJECTED';
-export type SurveyStatus = 'PENDING' | 'SCHEDULED' | 'IN_PROGRESS' | 'APPROVED' | 'REJECTED';
+export type SurveyStatus = 'PENDING' | 'SCHEDULED' | 'IN_PROGRESS' | 'REPORT_SUBMITTED' | 'APPROVED' | 'REJECTED' | 'REVISIT_REQUIRED';
 export type QuotationStatus = 'DRAFT' | 'SENT' | 'ACCEPTED' | 'REJECTED' | 'EXPIRED';
 export type OrderStatus = 'PENDING_PAYMENT' | 'CONFIRMED' | 'DISPATCHED' | 'IN_INSTALLATION' | 'INSTALLED' | 'COMPLETED' | 'CANCELLED';
 export type PaymentMethod = 'BANK_TRANSFER' | 'UPI' | 'CHEQUE' | 'CASH' | 'CARD';
 export type PaymentType = 'ADVANCE' | 'PROGRESS' | 'FULL';
-export type SerialNumberStatus = 'IN_STOCK' | 'ALLOCATED' | 'DISPATCHED' | 'INSTALLED' | 'DEFECTIVE' | 'REPLACED';
+export type SerialNumberStatus = 'IN_STOCK' | 'RESERVED' | 'ALLOCATED' | 'PICKED' | 'DISPATCHED' | 'SITE_RECEIVED' | 'INSTALLED' | 'DEFECTIVE' | 'REPLACED';
 export type DispatchStatus = 'PENDING' | 'PICKING' | 'READY_FOR_DISPATCH' | 'DISPATCHED' | 'DELIVERED';
 export type InstallationStatus = 'SCHEDULED' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED';
-export type WarrantyStatus = 'ACTIVE' | 'EXPIRED' | 'VOIDED';
+export type WarrantyStatus = 'NOT_STARTED' | 'ACTIVE' | 'EXPIRED' | 'VOIDED';
 export type TicketStatus = 'OPEN' | 'ASSIGNED' | 'IN_PROGRESS' | 'WAITING_FOR_PARTS' | 'RESOLVED' | 'CUSTOMER_CONFIRMED' | 'CLOSED';
 export type SubsidyStatus = 'NOT_STARTED' | 'DOCUMENTS_PENDING' | 'SUBMITTED' | 'UNDER_VERIFICATION' | 'APPROVED' | 'PARTIALLY_RECEIVED' | 'AMOUNT_RECEIVED' | 'REJECTED';
 export type ExpenseCategory = 'PRODUCT_PURCHASE' | 'INSTALLATION' | 'TECHNICIAN_PAYOUT' | 'SERVICE_REPAIR' | 'TRANSPORT' | 'OTHER';
@@ -32,6 +32,7 @@ export interface Customer {
   email: string;
   address: string;
   city: string;
+  state?: string;
   pincode: string;
   customerType: CustomerType;
   createdAt: string;
@@ -53,6 +54,8 @@ export interface Enquiry {
   systemType: SystemType;
   subsidyRequired: boolean;
   monthlyElectricityBill: number;
+  shadowFreeAreaSqFt?: number;
+  gridSuitable?: boolean;
   source: EnquirySource;
   status: EnquiryStatus;
   assignedTo?: User;
@@ -67,6 +70,7 @@ export interface Technician {
   phone: string;
   email: string;
   skills: string;
+  hourlyRate?: number;
   available: boolean;
   active: boolean;
 }
@@ -85,13 +89,17 @@ export interface SiteSurvey {
   enquiry?: Enquiry;
   technician: Technician;
   scheduledDate: string;
-  roofDirection: string;
-  roofTilt: string;
-  availableRoofAreaSqFt: number;
-  cableDistanceMeters: number;
-  shadingAssessment: string;
-  gridSuitability: string;
-  surveyNotes: string;
+  roofDirection?: string;
+  roofTilt?: string;
+  roofCondition?: string;
+  availableRoofAreaSqFt?: number;
+  cableDistanceMeters?: number;
+  shadingAssessment?: string;
+  gridSuitability?: string;
+  surveyNotes?: string;
+  structuralObservations?: string;
+  inspectionRecommendation?: 'APPROVED' | 'REJECTED' | 'REVISIT_REQUIRED' | string;
+  reportSubmittedAt?: string;
   status: SurveyStatus;
   approvedBy?: string;
   approvalDate?: string;
@@ -245,14 +253,24 @@ export interface SerialNumberHistory {
 export interface SerialNumber {
   id: number;
   serialCode: string;
+  barcodeValue?: string;
   product: Product;
   status: SerialNumberStatus;
   warehouseLocation: string;
   salesOrder?: SalesOrder;
   customer?: Customer;
+  dispatchId?: number;
+  installationId?: number;
+  technicianId?: number;
   purchaseReference?: string;
   dispatchDate?: string;
   deliveryDate?: string;
+  dispatchAt?: string;
+  siteReceivedAt?: string;
+  installationStartedAt?: string;
+  installationCompletedAt?: string;
+  warrantyStartDate?: string;
+  warrantyExpiryDate?: string;
   history?: SerialNumberHistory[];
 }
 
@@ -324,6 +342,7 @@ export interface Installation {
   testingPassed: boolean;
   testingNotes?: string;
   customerSigneeName?: string;
+  customerSignatureUrl?: string;
   customerAcceptanceNote?: string;
   customerSignedAt?: string;
   status: InstallationStatus;
@@ -384,12 +403,17 @@ export interface Expense {
   paidTo: string;
   paymentMethod: string;
   salesOrder?: SalesOrder;
+  status?: 'PENDING' | 'APPROVED' | 'REJECTED' | 'PAID';
+  approvedBy?: string;
+  approvedAt?: string;
+  rejectionReason?: string;
 }
 
 export interface Invoice {
   id: number;
   invoiceNumber: string;
-  salesOrder: SalesOrder;
+  salesOrder?: SalesOrder;
+  serviceTicketId?: number;
   customer: Customer;
   invoiceDate: string;
   dueDate: string;
@@ -468,28 +492,9 @@ export interface JobProfitability {
   netProfit: number;
   cashProfit?: number;
   profitMarginPercentage: number;
+  subsidyStatus?: string;
+  openServiceTicketsCount?: number;
   profitabilityStatus?: ProfitabilityStatus;
-}
-
-export interface FinanceDashboard {
-  totalInvoicedRevenue: number;
-  totalRecognizedRevenue?: number;
-  totalTaxCollected?: number;
-  totalCashCollected?: number;
-  totalConfirmedOrderValue?: number;
-  totalPaymentsReceived: number;
-  totalOutstandingReceivables: number;
-  totalHardwareCost: number;
-  totalInstallationLaborCost: number;
-  totalOperationalExpenses: number;
-  totalProjectProfit: number;
-  averageProfitMargin: number;
-  pendingTechnicianPayouts: number;
-  subsidiesPendingReceipt: number;
-  monthlyRevenueTrends: { month: string; revenue: number; cost: number; profit: number }[];
-  expenseCategoryBreakdown: { category: string; amount: number }[];
-  paymentStatusDistribution: { status: string; count: number; amount: number }[];
-  subsidyStatusDistribution: { status: string; count: number; amount: number }[];
 }
 
 export interface DashboardMetrics {
@@ -514,4 +519,243 @@ export interface DashboardMetrics {
   revenueTrends: { month: string; revenue: number; cost: number; profit: number }[];
   capacityDistribution: { capacity: string; count: number }[];
   recentJobProfitability: JobProfitability[];
+}
+
+export interface FinanceDashboard {
+  totalInvoicedRevenue: number;
+  totalRecognizedRevenue?: number;
+  totalTaxCollected?: number;
+  totalCashCollected?: number;
+  totalConfirmedOrderValue?: number;
+  totalPaymentsReceived: number;
+  totalOutstandingReceivables: number;
+  totalHardwareCost: number;
+  totalInstallationLaborCost: number;
+  totalOperationalExpenses: number;
+  totalProjectProfit: number;
+  averageProfitMargin: number;
+  pendingTechnicianPayouts: number;
+  subsidiesPendingReceipt: number;
+  monthlyRevenueTrends: { month: string; revenue: number; cost: number; profit: number }[];
+  expenseCategoryBreakdown: { category: string; amount: number }[];
+  paymentStatusDistribution: { status: string; count: number; amount: number }[];
+  subsidyStatusDistribution: { status: string; count: number; amount: number }[];
+  grossProfit?: number;
+  netProfit?: number;
+  cogs?: number;
+  overdueInvoicesCount?: number;
+  overdueInvoicesAmount?: number;
+  outstandingSupplierPayments?: number;
+  recentTransactions?: {
+    date: string;
+    type: string;
+    reference: string;
+    description: string;
+    amount: number;
+    flow: 'INFLOW' | 'OUTFLOW';
+    status: string;
+  }[];
+  aging0To30Days?: number;
+  aging31To60Days?: number;
+  aging61To90Days?: number;
+  agingOver90Days?: number;
+}
+
+export interface TechnicianWorkload {
+  name: string;
+  phone: string;
+  specialization: string;
+  activeJobs: number;
+  completedJobs: number;
+}
+
+export interface AdminDashboardData extends DashboardMetrics {
+  totalCustomers: number;
+  leadConversionRate: number;
+  totalDispatchedProducts: number;
+  totalInstalledProducts: number;
+  activeWarranties: number;
+  technicianWorkloads: TechnicianWorkload[];
+}
+
+export interface SalesDashboardData {
+  totalEnquiries: number;
+  newEnquiries: number;
+  contactedEnquiries: number;
+  qualifiedEnquiries: number;
+  rejectedEnquiries: number;
+  leadConversionRate: number;
+  pendingSurveys: number;
+  surveysAwaitingReview: number;
+  approvedSurveys: number;
+  pendingQuotations: number;
+  acceptedQuotations: number;
+  pipelineValue: number;
+  confirmedOrders: number;
+  ordersAwaitingAdvance: number;
+  capacityDistribution: { capacity: string; count: number }[];
+  recentEnquiries: Enquiry[];
+  surveysNeedingReview: SiteSurvey[];
+}
+
+export interface CategoryStock {
+  category: string;
+  units: number;
+  value: number;
+}
+
+export interface WarehouseDashboardData {
+  totalStockValue: number;
+  totalStockUnits: number;
+  reservedStockUnits: number;
+  availableStockUnits: number;
+  lowStockCount: number;
+  ordersAwaitingPicking: number;
+  dispatchedToday: number;
+  totalDispatches: number;
+  lowStockAlerts: InventoryStock[];
+  pendingPickingOrders: SalesOrder[];
+  categoryBreakdown: CategoryStock[];
+}
+
+export interface TechnicianDashboardData {
+  technicianName: string;
+  phone: string;
+  specialization: string;
+  assignedSurveysCount: number;
+  pendingSurveysCount: number;
+  completedSurveysCount: number;
+  assignedInstallationsCount: number;
+  inProgressInstallationsCount: number;
+  completedInstallationsCount: number;
+  assignedServiceVisitsCount: number;
+  upcomingSurveys: SiteSurvey[];
+  activeInstallations: Installation[];
+  assignedServiceTickets: ServiceTicket[];
+}
+
+export interface FaultBreakdown {
+  faultType: string;
+  count: number;
+}
+
+export interface SupportDashboardData {
+  openTickets: number;
+  assignedTickets: number;
+  inProgressTickets: number;
+  waitingForPartsTickets: number;
+  resolvedTickets: number;
+  closedTickets: number;
+  criticalTicketsCount: number;
+  activeWarrantiesCount: number;
+  avgResolutionDays: number;
+  urgentTickets: ServiceTicket[];
+  faultBreakdown: FaultBreakdown[];
+}
+
+export interface FinanceDashboardData {
+  totalInvoiced: number;
+  totalPaymentsReceived: number;
+  outstandingReceivables: number;
+  hardwareCost: number;
+  technicianCost: number;
+  directExpenses: number;
+  totalProjectCost: number;
+  netOperatingProfit: number;
+  grossMarginPercentage: number;
+  ordersPendingAdvanceCount: number;
+  unpaidInvoicesCount: number;
+  recentJobProfitability: JobProfitability[];
+  revenueTrends: { month: string; revenue: number; cost: number; profit: number }[];
+  subsidyAppliedCount: number;
+  subsidyApprovedCount: number;
+  subsidyApprovedAmount: number;
+}
+
+export interface SupplierPayment {
+  id: number;
+  paymentNumber: string;
+  purchaseId: number;
+  supplierName: string;
+  amount: number;
+  paymentDate: string;
+  paymentMethod: string;
+  referenceNumber?: string;
+  status: string;
+  notes?: string;
+  createdAt?: string;
+}
+
+export interface PurchaseItem {
+  id: number;
+  purchaseNumber: string;
+  supplierName: string;
+  totalAmount: number;
+  paidAmount: number;
+  remainingBalance: number;
+  dueDate?: string;
+  paymentStatus: string;
+  status: string;
+  purchaseDate: string;
+}
+
+export interface ProfitAndLossReport {
+  period: string;
+  totalRevenue: number;
+  gstExcludedRevenue: number;
+  hardwareCogs: number;
+  installationLaborCogs: number;
+  totalCogs: number;
+  grossProfit: number;
+  grossMarginPercentage: number;
+  operatingExpensesBreakdown: { category: string; amount: number }[];
+  totalOperatingExpenses: number;
+  netProfit: number;
+  netMarginPercentage: number;
+}
+
+export interface CashFlowReport {
+  period: string;
+  openingBalance: number;
+  customerReceipts: number;
+  subsidyReceipts: number;
+  totalOperatingInflows: number;
+  supplierPayments: number;
+  technicianPayouts: number;
+  directOperatingExpenses: number;
+  totalOperatingOutflows: number;
+  netOperatingCashFlow: number;
+  closingBalance: number;
+}
+
+export interface GstReport {
+  period: string;
+  outputCgst: number;
+  outputSgst: number;
+  outputIgst: number;
+  totalOutputGst: number;
+  inputGst: number;
+  netGstPayable: number;
+}
+
+export interface PaymentReceipt {
+  receiptNumber: string;
+  paymentNumber: string;
+  paymentDate: string;
+  amount: number;
+  paymentMethod: string;
+  paymentType: string;
+  referenceNumber: string;
+  customerName: string;
+  customerPhone: string;
+  customerEmail: string;
+  customerAddress: string;
+  customerGstin: string;
+  salesOrderNumber: string;
+  invoiceNumber: string;
+  orderTotalAmount: number;
+  totalPaidToDate: number;
+  remainingBalance: number;
+  receivedBy: string;
+  notes: string;
 }

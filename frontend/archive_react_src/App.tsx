@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { MainLayout } from './components/layout/MainLayout';
 import { LoginPage } from './pages/LoginPage';
+import { PublicEnquiryPage } from './pages/PublicEnquiryPage';
 import { DashboardPage } from './pages/DashboardPage';
 import { EnquiriesPage } from './pages/EnquiriesPage';
 import { SiteSurveysPage } from './pages/SiteSurveysPage';
@@ -29,8 +30,9 @@ export const App: React.FC = () => {
     <AuthProvider>
       <BrowserRouter>
         <Routes>
-          {/* Public Authentication Route */}
+          {/* Public Authentication & Enquiry Routes */}
           <Route path="/login" element={<LoginPage />} />
+          <Route path="/enquiry" element={<PublicEnquiryPage />} />
 
           {/* Protected Application Routes */}
           <Route

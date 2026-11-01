@@ -17,10 +17,13 @@ import {
   Calendar,
   Layers,
   Sparkles,
+  Camera,
 } from 'lucide-react';
 import api from '../api/client';
+import { useAuth } from '../context/AuthContext';
 import { ServiceTicket, Customer, Technician, Product, TicketStatus } from '../types';
 import { Badge } from '../components/ui/Badge';
+import { CameraPhotoUpload } from '../components/common/CameraPhotoUpload';
 
 export const ServiceTicketsPage: React.FC = () => {
   const [tickets, setTickets] = useState<ServiceTicket[]>([]);
@@ -37,6 +40,7 @@ export const ServiceTicketsPage: React.FC = () => {
   const [isResolveModalOpen, setIsResolveModalOpen] = useState(false);
   const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
   const [selectedTicket, setSelectedTicket] = useState<ServiceTicket | null>(null);
+  const [showComplaintPhotoModal, setShowComplaintPhotoModal] = useState(false);
 
   // Forms
   const [createForm, setCreateForm] = useState({
@@ -197,6 +201,11 @@ export const ServiceTicketsPage: React.FC = () => {
     return matchesSearch && matchesStatus;
   });
 
+  const { user } = useAuth();
+  const isAdmin = user?.roles?.includes('ROLE_ADMIN') || user?.roles?.includes('ROLE_DIRECTOR');
+  const isSupport = user?.roles?.includes('ROLE_SUPPORT') && !isAdmin;
+  const isTech = user?.roles?.includes('ROLE_TECHNICIAN') && !isAdmin;
+
   return (
     <div className="space-y-6">
       {/* Top Banner / Actions */}
@@ -210,13 +219,17 @@ export const ServiceTicketsPage: React.FC = () => {
             End-to-end fault logging, serial warranty verification (₹0 warranty coverage vs paid), technician dispatch, & customer closure gate.
           </p>
         </div>
-        <button
-          onClick={() => setIsCreateModalOpen(true)}
-          className="inline-flex items-center px-4 py-2.5 rounded-lg bg-emerald-600 text-white font-medium shadow-sm hover:bg-emerald-700 transition"
-        >
-          <Plus className="w-4 h-4 mr-2" />
-          Log New Service Ticket
-        </button>
+        <div className="flex items-center gap-2">
+          {isSupport && (
+            <button
+              onClick={() => setIsCreateModalOpen(true)}
+              className="inline-flex items-center px-4 py-2.5 rounded-lg bg-emerald-600 text-white font-medium shadow-sm hover:bg-emerald-700 transition cursor-pointer"
+            >
+              <Plus className="w-4 h-4 mr-2" />
+              Log New Service Ticket
+            </button>
+          )}
+        </div>
       </div>
 
       {/* KPI Cards */}
@@ -388,55 +401,61 @@ export const ServiceTicketsPage: React.FC = () => {
                       </div>
                     </td>
                     <td className="py-3.5 px-4 text-right space-x-1 whitespace-nowrap">
-                      {/* Assign button */}
-                      {['OPEN', 'ASSIGNED'].includes(t.status) && (
-                        <button
-                          onClick={() => {
-                            setSelectedTicket(t);
-                            setAssignTechId(t.assignedTechnician ? String(t.assignedTechnician.id) : '');
-                            setIsAssignModalOpen(true);
-                          }}
-                          className="px-2.5 py-1 text-xs font-semibold rounded bg-slate-100 text-slate-700 hover:bg-slate-200 transition"
-                        >
-                          {t.assignedTechnician ? 'Reassign' : 'Assign'}
-                        </button>
-                      )}
+                      {isAdmin ? (
+                        <span className="text-slate-400 italic text-[11px]">View Only</span>
+                      ) : (
+                        <>
+                          {/* Assign button */}
+                          {['OPEN', 'ASSIGNED'].includes(t.status) && isSupport && (
+                            <button
+                              onClick={() => {
+                                setSelectedTicket(t);
+                                setAssignTechId(t.assignedTechnician ? String(t.assignedTechnician.id) : '');
+                                setIsAssignModalOpen(true);
+                              }}
+                              className="px-2.5 py-1 text-xs font-semibold rounded bg-slate-100 text-slate-700 hover:bg-slate-200 transition cursor-pointer"
+                            >
+                              {t.assignedTechnician ? 'Reassign' : 'Assign'}
+                            </button>
+                          )}
 
-                      {/* Resolve button */}
-                      {['ASSIGNED', 'IN_PROGRESS', 'WAITING_FOR_PARTS'].includes(t.status) && (
-                        <button
-                          onClick={() => {
-                            setSelectedTicket(t);
-                            setResolveForm({
-                              diagnosisNotes: 'Inverter error E04 diagnosed: grid phase voltage spike triggered auto-shutdown. Firmware re-flashed and DC isolator checked.',
-                              resolutionNotes: 'Firmware updated to v3.2.0. Cleaned contactors and tested grid voltage at 238V. Inverter generating steady power.',
-                              laborCharges: t.underWarranty ? 0 : 500,
-                              parts: [],
-                            });
-                            setIsResolveModalOpen(true);
-                          }}
-                          className="px-2.5 py-1 text-xs font-semibold rounded bg-emerald-600 text-white hover:bg-emerald-700 transition"
-                        >
-                          Resolve
-                        </button>
-                      )}
+                          {/* Resolve button */}
+                          {['ASSIGNED', 'IN_PROGRESS', 'WAITING_FOR_PARTS'].includes(t.status) && (isSupport || isTech) && (
+                            <button
+                              onClick={() => {
+                                setSelectedTicket(t);
+                                setResolveForm({
+                                  diagnosisNotes: 'Inverter error E04 diagnosed: grid phase voltage spike triggered auto-shutdown. Firmware re-flashed and DC isolator checked.',
+                                  resolutionNotes: 'Firmware updated to v3.2.0. Cleaned contactors and tested grid voltage at 238V. Inverter generating steady power.',
+                                  laborCharges: t.underWarranty ? 0 : 500,
+                                  parts: [],
+                                });
+                                setIsResolveModalOpen(true);
+                              }}
+                              className="px-2.5 py-1 text-xs font-semibold rounded bg-emerald-600 text-white hover:bg-emerald-700 transition cursor-pointer"
+                            >
+                              Resolve
+                            </button>
+                          )}
 
-                      {/* Customer confirmation gate */}
-                      {t.status === 'RESOLVED' && (
-                        <button
-                          onClick={() => {
-                            setSelectedTicket(t);
-                            setConfirmForm({
-                              confirmedByCustomerName: t.customer?.fullName || '',
-                              customerSatisfactionNotes: 'Customer satisfied with inverter reset and confirmed normal generation.',
-                            });
-                            setIsConfirmModalOpen(true);
-                          }}
-                          className="px-2.5 py-1 text-xs font-bold rounded bg-purple-600 text-white hover:bg-purple-700 transition flex-inline items-center gap-1"
-                        >
-                          <UserCheck className="w-3 h-3 inline mr-1" />
-                          Confirm & Close
-                        </button>
+                          {/* Customer confirmation gate */}
+                          {t.status === 'RESOLVED' && isSupport && (
+                            <button
+                              onClick={() => {
+                                setSelectedTicket(t);
+                                setConfirmForm({
+                                  confirmedByCustomerName: t.customer?.fullName || '',
+                                  customerSatisfactionNotes: 'Customer satisfied with inverter reset and confirmed normal generation.',
+                                });
+                                setIsConfirmModalOpen(true);
+                              }}
+                              className="px-2.5 py-1 text-xs font-bold rounded bg-purple-600 text-white hover:bg-purple-700 transition cursor-pointer inline-flex items-center gap-1"
+                            >
+                              <UserCheck className="w-3 h-3 inline mr-1" />
+                              Confirm & Close
+                            </button>
+                          )}
+                        </>
                       )}
 
                       {/* Printable Job Sheet */}
@@ -499,9 +518,35 @@ export const ServiceTicketsPage: React.FC = () => {
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-700 uppercase mb-1">
-                  Product Serial Number (Optional - Auto-verifies Warranty)
-                </label>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block text-xs font-semibold text-slate-700 uppercase">
+                    Product Serial Number (Auto-verifies Warranty)
+                  </label>
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const match = customers.find((c: any) => c.fullName && c.fullName.toLowerCase().includes('vikram'));
+                        setCreateForm(prev => ({ ...prev, serialCode: 'INV-2025-1801', customerId: match ? String(match.id) : prev.customerId }));
+                      }}
+                      className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200 cursor-pointer transition-colors"
+                      title="Auto-selects Vikram Nair (18m old, In-Warranty -> ₹0 Free)"
+                    >
+                      🟢 Demo In-Warranty: INV-2025-1801
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const match = customers.find((c: any) => c.fullName && c.fullName.toLowerCase().includes('meera'));
+                        setCreateForm(prev => ({ ...prev, serialCode: 'INV-2023-9901', customerId: match ? String(match.id) : prev.customerId }));
+                      }}
+                      className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-200 cursor-pointer transition-colors"
+                      title="Auto-selects Meera Krishnan (30m old, Expired -> Auto-Bill)"
+                    >
+                      🔴 Demo Expired: INV-2023-9901
+                    </button>
+                  </div>
+                </div>
                 <input
                   type="text"
                   placeholder="e.g. INV-GROWATT-2026-9041"
@@ -545,6 +590,38 @@ export const ServiceTicketsPage: React.FC = () => {
                   className="w-full border border-slate-200 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-emerald-500"
                 />
               </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 uppercase mb-1">
+                  Faulty Equipment / Error Code Photo Evidence (Optional)
+                </label>
+                <button
+                  type="button"
+                  onClick={() => setShowComplaintPhotoModal(true)}
+                  className="w-full py-2.5 px-3 border border-dashed border-slate-300 rounded-lg text-xs font-medium text-slate-600 hover:border-emerald-500 hover:text-emerald-700 hover:bg-emerald-50/50 flex items-center justify-center space-x-2 transition cursor-pointer"
+                >
+                  <Camera className="w-4 h-4 text-emerald-600" />
+                  <span>Snap Photo or Upload Image Evidence</span>
+                </button>
+              </div>
+
+              {showComplaintPhotoModal && (
+                <CameraPhotoUpload
+                  title="Capture Equipment Photo Evidence"
+                  subtitle="Take a photo of the damaged inverter, panel, or error display"
+                  captionPlaceholder="e.g. Inverter error code blinking on display panel"
+                  onPhotoUploaded={(url, caption) => {
+                    setCreateForm((prev) => ({
+                      ...prev,
+                      complaintDescription: prev.complaintDescription
+                        ? `${prev.complaintDescription}\n[Attached Photo]: ${url}${caption ? ` (${caption})` : ''}`
+                        : `[Attached Photo]: ${url}${caption ? ` (${caption})` : ''}`,
+                    }));
+                    setShowComplaintPhotoModal(false);
+                  }}
+                  onClose={() => setShowComplaintPhotoModal(false)}
+                />
+              )}
 
               <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
                 <button

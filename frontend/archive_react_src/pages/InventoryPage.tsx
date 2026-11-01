@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../api/client';
 import { InventoryStock, StockMovement, Product } from '../types';
+import { useAuth } from '../context/AuthContext';
 import {
   Boxes,
   Plus,
@@ -66,6 +67,10 @@ export const InventoryPage: React.FC = () => {
       maximumFractionDigits: 0,
     }).format(val || 0);
   };
+
+  const { user } = useAuth();
+  const isAdmin = user?.roles?.includes('ROLE_ADMIN') || user?.roles?.includes('ROLE_DIRECTOR');
+  const isWarehouse = user?.roles?.includes('ROLE_WAREHOUSE') && !isAdmin;
 
   return (
     <div className="space-y-6">
@@ -185,15 +190,19 @@ export const InventoryPage: React.FC = () => {
                     </td>
                     <td className="py-3 px-4 text-slate-500">{stock.warehouseLocation}</td>
                     <td className="py-3 px-4 text-right">
-                      <button
-                        onClick={() => {
-                          setSelectedStock(stock);
-                          setShowAdjustModal(true);
-                        }}
-                        className="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded text-xs font-semibold cursor-pointer"
-                      >
-                        Adjust
-                      </button>
+                      {!isAdmin && isWarehouse ? (
+                        <button
+                          onClick={() => {
+                            setSelectedStock(stock);
+                            setShowAdjustModal(true);
+                          }}
+                          className="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded text-xs font-semibold cursor-pointer"
+                        >
+                          Adjust
+                        </button>
+                      ) : (
+                        <span className="text-slate-400 italic text-[11px]">View Only</span>
+                      )}
                     </td>
                   </tr>
                 );

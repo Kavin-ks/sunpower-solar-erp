@@ -38,6 +38,7 @@ import {
   Cell,
 } from 'recharts';
 import api from '../api/client';
+import { useAuth } from '../context/AuthContext';
 import {
   JobProfitability,
   Invoice,
@@ -339,72 +340,28 @@ export const FinancePage: React.FC = () => {
     }
   };
 
-  const handleGenerateInvoice = async (orderId: number) => {
+  const { user } = useAuth();
+  const isAdmin = user?.roles?.includes('ROLE_ADMIN');
+
+  const downloadCsv = async (endpoint: string, filename: string) => {
     try {
-      await api.post(`/api/finance/invoices/generate/${orderId}`);
-      fetchData();
-    } catch (err: any) {
-      alert(err.response?.data?.message || 'Failed to generate invoice');
+      const response = await api.get(endpoint, { responseType: 'blob' });
+      const blob = new Blob([response.data], { type: 'text/csv;charset=utf-8;' });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', filename);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error('Failed to download CSV', err);
     }
   };
 
-  // CSV Export
   const exportJobProfitabilityCsv = () => {
-    const headers = [
-      'Order #',
-      'Customer',
-      'System Type',
-      'Capacity (kW)',
-      'Order Value (incl. GST)',
-      'Recognized Revenue (excl. GST)',
-      'GST Component',
-      'Cash Received',
-      'Hardware Cost',
-      'Labor Cost',
-      'Transport & Ops',
-      'Service/Repair',
-      'Other Expenses',
-      'Total Project Cost',
-      'Net Profit (Accrual)',
-      'Margin %',
-      'Profitability Status',
-      'Outstanding Balance',
-    ];
-
-    const rows = filteredProfitability.map((j) => [
-      j.orderNumber,
-      `"${j.customerName}"`,
-      j.systemType,
-      j.capacityKw,
-      j.orderAmount,
-      j.recognizedRevenue ?? j.orderAmount,
-      j.taxAmount ?? 0,
-      j.revenueReceived,
-      j.hardwareCost,
-      j.installationLaborCost ?? j.technicianCost ?? 0,
-      j.transportCost ?? 0,
-      j.serviceRepairCost ?? 0,
-      j.otherExpenses ?? j.recordedExpenses ?? 0,
-      j.totalCost,
-      j.netProfit,
-      `${j.profitMarginPercentage}%`,
-      j.profitabilityStatus ?? 'PROFITABLE',
-      j.outstandingBalance,
-    ]);
-
-    const csvContent =
-      'data:text/csv;charset=utf-8,' +
-      [headers.join(','), ...rows.map((e) => e.join(','))].join('\n');
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement('a');
-    link.setAttribute('href', encodedUri);
-    link.setAttribute(
-      'download',
-      `SunPower_Job_Profitability_${new Date().toISOString().slice(0, 10)}.csv`
-    );
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    downloadCsv('/api/finance/export/job-profitability', `SunPower_Job_Profitability_${new Date().toISOString().slice(0, 10)}.csv`);
   };
 
   // Filtering Profitability
@@ -457,7 +414,7 @@ export const FinancePage: React.FC = () => {
             Financial Management & Project Profitability
           </h1>
           <p className="text-sm text-slate-500 mt-1">
-            Real-time project gross margins, GST invoices, customer collections, technician payroll, & national solar subsidies.
+Real-time project gross margins, GST invoices, customer collections, technician payroll, & national solar subsidies.
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -672,7 +629,7 @@ export const FinancePage: React.FC = () => {
               </h4>
               <div className="h-72 w-full">
                 {dashboardData?.monthlyRevenueTrends &&
-                dashboardData.monthlyRevenueTrends.some((t) => t.revenue > 0 || t.cost > 0 || t.profit !== 0) ? (
+                dashboardData.monthlyRevenueTrends.some((t: any) => t.revenue > 0 || t.cost > 0 || t.profit !== 0) ? (
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart
                       data={dashboardData.monthlyRevenueTrends}
@@ -721,7 +678,7 @@ export const FinancePage: React.FC = () => {
                         outerRadius={70}
                         paddingAngle={4}
                       >
-                        {dashboardData.expenseCategoryBreakdown.map((_, index) => (
+                        {dashboardData.expenseCategoryBreakdown.map((_: any, index: number) => (
                           <Cell key={`cell-${index}`} fill={PIE_COLORS[index % PIE_COLORS.length]} />
                         ))}
                       </Pie>
@@ -736,7 +693,7 @@ export const FinancePage: React.FC = () => {
                 )}
               </div>
               <div className="mt-4 space-y-2 max-h-32 overflow-y-auto pr-1">
-                {dashboardData?.expenseCategoryBreakdown?.map((cat, idx) => (
+                {dashboardData?.expenseCategoryBreakdown?.map((cat: any, idx: number) => (
                   <div key={cat.category} className="flex justify-between items-center text-xs">
                     <span className="flex items-center gap-1.5 text-slate-600">
                       <span
@@ -786,6 +743,42 @@ export const FinancePage: React.FC = () => {
               >
                 Reconcile Subsidies <ChevronRight className="w-3.5 h-3.5 ml-1" />
               </button>
+            </div>
+          </div>
+
+          {/* Accounts Receivable Aging Analysis */}
+          <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-xs">
+            <h4 className="font-bold text-slate-800 text-sm mb-1">Accounts Receivable Aging Analysis</h4>
+            <p className="text-xs text-slate-500 mb-4">Outstanding customer collection balances past order confirmation date</p>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+              <div className="p-3 bg-emerald-50/60 border border-emerald-100 rounded-lg">
+                <span className="text-[11px] font-semibold text-emerald-800 uppercase block">Current (0–30 Days)</span>
+                <span className="text-base font-bold font-mono text-emerald-900 mt-1 block">
+                  ₹{(dashboardData?.aging0To30Days || 0).toLocaleString('en-IN')}
+                </span>
+                <span className="text-[10px] text-emerald-700">Active collection cycle</span>
+              </div>
+              <div className="p-3 bg-blue-50/60 border border-blue-100 rounded-lg">
+                <span className="text-[11px] font-semibold text-blue-800 uppercase block">31–60 Days</span>
+                <span className="text-base font-bold font-mono text-blue-900 mt-1 block">
+                  ₹{(dashboardData?.aging31To60Days || 0).toLocaleString('en-IN')}
+                </span>
+                <span className="text-[10px] text-blue-700">First reminder phase</span>
+              </div>
+              <div className="p-3 bg-amber-50/60 border border-amber-100 rounded-lg">
+                <span className="text-[11px] font-semibold text-amber-800 uppercase block">61–90 Days</span>
+                <span className="text-base font-bold font-mono text-amber-900 mt-1 block">
+                  ₹{(dashboardData?.aging61To90Days || 0).toLocaleString('en-IN')}
+                </span>
+                <span className="text-[10px] text-amber-700">Escalation phase</span>
+              </div>
+              <div className="p-3 bg-rose-50/60 border border-rose-100 rounded-lg">
+                <span className="text-[11px] font-semibold text-rose-800 uppercase block">&gt; 90 Days Critical</span>
+                <span className="text-base font-bold font-mono text-rose-900 mt-1 block">
+                  ₹{(dashboardData?.agingOver90Days || 0).toLocaleString('en-IN')}
+                </span>
+                <span className="text-[10px] text-rose-700">Credit hold notice</span>
+              </div>
             </div>
           </div>
         </div>
