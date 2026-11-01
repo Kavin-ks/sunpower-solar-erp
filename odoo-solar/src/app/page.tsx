@@ -393,8 +393,91 @@ const AuthWelcomePage = () => {
             </p>
           </div>
 
+          {/* Direct Navigation Links */}
+          <div style={{ marginTop: '28px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            <span style={{ fontSize: '11.5px', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 700 }}>
+              Quick Direct Access:
+            </span>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+              <Link
+                href="/home"
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  padding: '7px 12px',
+                  backgroundColor: 'rgba(255, 255, 255, 0.08)',
+                  border: '1px solid rgba(255, 255, 255, 0.15)',
+                  borderRadius: '6px',
+                  color: '#ffffff',
+                  fontSize: '12px',
+                  fontWeight: 600,
+                  textDecoration: 'none',
+                }}
+              >
+                <span>🌐 Solar Website</span>
+              </Link>
+              <Link
+                href="/complaint"
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  padding: '7px 12px',
+                  backgroundColor: 'rgba(230, 58, 39, 0.15)',
+                  border: '1px solid rgba(230, 58, 39, 0.35)',
+                  borderRadius: '6px',
+                  color: '#ff8a7a',
+                  fontSize: '12px',
+                  fontWeight: 600,
+                  textDecoration: 'none',
+                }}
+              >
+                <span>⚡ Support & Warranty</span>
+              </Link>
+              <Link
+                href="/login"
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  padding: '7px 12px',
+                  backgroundColor: 'rgba(16, 185, 129, 0.15)',
+                  border: '1px solid rgba(16, 185, 129, 0.35)',
+                  borderRadius: '6px',
+                  color: '#6ee7b7',
+                  fontSize: '12px',
+                  fontWeight: 600,
+                  textDecoration: 'none',
+                }}
+              >
+                <span>🛠️ Staff ERP Scenes</span>
+              </Link>
+              <a
+                href="http://localhost:5173"
+                target="_blank"
+                rel="noreferrer"
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  padding: '7px 12px',
+                  backgroundColor: 'rgba(59, 130, 246, 0.15)',
+                  border: '1px solid rgba(59, 130, 246, 0.35)',
+                  borderRadius: '6px',
+                  color: '#93c5fd',
+                  fontSize: '12px',
+                  fontWeight: 600,
+                  textDecoration: 'none',
+                }}
+              >
+                <span>🖥️ Vue ERP (5173) ↗</span>
+              </a>
+            </div>
+          </div>
+
           {/* Simple Contact Footer */}
-          <div style={{ marginTop: '36px', fontSize: '13px', color: '#64748b' }}>
+          <div style={{ marginTop: '24px', fontSize: '13px', color: '#64748b' }}>
             <span>Need assistance? </span>
             <a href="tel:+917010818264" style={{ color: '#e63a27', fontWeight: 700, textDecoration: 'none' }}>
               +91 7010818264

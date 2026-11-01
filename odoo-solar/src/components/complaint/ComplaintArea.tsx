@@ -230,13 +230,43 @@ const ComplaintArea = () => {
                       </div>
 
                       <div className="col-md-6">
-                        <label className="form-label fw-semibold">Equipment Serial Number *</label>
+                        <div className="d-flex justify-content-between align-items-center mb-1">
+                          <label className="form-label fw-semibold m-0">Equipment Serial Number *</label>
+                          <div className="d-flex gap-1">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setSerialCode('INV-2025-1801');
+                                setCustomerName('Vikram Nair');
+                                setCustomerPhone('9840112233');
+                              }}
+                              className="badge bg-success border border-success text-white cursor-pointer"
+                              style={{ fontSize: '10px' }}
+                              title="Auto-fills Vikram Nair (Under 2-year warranty -> ₹0 Billed)"
+                            >
+                              🟢 In-Warranty: INV-2025-1801
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setSerialCode('INV-2023-9901');
+                                setCustomerName('Meera Krishnan');
+                                setCustomerPhone('9789012345');
+                              }}
+                              className="badge bg-danger border border-danger text-white cursor-pointer"
+                              style={{ fontSize: '10px' }}
+                              title="Auto-fills Meera Krishnan (Expired -> Auto-Billed)"
+                            >
+                              🔴 Expired: INV-2023-9901
+                            </button>
+                          </div>
+                        </div>
                         <input
                           type="text"
                           required
                           value={serialCode}
                           onChange={(e) => setSerialCode(e.target.value)}
-                          placeholder="e.g. SN-INV-5KW-001 or ITRK-PNL-ORD00001-1"
+                          placeholder="e.g. SN-INV-5KW-001 or INV-2025-1801"
                           className="form-control font-monospace"
                           style={{ padding: '12px', borderRadius: '10px' }}
                         />

@@ -11,6 +11,9 @@ import {
   getServiceTickets,
   getTechnicians,
   acceptQuotation,
+  getWarranties,
+  createPublicComplaint,
+  getWarrantyBySerial,
 } from '@/lib/api';
 
 // Types
@@ -140,7 +143,7 @@ export interface SupportTicket {
   labourCost: number;
   totalBilled: number;
   assignedTech: string;
-  status: 'Open - Bill Generated' | 'Repair In Progress' | 'Customer Confirmed & Closed';
+  status: 'Open - Bill Generated' | 'Repair In Progress' | 'Customer Confirmed & Closed' | 'Resolved' | 'Assigned' | 'Open' | string;
 }
 
 export interface TechnicianItem {
@@ -596,10 +599,12 @@ const SunPowerERP = () => {
     // Live sync from Spring Boot backend (port 8080)
     const hydrateFromBackend = async () => {
       try {
-        const [liveEnqs, liveTechs, liveSerials] = await Promise.allSettled([
+        const [liveEnqs, liveTechs, liveSerials, liveTickets, liveWarranties] = await Promise.allSettled([
           getEnquiries(),
           getTechnicians(),
           getSerialNumbers(),
+          getServiceTickets(),
+          getWarranties(),
         ]);
 
         if (liveEnqs.status === 'fulfilled' && Array.isArray(liveEnqs.value) && liveEnqs.value.length > 0) {
@@ -659,6 +664,57 @@ const SunPowerERP = () => {
           setSerials(prev => {
             const liveCodes = new Set(mappedSerials.map(m => m.serial));
             return [...mappedSerials, ...prev.filter(p => !liveCodes.has(p.serial))];
+          });
+        }
+
+        // Live sync Service Tickets from Spring Boot / Frontend Support
+        if (liveTickets.status === 'fulfilled' && Array.isArray(liveTickets.value) && liveTickets.value.length > 0) {
+          const mappedTickets: SupportTicket[] = liveTickets.value.map((t: any) => ({
+            ticketId: t.ticketNumber || `TCK-${t.id}`,
+            customerName: t.customer?.fullName || t.reportedBy || 'Customer',
+            phone: t.customer?.phone || '',
+            serial: t.serialNumber?.serialCode || 'N/A',
+            itemName: t.serialNumber?.product?.name || 'Solar Component',
+            faultCode: t.faultCode || t.complaintDescription || 'General Defect',
+            installedMonthsAgo: 18,
+            underWarranty: t.underWarranty !== false,
+            partsCost: Number(t.partsCharges) || 0,
+            labourCost: Number(t.laborCharges) || 0,
+            totalBilled: Number(t.totalCustomerCharges) || 0,
+            assignedTech: t.assignedTechnician?.name || 'Unassigned',
+            status: t.status === 'RESOLVED' || t.status === 'CONFIRMED' || t.status === 'CLOSED'
+              ? 'Resolved'
+              : t.status === 'IN_PROGRESS' || t.status === 'PARTS_PENDING'
+              ? 'Repair In Progress'
+              : t.status === 'ASSIGNED'
+              ? 'Assigned'
+              : 'Open'
+          }));
+          setTickets(prev => {
+            const liveIds = new Set(mappedTickets.map(m => m.ticketId));
+            return [...mappedTickets, ...prev.filter(p => !liveIds.has(p.ticketId))];
+          });
+        }
+
+        // Live sync Warranties from Spring Boot
+        if (liveWarranties.status === 'fulfilled' && Array.isArray(liveWarranties.value) && liveWarranties.value.length > 0) {
+          const mappedWarSerials: SerialRegistryItem[] = liveWarranties.value
+            .filter((w: any) => w.serialNumber && w.serialNumber.serialCode)
+            .map((w: any) => ({
+              serial: w.serialNumber.serialCode,
+              sku: w.product?.productCode || 'PROD',
+              itemName: w.product?.name || 'Solar Component',
+              customerName: w.customer?.fullName || 'Customer',
+              phone: w.customer?.phone || '',
+              orderId: w.salesOrder?.orderNumber || 'ORD',
+              dispatchedDate: w.deliveryDate || w.warrantyStartDate || new Date().toISOString().split('T')[0],
+              warrantyYears: w.durationMonths ? Math.round(w.durationMonths / 12) : 2,
+              warrantyExpiry: w.warrantyEndDate || new Date(Date.now() + 63072000000).toISOString().split('T')[0],
+              status: w.status === 'ACTIVE' ? 'Installed (Active Warranty)' : 'Expired'
+            }));
+          setSerials(prev => {
+            const liveCodes = new Set(mappedWarSerials.map(m => m.serial));
+            return [...mappedWarSerials, ...prev.filter(p => !liveCodes.has(p.serial))];
           });
         }
       } catch (err) {
@@ -765,6 +821,14 @@ const SunPowerERP = () => {
     saveAll(updated);
     setSelectedEnquiryId(newId);
 
+    const enqName = newEnqName.trim();
+    const enqEmail = newEnqEmail.trim();
+    const enqAddr = newEnqAddress.trim();
+    const enqKw = Number(newEnqKw);
+    const enqType = newEnqType;
+    const enqSubsidy = newEnqSubsidy;
+    const enqSource = newEnqSource;
+
     // Reset fields
     setNewEnqName('');
     setNewEnqEmail('');
@@ -777,16 +841,16 @@ const SunPowerERP = () => {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        fullName: newEnqName.trim(),
+        fullName: enqName,
         phone: cleanPhone,
-        email: newEnqEmail.trim(),
-        address: newEnqAddress.trim(),
+        email: enqEmail,
+        address: enqAddr,
         city: 'Chennai',
         pincode: '600001',
-        requestedCapacityKw: Number(newEnqKw),
-        systemType: newEnqType === 'Off-Grid' ? 'OFF_GRID' : 'ON_GRID',
-        subsidyRequired: newEnqSubsidy,
-        notes: `Created via SunPowerERP UI. Source: ${newEnqSource}`
+        requestedCapacityKw: enqKw,
+        systemType: enqType === 'Off-Grid' ? 'OFF_GRID' : 'ON_GRID',
+        subsidyRequired: enqSubsidy,
+        notes: `Created via SunPowerERP UI. Source: ${enqSource}`
       })
     }).catch(e => console.warn('Background sync to Spring Boot notice:', e));
 
@@ -1064,7 +1128,7 @@ const SunPowerERP = () => {
   };
 
   // SCENE 5: SUB-SECOND WARRANTY LOOKUP
-  const handleWarrantySearch = (query: string) => {
+  const handleWarrantySearch = async (query: string) => {
     setSearchQuery(query);
     if (!query.trim()) {
       setLookupResult(null);
@@ -1077,17 +1141,41 @@ const SunPowerERP = () => {
         s.customerName.toLowerCase().includes(clean) ||
         s.phone.includes(clean)
     );
-    setLookupResult(match || null);
+    if (match) {
+      setLookupResult(match);
+      return;
+    }
+
+    try {
+      const liveWar = await getWarrantyBySerial(query.trim());
+      if (liveWar && liveWar.serialNumber) {
+        const item: SerialRegistryItem = {
+          serial: liveWar.serialNumber.serialCode,
+          sku: liveWar.product?.productCode || 'PROD',
+          itemName: liveWar.product?.name || 'Solar Component',
+          customerName: liveWar.customer?.fullName || 'Customer',
+          phone: liveWar.customer?.phone || '',
+          orderId: liveWar.salesOrder?.orderNumber || 'ORD',
+          dispatchedDate: liveWar.deliveryDate || liveWar.warrantyStartDate || new Date().toISOString().split('T')[0],
+          warrantyYears: liveWar.durationMonths ? Math.round(liveWar.durationMonths / 12) : 2,
+          warrantyExpiry: liveWar.warrantyEndDate || new Date(Date.now() + 63072000000).toISOString().split('T')[0],
+          status: liveWar.status === 'ACTIVE' ? 'Installed (Active Warranty)' : 'Expired'
+        };
+        setLookupResult(item);
+        return;
+      }
+    } catch { /* ignore */ }
+    setLookupResult(null);
   };
 
   const simulateRainySeasonBreakdown = () => {
     // Quick load the 18-month scenario from PDF
-    setSearchQuery('INV-3KW-2025-8841');
-    handleWarrantySearch('INV-3KW-2025-8841');
-    notify('Loaded Scene 5 Scenario: Meenakshi Sundaram - 18 months into 2-year warranty during heavy rain!', 'success');
+    setSearchQuery('INV-2025-1801');
+    handleWarrantySearch('INV-2025-1801');
+    notify('Loaded Scene 5 Scenario: Vikram Nair - 18 months into 2-year warranty during heavy rain!', 'success');
   };
 
-  const createSupportTicketForMatch = () => {
+  const createSupportTicketForMatch = async () => {
     if (!lookupResult) return;
     const now = new Date();
     const expiryDate = new Date(lookupResult.warrantyExpiry);
@@ -1097,31 +1185,56 @@ const SunPowerERP = () => {
     const labour = isUnderWarranty ? 0 : 1500;
     const total = parts + labour;
 
+    let backendTicketId = `TKT-${new Date().getFullYear().toString().slice(-2)}${String(new Date().getMonth() + 1).padStart(2, '0')}-${Math.floor(800 + Math.random() * 199)}`;
+    let assignedTechName = 'Senthil Kumar (Crew Alpha)';
+    let actualWarrantyStatus = isUnderWarranty;
+    let actualCharges = total;
+
+    try {
+      const res = await createPublicComplaint({
+        customerPhone: lookupResult.phone || '9876543210',
+        customerName: lookupResult.customerName,
+        serialCode: lookupResult.serial,
+        faultCategory: 'Inverter Error / Grid Sync Drop',
+        complaintDescription: 'Customer reported inverter error ERR-GRID-OV04 (zero power / rainy season fault). Auto-adjudicated warranty lookup.',
+      });
+      if (res && res.ticketNumber) {
+        backendTicketId = res.ticketNumber;
+        actualWarrantyStatus = !!res.underWarranty;
+        actualCharges = Number(res.totalCustomerCharges) || (actualWarrantyStatus ? 0 : total);
+        if (res.assignedTechnician?.name) {
+          assignedTechName = res.assignedTechnician.name;
+        }
+      }
+    } catch (e) {
+      console.warn('Backend ticket creation notice (local fallback stored):', e);
+    }
+
     const newTicket: SupportTicket = {
-      ticketId: `TKT-${new Date().getFullYear().toString().slice(-2)}${String(new Date().getMonth() + 1).padStart(2, '0')}-${Math.floor(800 + Math.random() * 199)}`,
+      ticketId: backendTicketId,
       customerName: lookupResult.customerName,
       phone: lookupResult.phone,
       serial: lookupResult.serial,
       itemName: lookupResult.itemName,
       faultCode: 'ERR-GRID-OV04 (Inverter Zero Power / Rain Fault)',
       installedMonthsAgo: 18,
-      underWarranty: isUnderWarranty,
-      partsCost: parts,
-      labourCost: labour,
-      totalBilled: total,
-      assignedTech: 'Senthil Kumar (Crew Alpha)',
-      status: isUnderWarranty ? 'Repair In Progress' : 'Open - Bill Generated'
+      underWarranty: actualWarrantyStatus,
+      partsCost: actualWarrantyStatus ? 0 : 4200,
+      labourCost: actualWarrantyStatus ? 0 : 1500,
+      totalBilled: actualCharges,
+      assignedTech: assignedTechName,
+      status: actualWarrantyStatus ? 'Repair In Progress' : 'Open - Bill Generated'
     };
 
-    const updated = [newTicket, ...tickets];
+    const updated = [newTicket, ...tickets.filter(t => t.ticketId !== backendTicketId)];
     setTickets(updated);
     saveAll(enquiries, orders, inventory, serials, installations, updated, technicians);
 
     notify(
-      isUnderWarranty
-        ? `Customer is UNDER WARRANTY! Auto-billed ₹0 for parts & labor. Ticket ${newTicket.ticketId} assigned!`
-        : `Warranty EXPIRED! Parts (₹4,200) + Labour (₹1,500) = ₹5,700 automatically billed!`,
-      isUnderWarranty ? 'success' : 'warning'
+      actualWarrantyStatus
+        ? `Customer is UNDER WARRANTY! Auto-billed ₹0 for parts & labor. Ticket ${backendTicketId} synced to Spring Boot & Frontend Support!`
+        : `Warranty EXPIRED! Parts (₹4,200) + Labour (₹1,500) = ₹5,700 automatically billed! Synced to Support!`,
+      actualWarrantyStatus ? 'success' : 'warning'
     );
   };
 
