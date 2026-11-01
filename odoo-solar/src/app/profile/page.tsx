@@ -733,75 +733,143 @@ const ProfilePage = () => {
                             <div style={sectionHeaderStyle}>
                               <div style={iconBoxStyle('#ecfdf5', '#059669')}><i className="bi bi-file-earmark-spreadsheet"></i></div>
                               <div>
-                                <h4 style={{ margin: 0, fontSize: '17px', fontWeight: 800, color: '#0f172a' }}>Latest Quotation from Sales Team</h4>
-                                <p style={{ margin: 0, fontSize: '12px', color: '#64748b' }}>Review and accept your solar system quotation</p>
+                                <h4 style={{ margin: 0, fontSize: '17px', fontWeight: 800, color: '#0f172a' }}>Latest Quotation from ERP Sales Team</h4>
+                                <p style={{ margin: 0, fontSize: '12px', color: '#64748b' }}>Official solar engineering proposal and pricing for your property</p>
                               </div>
                             </div>
                             {(() => {
                               const q = portalData.quotations[portalData.quotations.length - 1];
+                              const quoteNo = q.quotationNumber || `QT-${String(q.id).padStart(5, '0')}`;
+                              const capacity = q.capacityKw ? `${q.capacityKw} kW` : (q.systemSize ? `${q.systemSize} kW` : '—');
+                              const packageName = q.solarPackage?.name || (q.systemType ? `${String(q.systemType).replace(/_/g, ' ')} Solar System` : 'Rooftop Solar System');
+
                               return (
-                                <div style={{ padding: '16px', backgroundColor: '#f8fafc', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
-                                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', flexWrap: 'wrap', gap: '8px' }}>
-                                    <div style={{ fontSize: '15px', fontWeight: 700, color: '#0f172a' }}>Quotation #{q.id}</div>
+                                <div style={{ padding: '20px', backgroundColor: '#f8fafc', borderRadius: '14px', border: '1px solid #e2e8f0' }}>
+                                  {/* Quotation Header */}
+                                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '8px' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                      <span style={{ fontSize: '16px', fontWeight: 800, color: '#0f172a' }}>{quoteNo}</span>
+                                      <span style={{ fontSize: '11px', fontWeight: 700, padding: '3px 10px', borderRadius: '20px', backgroundColor: '#eff6ff', color: '#1d4ed8', border: '1px solid #bfdbfe' }}>
+                                        <i className="bi bi-patch-check-fill me-1"></i>ERP Verified Proposal
+                                      </span>
+                                    </div>
                                     <StatusBadge status={q.status} />
                                   </div>
-                                  <div className="row g-2" style={{ fontSize: '13px', color: '#475569', marginBottom: '14px' }}>
-                                    <div className="col-6 col-md-3"><span style={{ fontWeight: 600 }}>System Size:</span><br/>{q.systemSize ? `${q.systemSize} kW` : '—'}</div>
-                                    <div className="col-6 col-md-3"><span style={{ fontWeight: 600 }}>Total Amount:</span><br/><span style={{ fontWeight: 800, color: '#0f172a', fontSize: '15px' }}>{formatCurrency(q.totalAmount)}</span></div>
-                                    <div className="col-6 col-md-3"><span style={{ fontWeight: 600 }}>Discount:</span><br/>{q.discountPercent ? `${q.discountPercent}%` : '—'}</div>
-                                    <div className="col-6 col-md-3"><span style={{ fontWeight: 600 }}>Final Amount:</span><br/><span style={{ fontWeight: 800, color: '#059669', fontSize: '15px' }}>{formatCurrency(q.finalAmount)}</span></div>
+
+                                  <div style={{ fontSize: '13px', fontWeight: 700, color: '#1e293b', marginBottom: '14px' }}>
+                                    <i className="bi bi-sun-fill me-2 text-warning"></i>{packageName} ({capacity})
                                   </div>
-                                  {q.validUntil && (
-                                    <div style={{ fontSize: '12px', color: '#64748b', marginBottom: '10px' }}>
-                                      <i className="bi bi-calendar3 me-1"></i>Valid until: <strong>{formatDate(q.validUntil)}</strong>
+
+                                  {/* Financial Metrics Cards */}
+                                  <div className="row g-2" style={{ marginBottom: '16px' }}>
+                                    <div className="col-6 col-md-3">
+                                      <div style={{ padding: '12px', backgroundColor: '#ffffff', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
+                                        <div style={{ fontSize: '11px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>Equipment Subtotal</div>
+                                        <div style={{ fontSize: '15px', fontWeight: 700, color: '#0f172a', marginTop: '2px' }}>{formatCurrency(q.subtotal)}</div>
+                                      </div>
+                                    </div>
+                                    <div className="col-6 col-md-3">
+                                      <div style={{ padding: '12px', backgroundColor: '#ffffff', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
+                                        <div style={{ fontSize: '11px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>Solar GST (5%)</div>
+                                        <div style={{ fontSize: '15px', fontWeight: 700, color: '#0f172a', marginTop: '2px' }}>{formatCurrency(q.taxAmount)}</div>
+                                      </div>
+                                    </div>
+                                    <div className="col-6 col-md-3">
+                                      <div style={{ padding: '12px', backgroundColor: '#ffffff', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
+                                        <div style={{ fontSize: '11px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>Installation & BOS</div>
+                                        <div style={{ fontSize: '15px', fontWeight: 700, color: '#0f172a', marginTop: '2px' }}>{formatCurrency(q.installationFee)}</div>
+                                      </div>
+                                    </div>
+                                    <div className="col-6 col-md-3">
+                                      <div style={{ padding: '12px', backgroundColor: '#ecfdf5', borderRadius: '10px', border: '1px solid #a7f3d0' }}>
+                                        <div style={{ fontSize: '11px', fontWeight: 700, color: '#047857', textTransform: 'uppercase' }}>Total Net Payable</div>
+                                        <div style={{ fontSize: '16px', fontWeight: 800, color: '#059669', marginTop: '2px' }}>{formatCurrency(q.totalAmount || q.finalAmount)}</div>
+                                      </div>
+                                    </div>
+                                  </div>
+
+                                  {/* Quotation Dates */}
+                                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', fontSize: '12px', color: '#64748b', marginBottom: '14px' }}>
+                                    <span><i className="bi bi-calendar-event me-1 text-primary"></i>Issued: <strong>{formatDate(q.quotationDate || q.createdAt)}</strong></span>
+                                    <span><i className="bi bi-calendar3 me-1 text-danger"></i>Valid Until: <strong>{formatDate(q.validityDate || q.validUntil)}</strong></span>
+                                    {q.siteSurvey && (
+                                      <span><i className="bi bi-geo-alt me-1 text-success"></i>Ref Survey #{q.siteSurvey.surveyNumber || q.siteSurvey.id}</span>
+                                    )}
+                                  </div>
+
+                                  {/* Notes from Sales Team */}
+                                  {q.notes && (
+                                    <div style={{ padding: '12px 16px', borderRadius: '10px', backgroundColor: '#eff6ff', border: '1px solid #bfdbfe', fontSize: '13px', color: '#1e40af', marginBottom: '16px' }}>
+                                      <div style={{ fontWeight: 700, marginBottom: '4px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                        <i className="bi bi-chat-left-quote-fill text-primary"></i>Note from ERP Sales Team:
+                                      </div>
+                                      <div>{q.notes}</div>
                                     </div>
                                   )}
-                                  {/* Line Items */}
+
+                                  {/* Line Items Table */}
                                   {q.items && q.items.length > 0 && (
-                                    <div style={{ marginBottom: '14px' }}>
-                                      <div style={{ fontSize: '12px', fontWeight: 700, color: '#475569', marginBottom: '8px', textTransform: 'uppercase' }}>Quotation Items</div>
-                                      <div style={{ overflowX: 'auto' }}>
-                                        <table style={{ width: '100%', fontSize: '12px', borderCollapse: 'collapse' }}>
+                                    <div style={{ marginBottom: '16px' }}>
+                                      <div style={{ fontSize: '12px', fontWeight: 700, color: '#475569', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                                        Itemized Bill of Materials (BOM) — {q.items.length} Components
+                                      </div>
+                                      <div style={{ overflowX: 'auto', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                                        <table style={{ width: '100%', fontSize: '12px', borderCollapse: 'collapse', backgroundColor: '#ffffff' }}>
                                           <thead>
-                                            <tr style={{ backgroundColor: '#f1f5f9' }}>
-                                              <th style={{ padding: '8px 10px', textAlign: 'left', fontWeight: 700, color: '#475569' }}>Item</th>
-                                              <th style={{ padding: '8px 10px', textAlign: 'center', fontWeight: 700, color: '#475569' }}>Qty</th>
-                                              <th style={{ padding: '8px 10px', textAlign: 'right', fontWeight: 700, color: '#475569' }}>Unit Price</th>
-                                              <th style={{ padding: '8px 10px', textAlign: 'right', fontWeight: 700, color: '#475569' }}>Total</th>
+                                            <tr style={{ backgroundColor: '#f1f5f9', borderBottom: '1px solid #e2e8f0' }}>
+                                              <th style={{ padding: '10px 12px', textAlign: 'left', fontWeight: 700, color: '#475569' }}>Component / Description</th>
+                                              <th style={{ padding: '10px 12px', textAlign: 'center', fontWeight: 700, color: '#475569' }}>Qty</th>
+                                              <th style={{ padding: '10px 12px', textAlign: 'right', fontWeight: 700, color: '#475569' }}>Unit Price</th>
+                                              <th style={{ padding: '10px 12px', textAlign: 'right', fontWeight: 700, color: '#475569' }}>Total</th>
                                             </tr>
                                           </thead>
                                           <tbody>
-                                            {q.items.map((item: any, idx: number) => (
-                                              <tr key={idx} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                                                <td style={{ padding: '8px 10px', fontWeight: 600, color: '#0f172a' }}>{item.productName || `Item ${idx + 1}`}</td>
-                                                <td style={{ padding: '8px 10px', textAlign: 'center' }}>{item.quantity}</td>
-                                                <td style={{ padding: '8px 10px', textAlign: 'right' }}>{formatCurrency(item.unitPrice)}</td>
-                                                <td style={{ padding: '8px 10px', textAlign: 'right', fontWeight: 700 }}>{formatCurrency(item.totalPrice)}</td>
-                                              </tr>
-                                            ))}
+                                            {q.items.map((item: any, idx: number) => {
+                                              const pName = item.product?.name || item.productName || item.name || `Solar Component ${idx + 1}`;
+                                              const pCode = item.product?.productCode;
+                                              return (
+                                                <tr key={idx} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                                                  <td style={{ padding: '10px 12px' }}>
+                                                    <div style={{ fontWeight: 600, color: '#0f172a' }}>{pName}</div>
+                                                    {pCode && <div style={{ fontSize: '11px', color: '#64748b', fontFamily: 'monospace' }}>Code: {pCode}</div>}
+                                                  </td>
+                                                  <td style={{ padding: '10px 12px', textAlign: 'center', fontWeight: 600 }}>{item.quantity}</td>
+                                                  <td style={{ padding: '10px 12px', textAlign: 'right', color: '#475569' }}>{formatCurrency(item.unitPrice)}</td>
+                                                  <td style={{ padding: '10px 12px', textAlign: 'right', fontWeight: 700, color: '#0f172a' }}>{formatCurrency(item.totalPrice)}</td>
+                                                </tr>
+                                              );
+                                            })}
                                           </tbody>
                                         </table>
                                       </div>
                                     </div>
                                   )}
-                                  {q.notes && (
-                                    <div style={{ fontSize: '12px', color: '#64748b', marginBottom: '12px', fontStyle: 'italic' }}>
-                                      <i className="bi bi-info-circle me-1"></i>{q.notes}
+
+                                  {/* Action Buttons */}
+                                  {(q.status === 'SENT' || q.status === 'DRAFT') && (
+                                    <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', alignItems: 'center' }}>
+                                      <button type="button" onClick={() => handleAcceptQuotation(q.id)}
+                                        style={{ padding: '12px 24px', borderRadius: '10px', border: 'none', backgroundColor: '#059669', color: '#fff', fontSize: '14px', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', boxShadow: '0 4px 12px rgba(5, 150, 105, 0.25)' }}>
+                                        <i className="bi bi-check2-circle"></i>
+                                        <span>Accept Quotation & Proceed to Order</span>
+                                      </button>
+                                      <button type="button" onClick={() => window.print()}
+                                        style={{ padding: '12px 20px', borderRadius: '10px', border: '1px solid #cbd5e1', backgroundColor: '#ffffff', color: '#334155', fontSize: '13px', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                        <i className="bi bi-printer"></i>
+                                        <span>Print Proposal</span>
+                                      </button>
                                     </div>
                                   )}
-                                  {/* Accept Button */}
-                                  {(q.status === 'SENT' || q.status === 'DRAFT') && (
-                                    <button type="button" onClick={() => handleAcceptQuotation(q.id)}
-                                      style={{ padding: '12px 24px', borderRadius: '10px', border: 'none', backgroundColor: '#059669', color: '#fff', fontSize: '14px', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                      <i className="bi bi-check2-circle"></i>
-                                      <span>Accept Quotation & Proceed</span>
-                                    </button>
-                                  )}
+
                                   {q.status === 'ACCEPTED' && (
-                                    <div style={{ padding: '10px 14px', borderRadius: '8px', backgroundColor: '#ecfdf5', border: '1px solid #a7f3d0' }}>
-                                      <span style={{ fontSize: '13px', fontWeight: 700, color: '#059669' }}>
-                                        <i className="bi bi-check-circle-fill me-2"></i>You have accepted this quotation. A sales order has been created.
+                                    <div style={{ padding: '12px 16px', borderRadius: '10px', backgroundColor: '#ecfdf5', border: '1px solid #a7f3d0', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px' }}>
+                                      <span style={{ fontSize: '13px', fontWeight: 700, color: '#059669', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                        <i className="bi bi-check-circle-fill"></i>You have accepted this quotation. Your Sales Order has been generated!
                                       </span>
+                                      <button type="button" onClick={() => setActiveTab('orders')}
+                                        style={{ padding: '8px 16px', borderRadius: '8px', border: 'none', backgroundColor: '#059669', color: '#fff', fontSize: '12px', fontWeight: 700, cursor: 'pointer' }}>
+                                        View Orders & Payments &rarr;
+                                      </button>
                                     </div>
                                   )}
                                 </div>
@@ -867,67 +935,168 @@ const ProfilePage = () => {
                       <div style={cardStyle}>
                         <div style={sectionHeaderStyle}>
                           <div style={iconBoxStyle('#ecfdf5', '#059669')}><i className="bi bi-file-earmark-spreadsheet"></i></div>
-                          <h4 style={{ margin: 0, fontSize: '17px', fontWeight: 800, color: '#0f172a' }}>All Quotations</h4>
+                          <div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                              <h4 style={{ margin: 0, fontSize: '17px', fontWeight: 800, color: '#0f172a' }}>Quotations Raised by ERP Sales Team</h4>
+                              <span style={{ fontSize: '11px', fontWeight: 700, padding: '2px 8px', borderRadius: '10px', backgroundColor: '#eff6ff', color: '#2563eb' }}>
+                                {portalData.quotations.length} {portalData.quotations.length === 1 ? 'Proposal' : 'Proposals'}
+                              </span>
+                            </div>
+                            <p style={{ margin: 0, fontSize: '12px', color: '#64748b' }}>Custom engineering proposals generated exclusively for your registered account</p>
+                          </div>
                         </div>
+
                         {portalData.quotations.length === 0 ? (
-                          <p style={{ color: '#64748b', fontSize: '14px' }}>No quotations yet. Once your enquiry is reviewed, our sales team will generate a quotation for you.</p>
+                          <div style={{ textAlign: 'center', padding: '36px 20px', backgroundColor: '#f8fafc', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
+                            <div style={{ fontSize: '36px', color: '#94a3b8', marginBottom: '12px' }}><i className="bi bi-hourglass-split"></i></div>
+                            <h5 style={{ fontSize: '16px', fontWeight: 700, color: '#0f172a', marginBottom: '6px' }}>No Quotations Generated Yet</h5>
+                            <p style={{ color: '#64748b', fontSize: '13px', maxWidth: '440px', margin: '0 auto 16px' }}>
+                              Our certified solar engineers are currently reviewing your property details and site inspection report to prepare your tailored proposal.
+                            </p>
+                            <Link href="/contact" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '10px 18px', borderRadius: '8px', backgroundColor: '#e63a27', color: '#fff', textDecoration: 'none', fontSize: '13px', fontWeight: 700 }}>
+                              <i className="bi bi-plus-circle"></i>
+                              <span>Submit New Solar Enquiry</span>
+                            </Link>
+                          </div>
                         ) : (
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                            {portalData.quotations.map((q: any) => (
-                              <div key={q.id} style={{ padding: '20px', backgroundColor: '#f8fafc', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', flexWrap: 'wrap', gap: '8px' }}>
-                                  <span style={{ fontSize: '15px', fontWeight: 700, color: '#0f172a' }}>Quotation #{q.id}</span>
-                                  <StatusBadge status={q.status} />
-                                </div>
-                                <div className="row g-2" style={{ fontSize: '13px', color: '#475569', marginBottom: '12px' }}>
-                                  <div className="col-6 col-md-3"><strong>System:</strong><br/>{q.systemSize ? `${q.systemSize} kW` : '—'}</div>
-                                  <div className="col-6 col-md-3"><strong>Total:</strong><br/><span style={{ fontWeight: 800, color: '#0f172a' }}>{formatCurrency(q.totalAmount)}</span></div>
-                                  <div className="col-6 col-md-3"><strong>Discount:</strong><br/>{q.discountPercent ? `${q.discountPercent}%` : 'None'}</div>
-                                  <div className="col-6 col-md-3"><strong>Final:</strong><br/><span style={{ fontWeight: 800, color: '#059669' }}>{formatCurrency(q.finalAmount)}</span></div>
-                                </div>
-                                {q.items && q.items.length > 0 && (
-                                  <details style={{ marginBottom: '10px' }}>
-                                    <summary style={{ cursor: 'pointer', fontSize: '12px', fontWeight: 700, color: '#2563eb' }}>
-                                      <i className="bi bi-file-earmark-text me-1"></i>View {q.items.length} Line Items
-                                    </summary>
-                                    <div style={{ marginTop: '8px', overflowX: 'auto' }}>
-                                      <table style={{ width: '100%', fontSize: '12px', borderCollapse: 'collapse' }}>
-                                        <thead><tr style={{ backgroundColor: '#f1f5f9' }}>
-                                          <th style={{ padding: '6px 8px', textAlign: 'left' }}>Item</th>
-                                          <th style={{ padding: '6px 8px', textAlign: 'center' }}>Qty</th>
-                                          <th style={{ padding: '6px 8px', textAlign: 'right' }}>Unit Price</th>
-                                          <th style={{ padding: '6px 8px', textAlign: 'right' }}>Total</th>
-                                        </tr></thead>
-                                        <tbody>{q.items.map((item: any, idx: number) => (
-                                          <tr key={idx} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                                            <td style={{ padding: '6px 8px' }}>{item.productName || `Item ${idx + 1}`}</td>
-                                            <td style={{ padding: '6px 8px', textAlign: 'center' }}>{item.quantity}</td>
-                                            <td style={{ padding: '6px 8px', textAlign: 'right' }}>{formatCurrency(item.unitPrice)}</td>
-                                            <td style={{ padding: '6px 8px', textAlign: 'right', fontWeight: 700 }}>{formatCurrency(item.totalPrice)}</td>
-                                          </tr>
-                                        ))}</tbody>
-                                      </table>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                            {portalData.quotations.map((q: any) => {
+                              const quoteNo = q.quotationNumber || `QT-${String(q.id).padStart(5, '0')}`;
+                              const capacity = q.capacityKw ? `${q.capacityKw} kW` : (q.systemSize ? `${q.systemSize} kW` : '—');
+                              const packageName = q.solarPackage?.name || (q.systemType ? `${String(q.systemType).replace(/_/g, ' ')} Solar System` : 'Rooftop Solar System');
+
+                              return (
+                                <div key={q.id} style={{ padding: '24px', backgroundColor: '#f8fafc', borderRadius: '14px', border: '1px solid #e2e8f0' }}>
+                                  {/* Quotation Header */}
+                                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '10px' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                      <span style={{ fontSize: '17px', fontWeight: 800, color: '#0f172a' }}>{quoteNo}</span>
+                                      <span style={{ fontSize: '11px', fontWeight: 700, padding: '3px 10px', borderRadius: '20px', backgroundColor: '#eff6ff', color: '#1d4ed8', border: '1px solid #bfdbfe' }}>
+                                        <i className="bi bi-patch-check-fill me-1"></i>Official Sales Proposal
+                                      </span>
                                     </div>
-                                  </details>
-                                )}
-                                {q.validUntil && (
-                                  <div style={{ fontSize: '11px', color: '#64748b', marginBottom: '8px' }}>
-                                    <i className="bi bi-calendar3 me-1"></i>Valid until: {formatDate(q.validUntil)}
+                                    <StatusBadge status={q.status} />
                                   </div>
-                                )}
-                                {(q.status === 'SENT' || q.status === 'DRAFT') && (
-                                  <button type="button" onClick={() => handleAcceptQuotation(q.id)} style={{ padding: '10px 20px', borderRadius: '8px', border: 'none', backgroundColor: '#059669', color: '#fff', fontSize: '13px', fontWeight: 700, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
-                                    <i className="bi bi-check2-circle"></i>
-                                    <span>Accept This Quotation</span>
-                                  </button>
-                                )}
-                                {q.status === 'ACCEPTED' && (
-                                  <div style={{ padding: '8px 12px', borderRadius: '8px', backgroundColor: '#ecfdf5', border: '1px solid #a7f3d0', fontSize: '12px', fontWeight: 700, color: '#059669' }}>
-                                    <i className="bi bi-check-circle-fill me-1"></i>Accepted — Sales order created
+
+                                  <div style={{ fontSize: '14px', fontWeight: 700, color: '#1e293b', marginBottom: '16px' }}>
+                                    <i className="bi bi-sun-fill me-2 text-warning"></i>{packageName} &bull; Capacity: <span style={{ color: '#2563eb' }}>{capacity}</span>
                                   </div>
-                                )}
-                              </div>
-                            ))}
+
+                                  {/* Financial Metrics Cards */}
+                                  <div className="row g-2" style={{ marginBottom: '16px' }}>
+                                    <div className="col-6 col-md-3">
+                                      <div style={{ padding: '12px', backgroundColor: '#ffffff', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
+                                        <div style={{ fontSize: '11px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>Subtotal</div>
+                                        <div style={{ fontSize: '15px', fontWeight: 700, color: '#0f172a', marginTop: '2px' }}>{formatCurrency(q.subtotal)}</div>
+                                      </div>
+                                    </div>
+                                    <div className="col-6 col-md-3">
+                                      <div style={{ padding: '12px', backgroundColor: '#ffffff', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
+                                        <div style={{ fontSize: '11px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>GST Tax (5%)</div>
+                                        <div style={{ fontSize: '15px', fontWeight: 700, color: '#0f172a', marginTop: '2px' }}>{formatCurrency(q.taxAmount)}</div>
+                                      </div>
+                                    </div>
+                                    <div className="col-6 col-md-3">
+                                      <div style={{ padding: '12px', backgroundColor: '#ffffff', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
+                                        <div style={{ fontSize: '11px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>Installation & BOS</div>
+                                        <div style={{ fontSize: '15px', fontWeight: 700, color: '#0f172a', marginTop: '2px' }}>{formatCurrency(q.installationFee)}</div>
+                                      </div>
+                                    </div>
+                                    <div className="col-6 col-md-3">
+                                      <div style={{ padding: '12px', backgroundColor: '#ecfdf5', borderRadius: '10px', border: '1px solid #a7f3d0' }}>
+                                        <div style={{ fontSize: '11px', fontWeight: 700, color: '#047857', textTransform: 'uppercase' }}>Total Investment</div>
+                                        <div style={{ fontSize: '16px', fontWeight: 800, color: '#059669', marginTop: '2px' }}>{formatCurrency(q.totalAmount || q.finalAmount)}</div>
+                                      </div>
+                                    </div>
+                                  </div>
+
+                                  {/* Quotation Metadata Row */}
+                                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', fontSize: '12px', color: '#64748b', marginBottom: '14px' }}>
+                                    <span><i className="bi bi-calendar-check me-1 text-primary"></i>Issued: <strong>{formatDate(q.quotationDate || q.createdAt)}</strong></span>
+                                    <span><i className="bi bi-clock-history me-1 text-danger"></i>Valid Until: <strong>{formatDate(q.validityDate || q.validUntil)}</strong></span>
+                                    {q.siteSurvey && (
+                                      <span><i className="bi bi-geo-alt me-1 text-success"></i>Ref Survey #{q.siteSurvey.surveyNumber || q.siteSurvey.id}</span>
+                                    )}
+                                  </div>
+
+                                  {/* Notes from Sales Team */}
+                                  {q.notes && (
+                                    <div style={{ padding: '12px 16px', borderRadius: '10px', backgroundColor: '#eff6ff', border: '1px solid #bfdbfe', fontSize: '13px', color: '#1e40af', marginBottom: '16px' }}>
+                                      <div style={{ fontWeight: 700, marginBottom: '4px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                        <i className="bi bi-person-badge-fill text-primary"></i>Proposal Notes from Sales Engineering:
+                                      </div>
+                                      <div>{q.notes}</div>
+                                    </div>
+                                  )}
+
+                                  {/* Bill of Materials Table */}
+                                  {q.items && q.items.length > 0 && (
+                                    <div style={{ marginBottom: '16px' }}>
+                                      <div style={{ fontSize: '12px', fontWeight: 700, color: '#475569', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                                        Itemized Bill of Materials (BOM) — {q.items.length} Line Items
+                                      </div>
+                                      <div style={{ overflowX: 'auto', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                                        <table style={{ width: '100%', fontSize: '12px', borderCollapse: 'collapse', backgroundColor: '#ffffff' }}>
+                                          <thead>
+                                            <tr style={{ backgroundColor: '#f1f5f9', borderBottom: '1px solid #e2e8f0' }}>
+                                              <th style={{ padding: '10px 12px', textAlign: 'left', fontWeight: 700, color: '#475569' }}>Component</th>
+                                              <th style={{ padding: '10px 12px', textAlign: 'center', fontWeight: 700, color: '#475569' }}>Qty</th>
+                                              <th style={{ padding: '10px 12px', textAlign: 'right', fontWeight: 700, color: '#475569' }}>Unit Price</th>
+                                              <th style={{ padding: '10px 12px', textAlign: 'right', fontWeight: 700, color: '#475569' }}>Total</th>
+                                            </tr>
+                                          </thead>
+                                          <tbody>
+                                            {q.items.map((item: any, idx: number) => {
+                                              const pName = item.product?.name || item.productName || item.name || `Solar Component ${idx + 1}`;
+                                              const pCode = item.product?.productCode;
+                                              return (
+                                                <tr key={idx} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                                                  <td style={{ padding: '10px 12px' }}>
+                                                    <div style={{ fontWeight: 600, color: '#0f172a' }}>{pName}</div>
+                                                    {pCode && <div style={{ fontSize: '11px', color: '#64748b', fontFamily: 'monospace' }}>Code: {pCode}</div>}
+                                                  </td>
+                                                  <td style={{ padding: '10px 12px', textAlign: 'center', fontWeight: 600 }}>{item.quantity}</td>
+                                                  <td style={{ padding: '10px 12px', textAlign: 'right', color: '#475569' }}>{formatCurrency(item.unitPrice)}</td>
+                                                  <td style={{ padding: '10px 12px', textAlign: 'right', fontWeight: 700, color: '#0f172a' }}>{formatCurrency(item.totalPrice)}</td>
+                                                </tr>
+                                              );
+                                            })}
+                                          </tbody>
+                                        </table>
+                                      </div>
+                                    </div>
+                                  )}
+
+                                  {/* Action Buttons */}
+                                  {(q.status === 'SENT' || q.status === 'DRAFT') && (
+                                    <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', alignItems: 'center' }}>
+                                      <button type="button" onClick={() => handleAcceptQuotation(q.id)}
+                                        style={{ padding: '12px 24px', borderRadius: '10px', border: 'none', backgroundColor: '#059669', color: '#fff', fontSize: '14px', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', boxShadow: '0 4px 12px rgba(5, 150, 105, 0.25)' }}>
+                                        <i className="bi bi-check2-circle"></i>
+                                        <span>Accept Quotation & Proceed to Order</span>
+                                      </button>
+                                      <button type="button" onClick={() => window.print()}
+                                        style={{ padding: '12px 20px', borderRadius: '10px', border: '1px solid #cbd5e1', backgroundColor: '#ffffff', color: '#334155', fontSize: '13px', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                        <i className="bi bi-printer"></i>
+                                        <span>Print Proposal</span>
+                                      </button>
+                                    </div>
+                                  )}
+
+                                  {q.status === 'ACCEPTED' && (
+                                    <div style={{ padding: '12px 16px', borderRadius: '10px', backgroundColor: '#ecfdf5', border: '1px solid #a7f3d0', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px' }}>
+                                      <span style={{ fontSize: '13px', fontWeight: 700, color: '#059669', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                        <i className="bi bi-check-circle-fill"></i>You have accepted this quotation. Your Sales Order has been generated!
+                                      </span>
+                                      <button type="button" onClick={() => setActiveTab('orders')}
+                                        style={{ padding: '8px 16px', borderRadius: '8px', border: 'none', backgroundColor: '#059669', color: '#fff', fontSize: '12px', fontWeight: 700, cursor: 'pointer' }}>
+                                        View Orders & Payments &rarr;
+                                      </button>
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            })}
                           </div>
                         )}
                       </div>
