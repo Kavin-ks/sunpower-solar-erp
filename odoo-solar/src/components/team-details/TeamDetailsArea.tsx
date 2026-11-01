@@ -67,7 +67,7 @@ const TeamDetailsArea = () => {
                           </li>
                           <li>
                             <span className="label">Website:</span>
-                            <a href="yourwebsitehere.com" className="value">yourwebsitehere.com</a>
+                            <Link href="/" className="value">odoo-solar.com</Link>
                           </li>
                           <li>
                             <span className="label">Fax: </span>

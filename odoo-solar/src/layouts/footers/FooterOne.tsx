@@ -38,7 +38,7 @@ const footer_content = {
   phone: "+91 7010818264",
   email: "Odoo@gmail.com",
   bootom_links: [
-    'Privercy',
+    'Privacy',
     'Term & Conditions',
     'Legal',
   ]

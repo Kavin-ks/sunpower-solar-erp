@@ -1,32 +1,25 @@
 import Link from "next/link";
 
-
 interface social_links_type {
   link: string;
-  target: string;
   icon: string;
 }
 
-
 const social_links: social_links_type[] = [
   {
-    link: "http://facebook.com",
-    target: "_blank",
+    link: "#",
     icon: "fab fa-facebook-f",
   },
   {
-    link: "http://twitter.com",
-    target: "_blank",
+    link: "#",
     icon: "fab fa-twitter",
   },
   {
-    link: "https://www.linkedin.com",
-    target: "_blank",
+    link: "#",
     icon: "fab fa-linkedin-in",
   },
   {
-    link: "https://www.vimeo.com",
-    target: "_blank",
+    link: "#",
     icon: "fab fa-vimeo-v",
   },
 ];
@@ -35,21 +28,19 @@ const SocialLinks = () => {
   return (
     <>
       {social_links.map((l, i) => (
-        <Link
+        <a
           key={i}
           href={l.link}
-          target={l.target ? l.target : ""} style={{color: 'black'}}>
-          <i className={l.icon} ></i> {' '}
-        </Link>
+          onClick={(e) => e.preventDefault()}
+          style={{ color: 'black', cursor: 'pointer' }}>
+          <i className={l.icon}></i>{' '}
+        </a>
       ))}
     </>
   );
 };
 
 export default SocialLinks;
-
-
-
 
 interface social_links_type_2 {
   link: string;
@@ -59,22 +50,22 @@ interface social_links_type_2 {
 
 const social_links_2: social_links_type_2[] = [
   {
-    link: "http://facebook.com",
+    link: "#",
     color: "footer-facebook",
     icon: "fa-brands fa-facebook-f",
   },
   {
-    link: "http://twitter.com",
+    link: "#",
     color: "",
     icon: "fa-brands fa-twitter",
   },
   {
-    link: "http://www.linkedin.com",
+    link: "#",
     color: "footer-linkedin",
     icon: "fa-brands fa-linkedin-in",
   },
   {
-    link: "http://www.instagram.com",
+    link: "#",
     color: "footer-insta",
     icon: "fa-brands fa-instagram",
   },
@@ -84,20 +75,18 @@ export const SocialLinksTwo = () => {
   return (
     <>
       {social_links_2.map((link, index) => (
-        <Link
+        <a
           key={index}
           href={link.link}
+          onClick={(e) => e.preventDefault()}
           className={link.color}
-          target="_blank">
+          style={{ cursor: 'pointer' }}>
           <i className={link.icon}></i>{" "}
-        </Link>
+        </a>
       ))}
     </>
   );
 };
-
-
-
 
 // team social links
 interface DataType {
@@ -108,60 +97,57 @@ interface DataType {
 const team_social_data: DataType[] = [
   {
     id: 1,
-    link: "http://facebook.com",
+    link: "#",
     icon: "fab fa-facebook-f",
   },
   {
     id: 2,
-    link: "http://twitter.com",
+    link: "#",
     icon: "fab fa-twitter",
   },
   {
     id: 3,
-    link: "http://vimeo.com",
+    link: "#",
     icon: "fab fa-vimeo-v",
   },
   {
-    id: 3,
-    link: "http://instagram.com",
+    id: 4,
+    link: "#",
     icon: "fab fa-instagram",
   },
-]
+];
 
 export const TeamSocialLinks = () => {
   return (
     <>
       {team_social_data.map((t_item, t_index) => (
         <li key={t_index}>
-          <Link 
+          <a 
             href={t_item.link}
-            target="_blank">
+            onClick={(e) => e.preventDefault()}
+            style={{ cursor: 'pointer' }}>
             <i className={t_item.icon}></i>{" "}
-          </Link>
-
+          </a>
         </li>
       ))}
     </>
-  )
-}
-
+  );
+};
 
 // copy right text 
 type copy_right_text_type = {
   copy_right: JSX.Element;
-}
+};
 
 const copy_right_text: copy_right_text_type = {
   copy_right: <>
-     ©{new Date().getFullYear()} | All rights reserved by <a href="/">Odoo Hyderabad</a>
+     ©{new Date().getFullYear()} | All rights reserved by <Link href="/">Odoo Hyderabad</Link>
   </>
-}
+};
 
-const { copy_right } = copy_right_text
+const { copy_right } = copy_right_text;
 export const CopyRight = () => {
   return (
     <> {copy_right}</>
-  )
-}
-
-
+  );
+};

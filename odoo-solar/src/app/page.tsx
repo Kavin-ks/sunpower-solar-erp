@@ -351,133 +351,50 @@ const AuthWelcomePage = () => {
             }}
           />
 
-          <div>
-            {/* Brand Logo & Name */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginBottom: '32px' }}>
-              <img
-                src="/odoo_logo.png"
-                alt="Odoo Solar System ERP"
-                style={{
-                  height: '46px',
-                  width: 'auto',
-                  objectFit: 'contain',
-                  borderRadius: '6px',
-                }}
-              />
-              <div>
-                <h1 style={{ fontSize: '19px', fontWeight: 800, margin: 0, letterSpacing: '0.03em', color: '#ffffff' }}>
-                  ODOO SOLAR SYSTEM ERP
-                </h1>
-                <p style={{ margin: 0, fontSize: '11px', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-                  Rooftop Installation & CRM Portal
-                </p>
-              </div>
+          {/* Brand Logo & Name */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+            <img
+              src="/odoo_logo.png"
+              alt="Odoo Solar System ERP"
+              style={{
+                height: '46px',
+                width: 'auto',
+                objectFit: 'contain',
+                borderRadius: '6px',
+              }}
+            />
+            <div>
+              <h1 style={{ fontSize: '19px', fontWeight: 800, margin: 0, letterSpacing: '0.03em', color: '#ffffff' }}>
+                ODOO SOLAR SYSTEM ERP
+              </h1>
+              <p style={{ margin: 0, fontSize: '11px', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                Rooftop Installation & CRM Portal
+              </p>
             </div>
+          </div>
 
-            {/* Clean Title & Message */}
+          {/* Clean Title & Message Centered in Available Space */}
+          <div style={{ margin: 'auto 0', padding: '28px 0' }}>
             <h2
               style={{
-                fontSize: '28px',
+                fontSize: '32px',
                 fontWeight: 800,
                 color: '#ffffff',
-                lineHeight: 1.3,
-                margin: '0 0 14px 0',
+                lineHeight: 1.25,
+                margin: '0 0 16px 0',
                 letterSpacing: '-0.02em',
               }}
             >
-              Powering Clean Rooftop Energy
+              Powering Clean<br />Rooftop Energy
             </h2>
 
-            <p style={{ fontSize: '15px', color: '#94a3b8', lineHeight: 1.6, margin: 0 }}>
-              Sign in to manage your solar installations, track quotations, and access government subsidies.
+            <p style={{ fontSize: '15px', color: '#94a3b8', lineHeight: 1.6, margin: 0, maxWidth: '350px' }}>
+              Sign in to manage your solar installations,<br />track quotations, and access government subsidies.
             </p>
           </div>
 
-          {/* Direct Navigation Links */}
-          <div style={{ marginTop: '28px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            <span style={{ fontSize: '11.5px', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 700 }}>
-              Quick Direct Access:
-            </span>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-              <Link
-                href="/home"
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  padding: '7px 12px',
-                  backgroundColor: 'rgba(255, 255, 255, 0.08)',
-                  border: '1px solid rgba(255, 255, 255, 0.15)',
-                  borderRadius: '6px',
-                  color: '#ffffff',
-                  fontSize: '12px',
-                  fontWeight: 600,
-                  textDecoration: 'none',
-                }}
-              >
-                <span>🌐 Solar Website</span>
-              </Link>
-              <Link
-                href="/complaint"
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  padding: '7px 12px',
-                  backgroundColor: 'rgba(230, 58, 39, 0.15)',
-                  border: '1px solid rgba(230, 58, 39, 0.35)',
-                  borderRadius: '6px',
-                  color: '#ff8a7a',
-                  fontSize: '12px',
-                  fontWeight: 600,
-                  textDecoration: 'none',
-                }}
-              >
-                <span>⚡ Support & Warranty</span>
-              </Link>
-              <Link
-                href="/login"
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  padding: '7px 12px',
-                  backgroundColor: 'rgba(16, 185, 129, 0.15)',
-                  border: '1px solid rgba(16, 185, 129, 0.35)',
-                  borderRadius: '6px',
-                  color: '#6ee7b7',
-                  fontSize: '12px',
-                  fontWeight: 600,
-                  textDecoration: 'none',
-                }}
-              >
-                <span>🛠️ Staff ERP Scenes</span>
-              </Link>
-              <a
-                href="http://localhost:5173"
-                target="_blank"
-                rel="noreferrer"
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  padding: '7px 12px',
-                  backgroundColor: 'rgba(59, 130, 246, 0.15)',
-                  border: '1px solid rgba(59, 130, 246, 0.35)',
-                  borderRadius: '6px',
-                  color: '#93c5fd',
-                  fontSize: '12px',
-                  fontWeight: 600,
-                  textDecoration: 'none',
-                }}
-              >
-                <span>🖥️ Vue ERP (5173) ↗</span>
-              </a>
-            </div>
-          </div>
-
           {/* Simple Contact Footer */}
-          <div style={{ marginTop: '24px', fontSize: '13px', color: '#64748b' }}>
+          <div style={{ fontSize: '13px', color: '#64748b' }}>
             <span>Need assistance? </span>
             <a href="tel:+917010818264" style={{ color: '#e63a27', fontWeight: 700, textDecoration: 'none' }}>
               +91 7010818264

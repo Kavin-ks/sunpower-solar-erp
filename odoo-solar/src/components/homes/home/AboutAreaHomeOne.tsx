@@ -45,7 +45,7 @@ const tab_data:DataType[] = [
   },
   {
     tab_id: "contact",
-    tab_name: "Visiont",
+    tab_name: "Vision",
     sm_info: "Sed ut perspiciatis unde omnis iste natus error sit voluptatem accusantium doloremque laudantium, totam aperiam, eaquecy epsa abillo inventore veritatis architecto beatae",
     feature_list_1: [
       "Trusted & Experience",
